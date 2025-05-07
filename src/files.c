@@ -1,0 +1,92 @@
+#include <stdio.h>
+#include <raylib.h>
+#include <ray.h>
+#include "note.h"
+#include <dirent.h>
+
+void getDirContent(NoteLine* files[],int* count,const char* path){
+	struct dirent* entry;
+	DIR* dir = opendir(path);
+	int i = 0;
+	while((entry = readdir(dir)) != NULL){
+		if(entry->d_type == DT_REG){
+			files[i] = createNoteLine(LINE_LENGTH);
+			addLine(files[i++],entry->d_name);
+		}
+		*count = i;
+	}
+	closedir(dir);
+}
+void writeFile(char* name,char* day,char* month,char* year,
+		char* title,NoteLine** noteText,int linesN){
+	FILE* file = fopen(name,"w");
+	fprintf(file,day);
+	fprintf(file,month);
+	fprintf(file,year);
+	fprintf(file," ");
+	fprintf(file,title);
+	fprintf(file,"\n");
+	for(int i=0; i<linesN; i++){
+		fprintf(file,noteText[i]->chars);
+	}
+	fclose(file);
+}
+
+void readNote(
+	NoteLine* note[],
+	NoteLine* title,
+	char* y,
+	char* m,
+	char* d,
+	int* Nlines,
+	char* path
+){
+	FILE* noteFile = fopen(path,"r");
+	char line[100];
+	int i = 0;
+	int charsN = 0;
+	while(fgets(line,sizeof(line),noteFile) != NULL){
+		printf("%s\n",line);
+		note[i] = createNoteLine(LINE_LENGTH);
+		if(i > 0) addLine(note[i-1],line);
+		else {
+			sscanf(
+				line,
+				"%2c%2c%4c %20[^\n]%n",
+				d,m,y,
+				title->chars,
+				&charsN
+			);
+			title->length = charsN - 9;
+			printf("[%s] ==> %d\n",title->chars,title->length);
+		}
+		i++;
+	}
+	*Nlines = --i;
+}
+
+void loadFontSDF(
+		char* path,
+		int* fileSize,
+		int size,
+		Font* font
+){
+	unsigned char* fontFile = LoadFileData(path,fileSize);
+	if(fontFile == NULL || fontFile == 0){
+		fontFile = LoadFileData("assets/fonts/JetBrainsMonoNF.ttf",fileSize);
+	}
+	font->baseSize = size;
+	font->glyphCount = 95;
+	font->glyphs = LoadFontData(fontFile,*fileSize,size,0,0,FONT_SDF);
+	Image atlas = GenImageFontAtlas(font->glyphs,&font->recs,95,size,0,1);
+	font->texture = LoadTextureFromImage(atlas);
+	UnloadImage(atlas);
+	UnloadFileData(fontFile);
+	LoadShader(0,TextFormat("resources/shaders/glsl330/sdf.fs",GLSL_VERSION));
+	SetTextureFilter(font->texture,TEXTURE_FILTER_BILINEAR);
+}
+
+
+
+
+
