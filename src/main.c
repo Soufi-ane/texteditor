@@ -28,7 +28,7 @@ void getLocalDate(char* year,char* month,char* day) {
 
 int currentFileIndex = 0;
 char dir[100];
-NoteLine* fileNames[MAX_FILES_NUM];
+Line* fileNames[MAX_FILES_NUM];
 char year[5],month[3],day[3];
 int isInsertingTitle = 1;
 int linesNum = 1;
@@ -42,10 +42,10 @@ int main(){
 	sprintf(dir,"%s/.local/notes",HOME_DIR);
 	getDirContent(fileNames,&filesCount,dir);
 	getLocalDate(year,month,day);
-	NoteLine* line = createNoteLine(LINE_LENGTH);
-	NoteLine* currentLine = line;
-	NoteLine* note[LINES_COUNT - 1];
-	NoteLine* title = createNoteLine(TITLE_LENGTH);
+	Line* line = createLine(LINE_LENGTH);
+	Line* currentLine = line;
+	Line* note[LINES_COUNT - 1];
+	Line* title = createLine(TITLE_LENGTH);
 	note[0] = line;
 
 
@@ -135,9 +135,9 @@ int main(){
 			else if(linesNum < LINES_COUNT  && currentMode == INSERT){
 				if(currentLine->length > 58 /* 65 */ ){ 
 					// printf("new line");
-					NoteLine* newLine;
+					Line* newLine;
 					// addChar(currentLine, '\0');
-					newLine = createNoteLine(LINE_LENGTH);
+					newLine = createLine(LINE_LENGTH);
 					if(linesNum == LINES_COUNT - 1){
 						printf("some stuff\n");
 						// note[linesNum] = newLine;
@@ -197,7 +197,7 @@ int main(){
 				else {
 					if(linesNum < LINES_COUNT - 1){
 						addChar(currentLine,'\n');
-						NoteLine* newLine = createNoteLine(LINE_LENGTH);
+						Line* newLine = createLine(LINE_LENGTH);
 						note[linesNum++] = newLine;
 						currentLine = newLine;
 					}

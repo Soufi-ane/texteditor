@@ -5,24 +5,24 @@
 #define LINE_LENGTH 100
 #define TITLE_LENGTH 20
 
-typedef struct noteline_ {
+typedef struct line_ {
 	char* chars;
 	int length;
 	int size;
-} NoteLine;
+} Line;
 
-NoteLine* createNoteLine(int n);
+Line* createLine(int n);
 
 void addChar(
-	NoteLine* line,
+	Line* line,
 	char c
 );
 
 void addLine(
-	NoteLine* line,
+	Line* line,
 	char* text
 );
 
-void popChar(NoteLine* line);
+void popChar(Line* line);
 
 #endif

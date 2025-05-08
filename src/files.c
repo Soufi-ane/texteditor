@@ -4,13 +4,13 @@
 #include "note.h"
 #include <dirent.h>
 
-void getDirContent(NoteLine* files[],int* count,const char* path){
+void getDirContent(Line* files[],int* count,const char* path){
 	struct dirent* entry;
 	DIR* dir = opendir(path);
 	int i = 0;
 	while((entry = readdir(dir)) != NULL){
 		if(entry->d_type == DT_REG){
-			files[i] = createNoteLine(LINE_LENGTH);
+			files[i] = createLine(LINE_LENGTH);
 			addLine(files[i++],entry->d_name);
 		}
 		*count = i;
@@ -18,7 +18,7 @@ void getDirContent(NoteLine* files[],int* count,const char* path){
 	closedir(dir);
 }
 void writeFile(char* name,char* day,char* month,char* year,
-		char* title,NoteLine** noteText,int linesN){
+		char* title,Line** noteText,int linesN){
 	FILE* file = fopen(name,"w");
 	fprintf(file,day);
 	fprintf(file,month);
@@ -33,8 +33,8 @@ void writeFile(char* name,char* day,char* month,char* year,
 }
 
 void readNote(
-	NoteLine* note[],
-	NoteLine* title,
+	Line* note[],
+	Line* title,
 	char* y,
 	char* m,
 	char* d,
@@ -47,7 +47,7 @@ void readNote(
 	int charsN = 0;
 	while(fgets(line,sizeof(line),noteFile) != NULL){
 		printf("%s\n",line);
-		note[i] = createNoteLine(LINE_LENGTH);
+		note[i] = createLine(LINE_LENGTH);
 		if(i > 0) addLine(note[i-1],line);
 		else {
 			sscanf(

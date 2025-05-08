@@ -4,8 +4,8 @@
 #include <string.h>
 
 
-NoteLine* createNoteLine(int n){
-	NoteLine* noteLine = (NoteLine*) malloc(sizeof(NoteLine));
+Line* createLine(int n){
+	Line* noteLine = (Line*) malloc(sizeof(Line));
 	noteLine->size = n;
 	noteLine->chars = (char*) malloc(sizeof(char) * n);
 	for(int i=0; i<n; i++) noteLine->chars[i] = '\0';
@@ -14,7 +14,7 @@ NoteLine* createNoteLine(int n){
 }
 
 
-void addChar(NoteLine* line,char c){
+void addChar(Line* line,char c){
 	if(line->length > line->size - 1) {
 		line->size = line->size + 100;
 		char* newChars = (char*) realloc(line->chars,line->size * sizeof(char));
@@ -27,7 +27,7 @@ void addChar(NoteLine* line,char c){
 	line->length++;
 }
 
-void addLine(NoteLine* line,char* text){
+void addLine(Line* line,char* text){
 	int length = strlen(text);
 	// if(length > line->size) {
 		// return;
@@ -41,7 +41,7 @@ void addLine(NoteLine* line,char* text){
 }
 
 
-void popChar(NoteLine* line){
+void popChar(Line* line){
 	if(line->length){
 		line->length--;
 		line->chars[line->length] = '\0';

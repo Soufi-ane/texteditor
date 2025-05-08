@@ -7,7 +7,7 @@
 
 
 void getDirContent(
-	NoteLine* files[],
+	Line* files[],
 	int* count,
 	const char* path
 );
@@ -25,13 +25,13 @@ void writeFile(
 	char* month,
 	char* year,
 	char* title,
-	NoteLine** noteText,
+	Line** noteText,
 	int linesN
 );
 
 void readNote(
-	NoteLine* note[],
-	NoteLine* title,
+	Line* note[],
+	Line* title,
 	char* y,
 	char* m,
 	char* d,
