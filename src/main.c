@@ -90,6 +90,7 @@ int main(){
 			} else longPressDelay--;
 		}
 		if(IsKeyReleased(KEY_BACKSPACE)) longPressDelay = 30;
+		if(IsKeyPressed(KEY_CAPS_LOCK)) currentMode = NORMAL;
 
 		while((c = GetCharPressed()) >= 8){
 			if(currentMode == NONE ){
@@ -122,6 +123,7 @@ int main(){
 					SetExitKey(KEY_NULL);
 				} 
 				else if(c == 't'){
+					popChar(title);
 					isInsertingTitle = 1;
 					currentMode = INSERT;
 				}
@@ -142,7 +144,6 @@ int main(){
 					}
 					else {
 						addChar(currentLine, '\n');
-						printf("some other stuff\n");
 						note[linesNum++] = newLine;
 						currentLine = newLine;
 					} 
@@ -231,10 +232,11 @@ int main(){
 			// bgTexture,(Vector2) {0,0},0.0f,1.0f,WHITE
 		// );
 		if(currentMode == NONE || currentMode == OPEN){
-			DrawTextureEx(
+			/* DrawTextureEx(
 				menuTexture,(Vector2) {0,300},
 				0.0f,1.0f,(Color){255,255,255,240}
-			);
+			); */
+			DrawRectangle(0,270,960,400,(Color) {0,0,0,230});
 			if(currentMode == NONE){
 				DrawTextEx(
 					fontSDF,"Press Something!",
