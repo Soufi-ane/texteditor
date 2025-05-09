@@ -13,6 +13,11 @@ Line* createLine(int n){
 	return noteLine;
 }
 
+void emptyLine(Line* line,int n){
+	memset(line->chars,0,n);
+	line->size = n;
+	line->length = 0;
+}
 
 void addChar(Line* line,char c){
 	if(line->length > line->size - 1) {

@@ -13,6 +13,11 @@ typedef struct line_ {
 
 Line* createLine(int n);
 
+void emptyLine(
+	Line* line,
+	int n
+);
+
 void addChar(
 	Line* line,
 	char c

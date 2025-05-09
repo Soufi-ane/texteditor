@@ -36,11 +36,11 @@ char year[5],month[3],day[3];
 int isInsertingTitle = 1;
 int linesNum = 1;
 int filesCount = 0;
-int longPressDelay = 30;
+int longPressDelay = 100;
 
 int main(){
 	Line* searchQuery = createLine(50);
-	addLine(searchQuery,"nigga");
+	// addLine(searchQuery,"nigga");
 	Color fgColor = GetColor(0xD9D9D9FF);
 	const char* HOME_DIR = getenv("HOME");
 	if(HOME_DIR == NULL) printf("ERRR!\n"); 
@@ -75,7 +75,7 @@ int main(){
 	// ImageColorBrightness(&bg,-70);
 	Texture2D menuTexture = LoadTextureFromImage(menuImg);
 	UnloadImage(menuImg);
-	SetTargetFPS(60);
+	SetTargetFPS(240);
 	SetConfigFlags(FLAG_MSAA_4X_HINT);
 	while(!WindowShouldClose()){
 		if(currentMode != INSERT) {SetExitKey(KEY_Q);}
@@ -83,7 +83,6 @@ int main(){
 		int c ;
 		if(IsKeyDown(KEY_BACKSPACE)){
 			if(longPressDelay < 1){
-				if(isInsertingTitle && title->length) popChar(title);
 				if(isSearching){
 					popChar(searchQuery);
 					find(
@@ -94,6 +93,7 @@ int main(){
 						&numResults
 					);
 				} 
+				if(isInsertingTitle) popChar(title);
 				else {
 					if(currentLine->length < 1 && linesNum > 1) {
 						currentLine = note[--linesNum - 1];
@@ -101,12 +101,17 @@ int main(){
 					}
 					else if (currentLine->length > 0) popChar(currentLine);
 				} 
-				longPressDelay = 1;
+				longPressDelay = 3;
 			} else longPressDelay--;
 		}
-		if(IsKeyReleased(KEY_BACKSPACE)) longPressDelay = 30;
-		if(IsKeyPressed(KEY_CAPS_LOCK)) currentMode = NORMAL;
-
+		if(IsKeyReleased(KEY_BACKSPACE)) longPressDelay = 100;
+		if(IsKeyPressed(KEY_CAPS_LOCK) ){
+			if(!isSearching) currentMode = NORMAL;
+			else{
+				isSearching = 0;
+				emptyLine(searchQuery,50);
+			} 
+		} 
 		while((c = GetCharPressed()) >= 8){
 			if(currentMode == NONE ){
 				if(c == 'n' || c == 'N'){
@@ -154,6 +159,12 @@ int main(){
 						: filesCount - 1;
 				}
 			}
+			//todo
+			/* else if(currentMode == NORMAL){
+				if(c == 'k') {
+					currentLine = note[linesNum - 2];
+				}
+			} */
 			else if(currentMode != INSERT){
 				if( currentMode == NORMAL && 
 					(c == 'i' || c == 'I' || c == 'a' || c == 'A')
@@ -172,7 +183,7 @@ int main(){
 				}
 			}
 			else if(linesNum < LINES_COUNT  && currentMode == INSERT){
-				if(currentLine->length > 58 /* 65 */ ){ 
+				if(currentLine->length > 60 /* 65 */ ){ 
 					// printf("new line");
 					Line* newLine;
 					// addChar(currentLine, '\0');
@@ -185,6 +196,7 @@ int main(){
 						addChar(currentLine, '\n');
 						note[linesNum++] = newLine;
 						currentLine = newLine;
+						addChar(currentLine,c);
 					} 
 				}
 				else if(c >= 32 ){
@@ -320,14 +332,57 @@ int main(){
 				);
 			}
 			else {
+				/* DrawRectangleRoundedLines(
+					(Rectangle){70,280,820,45},
+					0.8f,
+					200,
+					WHITE
+				); */
 				if(isSearching){
-					DrawTextEx(
-						fontSDF,searchQuery->chars,
+					if(searchQuery->length){
+						int i ;
+						for(i=0;i<searchQuery->length;i++){
+							DrawTextCodepoint(
+								fontSDF,searchQuery->chars[i],
+								(Vector2){
+									FILES_X_POSITION + i * 14,
+									GetScreenHeight()/2 - 255
+								},
+								32,WHITE
+							);
+						}
+						DrawTextCodepoint(
+							fontSDF,' ',
+							(Vector2){
+								FILES_X_POSITION + i * 14,
+								GetScreenHeight()/2 - 255
+							},
+							32,WHITE
+						);
+						DrawRectangle(
+							FILES_X_POSITION + i * 14,
+							GetScreenHeight()/2 - 255,
+							14,30,WHITE
+						);
+					}
+					else {
+						DrawTextEx(
+						fontSDF,"Search...",
 						(Vector2){
 							FILES_X_POSITION,
-							GetScreenHeight()/2 - 255
+							GetScreenHeight()/2 - 253
 						},
-						32,0, WHITE
+						28,0,(Color){255,255,255,180}
+					);
+					}
+				} else {
+					DrawTextEx(
+						fontSDF,"Press / to search",
+						(Vector2){
+							FILES_X_POSITION,
+							GetScreenHeight()/2 - 253
+						},
+						28,0,(Color){255,255,255,180}
 					);
 				}
 				for(int i=0;i<(isSearching ? numResults : filesCount);i++){
@@ -384,18 +439,43 @@ int main(){
 			(Vector2) MODE_POSITION,
 			32,0,BLACK
 		);
-		DrawTextEx(fontSDF,title->chars,titlePosition,40,0,BLACK);
-		for(int i=0; i<linesNum;i++){
-			DrawTextEx(
-				fontSDF,
-				note[i]->chars,
-				(Vector2){
-					LINE_X_POSITION,
-					LINE1_Y + 22  + (LINE_HEIGHT) * i
-				},
-				32,0,BLACK
-			);
+		for(int i=0;i<title->length;i++) {
+			if(title->chars[i] != '\n'){
+				DrawTextCodepoint(
+					fontSDF,
+					title->chars[i]
+					,(Vector2){
+						titlePosition.x + 20 * i,
+						titlePosition.y
+						}
+					,40,BLACK
+				);
+			}
 		}
+		int i;
+		for(i=0; i<linesNum;i++){
+			for(int j=0;j<note[i]->length;j++){
+				if(note[i]->chars[j] != '\n'){
+					DrawTextCodepoint(
+						fontSDF,
+						note[i]->chars[j],
+						(Vector2){
+							LINE_X_POSITION + j * 14,
+							LINE1_Y + 22  + (LINE_HEIGHT) * i
+						},
+						32,BLACK
+					);
+				}
+			}
+		}
+		DrawRectangle(
+			isInsertingTitle ? titlePosition.x + 20 * title->length :
+			LINE_X_POSITION + currentLine->length * 14 ,
+			isInsertingTitle ? titlePosition.y  :
+			LINE1_Y +22 + LINE_HEIGHT* (i-1) ,
+			isInsertingTitle ? 19 :14,isInsertingTitle ? 40 :30,BLACK
+		);
+		DrawFPS(10,10);
 		EndDrawing();
 	}
 	// UnloadImage(bg);

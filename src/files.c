@@ -95,17 +95,26 @@ void find(
 ){
 	int p = 0;
 	int scores[numFiles];
+	printf("============================\n");
 	for(int i=0;i<numFiles;i++){
 		int score = 0;
 		for(int j=0;j<query->length;j++){
 			for(int k=0;k<fileNames[i]->length;k++) {
-				if(query->chars[j] == fileNames[i]->chars[k]) score++;
+				char qChar = query->chars[j];
+				char fChar = fileNames[i]->chars[k];
+				qChar = qChar < 91 ? qChar + 32 : qChar;
+				fChar = fChar < 91 ? fChar + 32 : fChar;
+				if(qChar == fChar) score++;
 			}
 		}
-		if(score == query->length){
+		// first
+		// firstNote
+		if(score >= query->length){
 			scores[i] = score;
 			resultFiles[p++] = fileNames[i];
 		}
+		printf("----------------------\n");
+		printf("[%s] %d\n",fileNames[i]->chars,score);
 	}
 	*numResult = p;
 }
