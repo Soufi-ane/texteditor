@@ -29,6 +29,9 @@ void getLocalDate(char* year,char* month,char* day) {
 int currentFileIndex = 0;
 char dir[100];
 Line* fileNames[MAX_FILES_NUM];
+Line* resultNames[MAX_FILES_NUM];
+int isSearching = 0;
+int numResults = 0;
 char year[5],month[3],day[3];
 int isInsertingTitle = 1;
 int linesNum = 1;
@@ -36,6 +39,8 @@ int filesCount = 0;
 int longPressDelay = 30;
 
 int main(){
+	Line* searchQuery = createLine(50);
+	addLine(searchQuery,"nigga");
 	Color fgColor = GetColor(0xD9D9D9FF);
 	const char* HOME_DIR = getenv("HOME");
 	if(HOME_DIR == NULL) printf("ERRR!\n"); 
@@ -79,6 +84,16 @@ int main(){
 		if(IsKeyDown(KEY_BACKSPACE)){
 			if(longPressDelay < 1){
 				if(isInsertingTitle && title->length) popChar(title);
+				if(isSearching){
+					popChar(searchQuery);
+					find(
+						fileNames,
+						filesCount,
+						searchQuery,
+						resultNames,
+						&numResults
+					);
+				} 
 				else {
 					if(currentLine->length < 1 && linesNum > 1) {
 						currentLine = note[--linesNum - 1];
@@ -108,12 +123,36 @@ int main(){
 				} 
 			}  
 			else if (currentMode == OPEN){
-				if(c == 'j') currentFileIndex = 
-					currentFileIndex < filesCount - 1 ? currentFileIndex + 1 
-					: 0;
-				else if(c == 'k' )currentFileIndex = 
-					currentFileIndex > 0  ? currentFileIndex - 1
-					: filesCount - 1;
+				if(isSearching){
+					if(c >= 32 && searchQuery->length < 50){
+						addChar(searchQuery,c);
+						find(
+							fileNames,
+							filesCount,
+							searchQuery,
+							resultNames,
+							&numResults
+						);
+					} 
+				}
+				else {
+					if (c == '/'){
+						isSearching = 1;
+						find(
+							fileNames,
+							filesCount,
+							searchQuery,
+							resultNames,
+							&numResults
+						);
+					} 
+					else if(c == 'j') currentFileIndex = 
+						currentFileIndex < filesCount - 1 ? currentFileIndex + 1 
+						: 0;
+					else if(c == 'k' )currentFileIndex = 
+						currentFileIndex > 0  ? currentFileIndex - 1
+						: filesCount - 1;
+				}
 			}
 			else if(currentMode != INSERT){
 				if( currentMode == NORMAL && 
@@ -164,7 +203,16 @@ int main(){
 			currentMode = NORMAL;
 		}
 		if(IsKeyPressed(KEY_BACKSPACE)){
-			// printf("backcspace\n");
+			if(isSearching){
+				popChar(searchQuery);
+				find(
+					fileNames,
+					filesCount,
+					searchQuery,
+					resultNames,
+					&numResults
+				);
+			} 
 			if(isInsertingTitle) popChar(title);
 			else {
 				if(currentLine->length < 1 && linesNum > 1) {
@@ -272,7 +320,17 @@ int main(){
 				);
 			}
 			else {
-				for(int i=0;i<filesCount;i++){
+				if(isSearching){
+					DrawTextEx(
+						fontSDF,searchQuery->chars,
+						(Vector2){
+							FILES_X_POSITION,
+							GetScreenHeight()/2 - 255
+						},
+						32,0, WHITE
+					);
+				}
+				for(int i=0;i<(isSearching ? numResults : filesCount);i++){
 					Vector2 nameSize = MeasureTextEx(fontSDF,fileNames[i]->chars,32,0);
 					titleSize = MeasureTextEx(fontSDF,title->chars,40,0);
 					if(i == currentFileIndex) {
@@ -282,7 +340,9 @@ int main(){
 						);
 					}
 					DrawTextEx(
-						fontSDF,fileNames[i]->chars,
+						fontSDF,
+						// fileNames[i]->chars,
+						isSearching ? resultNames[i]->chars : fileNames[i]->chars,
 						(Vector2){
 							FILES_X_POSITION,
 							GetScreenHeight()/2 - 200 + (i * 40)

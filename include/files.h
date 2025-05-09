@@ -39,5 +39,12 @@ void readNote(
 	char* path
 );
 
+void find(
+	Line* fileNames[],
+	int numFiles,
+	Line* query,
+	Line* resultFiles[],
+	int* numResult
+);
 #endif
 

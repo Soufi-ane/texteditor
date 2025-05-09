@@ -86,6 +86,30 @@ void loadFontSDF(
 	SetTextureFilter(font->texture,TEXTURE_FILTER_BILINEAR);
 }
 
+void find(
+	Line* fileNames[],
+	int numFiles,
+	Line* query,
+	Line* resultFiles[],
+	int* numResult
+){
+	int p = 0;
+	int scores[numFiles];
+	for(int i=0;i<numFiles;i++){
+		int score = 0;
+		for(int j=0;j<query->length;j++){
+			for(int k=0;k<fileNames[i]->length;k++) {
+				if(query->chars[j] == fileNames[i]->chars[k]) score++;
+			}
+		}
+		if(score == query->length){
+			scores[i] = score;
+			resultFiles[p++] = fileNames[i];
+		}
+	}
+	*numResult = p;
+}
+
 
 
 
