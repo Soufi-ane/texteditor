@@ -12,6 +12,11 @@ Line* createLine(int n){
 	noteLine->length = 0;
 	return noteLine;
 }
+void deleteLine(Line** line){
+	free((*line)->chars);
+	free((*line));
+	*line = NULL;
+}
 
 void emptyLine(Line* line,int n){
 	memset(line->chars,0,n);

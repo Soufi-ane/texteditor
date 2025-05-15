@@ -12,6 +12,7 @@ typedef struct line_ {
 } Line;
 
 Line* createLine(int n);
+void deleteLine(Line** line);
 
 void emptyLine(
 	Line* line,

@@ -81,8 +81,8 @@ void loadFontSDF(
 	Image atlas = GenImageFontAtlas(font->glyphs,&font->recs,95,size,0,1);
 	font->texture = LoadTextureFromImage(atlas);
 	UnloadImage(atlas);
-	UnloadFileData(fontFile);
-	LoadShader(0,TextFormat("resources/shaders/glsl330/sdf.fs",GLSL_VERSION));
+	UnloadFileData(fontFile) ;
+	// LoadShader(0,TextFormat("resources/shaders/glsl330/sdf.fs",GLSL_VERSION));
 	SetTextureFilter(font->texture,TEXTURE_FILTER_BILINEAR);
 }
 

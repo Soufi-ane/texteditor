@@ -40,21 +40,20 @@ int longPressDelay = 100;
 
 int main(){
 	Line* searchQuery = createLine(50);
-	// addLine(searchQuery,"nigga");
 	Color fgColor = GetColor(0xD9D9D9FF);
 	const char* HOME_DIR = getenv("HOME");
 	if(HOME_DIR == NULL) printf("ERRR!\n"); 
 	sprintf(dir,"%s/.local/notes",HOME_DIR);
 	getDirContent(fileNames,&filesCount,dir);
 	getLocalDate(year,month,day);
-	Line* line = createLine(LINE_LENGTH);
-	Line* currentLine = line;
+	Line* firstLine = createLine(LINE_LENGTH);
+	Line* currentLine = firstLine;
 	Line* note[LINES_COUNT - 1];
 	Line* title = createLine(TITLE_LENGTH);
-	note[0] = line;
+	note[0] = firstLine;
 
 
-	InitWindow(SCREEN_WIDTH,SCREEN_HEIGHT,"Notes");
+	InitWindow(SCREEN_WIDTH,SCREEN_HEIGHT,"Note");
 	SetExitKey(KEY_NULL);
 	int fileSize = 0;
 	Font fontSDF = {0};
@@ -66,15 +65,6 @@ int main(){
 		&fontSDF
 	);
 
-	// Image bg = LoadImage("assets/imgs/notebook.png");
-	// Texture2D bgTexture = LoadTextureFromImage(bg);
-	Image menuImg = LoadImage("/usr/local/share/images/menuImg.png");
-	if(menuImg.data == NULL) menuImg = LoadImage("assets/imgs/menuImg.png");
-	// applyBlur(&bg,&bgTexture,2);
-	// ImageBlurGaussian(&bg,2);
-	// ImageColorBrightness(&bg,-70);
-	Texture2D menuTexture = LoadTextureFromImage(menuImg);
-	UnloadImage(menuImg);
 	SetTargetFPS(240);
 	SetConfigFlags(FLAG_MSAA_4X_HINT);
 	while(!WindowShouldClose()){
@@ -96,6 +86,7 @@ int main(){
 				if(isInsertingTitle) popChar(title);
 				else {
 					if(currentLine->length < 1 && linesNum > 1) {
+						// deleteLine(&currentLine);
 						currentLine = note[--linesNum - 1];
 						currentLine->length--;
 					}
@@ -115,15 +106,10 @@ int main(){
 		while((c = GetCharPressed()) >= 8){
 			if(currentMode == NONE ){
 				if(c == 'n' || c == 'N'){
-					// currentMode = NEW;
-					// resetBlur(&bg,&bgTexture,"assets/imgs/notebook.png");
 					currentMode = INSERT;
-					// TODO : WTF
 				} 
 				else if(c == 'o' || c == 'O'){
 					currentMode = OPEN;
-					// bg = LoadImage("assets/imgs/notebook.png");
-					// bgTexture = LoadTextureFromImage(bg);
 
 				} 
 			}  
@@ -179,7 +165,6 @@ int main(){
 				}
 				else if(c == 'e') {
 					currentMode = OPEN;
-					// applyBlur(&bg,&bgTexture,2);
 				}
 			}
 			else if(linesNum < LINES_COUNT  && currentMode == INSERT){
@@ -247,7 +232,6 @@ int main(){
 				}
 				isInsertingTitle = 0;
 				currentMode = INSERT;
-				// resetBlur(&bg,&bgTexture,"assets/imgs/notebook.png");
 			} 
 			else {
 				if(isInsertingTitle){
@@ -287,15 +271,7 @@ int main(){
 					3.0f,fgColor
 			);
 		}
-		// background
-		// DrawTextureEx(
-			// bgTexture,(Vector2) {0,0},0.0f,1.0f,WHITE
-		// );
 		if(currentMode == NONE || currentMode == OPEN){
-			/* DrawTextureEx(
-				menuTexture,(Vector2) {0,300},
-				0.0f,1.0f,(Color){255,255,255,240}
-			); */
 			DrawRectangle(0,270,960,400,(Color) {0,0,0,230});
 			if(currentMode == NONE){
 				DrawTextEx(
@@ -478,13 +454,24 @@ int main(){
 		DrawFPS(10,10);
 		EndDrawing();
 	}
-	// UnloadImage(bg);
-	// UnloadTexture(bgTexture);
-	UnloadTexture(menuTexture);
 	CloseWindow();
 	char savePath[100];
 	sprintf(savePath,"%s/.local/notes/%s",HOME_DIR,"myNote");
 	writeFile(savePath,day,month,year,title->chars,note,linesNum);
-
+	int i;
+	deleteLine(&title);
+	deleteLine(&firstLine);
+	for(i=1;i<linesNum;i++){
+		deleteLine(&note[i]);
+	}
+	for(i=0;i<filesCount;i++){
+		deleteLine(&fileNames[i]);
+	}
+	for(i=0;i<numResults;i++){
+		deleteLine(&resultNames[i]);
+	}
+	UnloadFontData(fontSDF.glyphs,fontSDF.glyphCount);
+	UnloadTexture(fontSDF.texture);
+	deleteLine(&searchQuery);
 	return 0; 
 }
