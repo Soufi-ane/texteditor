@@ -37,6 +37,7 @@ int isInsertingTitle = 1;
 int linesNum = 1;
 int filesCount = 0;
 int longPressDelay = 100;
+int isChoosingDir = 0;
 
 int main(){
 	Line* searchQuery = createLine(50);
@@ -76,11 +77,8 @@ int main(){
 				if(isSearching){
 					popChar(searchQuery);
 					find(
-						fileNames,
-						filesCount,
-						searchQuery,
-						resultNames,
-						&numResults
+						fileNames,filesCount,searchQuery,
+						resultNames,&numResults
 					);
 				} 
 				if(isInsertingTitle) popChar(title);
@@ -105,12 +103,15 @@ int main(){
 		} 
 		while((c = GetCharPressed()) >= 8){
 			if(currentMode == NONE ){
-				if(c == 'n' || c == 'N'){
+				if(c == 'n'){
 					currentMode = INSERT;
 				} 
-				else if(c == 'o' || c == 'O'){
+				else if(c == 'o'){
 					currentMode = OPEN;
-
+				} 
+				else if(c == 'd'){
+					currentMode = INSERT;
+					isChoosingDir = 1;
 				} 
 			}  
 			else if (currentMode == OPEN){
@@ -273,39 +274,59 @@ int main(){
 		}
 		if(currentMode == NONE || currentMode == OPEN){
 			DrawRectangle(0,270,960,400,(Color) {0,0,0,230});
-			if(currentMode == NONE){
-				DrawTextEx(
-					fontSDF,"Press Something!",
-					(Vector2){
-						350,
-						LINE1_Y + LINE_HEIGHT * 4
-					},
-					32,0,WHITE
-				);
-				DrawTextEx(
-					fontSDF,"n : New note",
-					(Vector2){
-						LINE_X_POSITION * 3,
-						LINE1_Y + LINE_HEIGHT * 5
-					},
-					32,0,WHITE
-				);
-				DrawTextEx(
-					fontSDF,"o : Open a note",
-					(Vector2){
-						LINE_X_POSITION * 3,
-						LINE1_Y + LINE_HEIGHT * 6
-					},
-					32,0,WHITE
-				);
-				DrawTextEx(
-					fontSDF,"s : Search for a note",
-					(Vector2){
-						LINE_X_POSITION * 3,
-						LINE1_Y + LINE_HEIGHT * 7
-					},
-					32,0,WHITE
-				);
+			if(currentMode == NONE ){
+				if(!isChoosingDir){
+					DrawTextEx(
+						fontSDF,"Press Something!",
+						(Vector2){
+							350,
+							LINE1_Y + LINE_HEIGHT * 4
+						},
+						32,0,WHITE
+					);
+					DrawTextEx(
+						fontSDF,"n : New note",
+						(Vector2){
+							LINE_X_POSITION * 3,
+							LINE1_Y + LINE_HEIGHT * 5
+						},
+						32,0,WHITE
+					);
+					DrawTextEx(
+						fontSDF,"o : Open a note",
+						(Vector2){
+							LINE_X_POSITION * 3,
+							LINE1_Y + LINE_HEIGHT * 6
+						},
+						32,0,WHITE
+					);
+					DrawTextEx(
+						fontSDF,"d : Select directory",
+						(Vector2){
+							LINE_X_POSITION * 3,
+							LINE1_Y + LINE_HEIGHT * 7
+						},
+						32,0,WHITE
+					);
+				} else {
+					int i;
+					for(i=0;i<100;i++){
+						if(dir[i]== '\0') break;
+						DrawTextCodepoint(
+							fontSDF,dir[i],
+							(Vector2){
+								FILES_X_POSITION + i * 14,
+								GetScreenHeight()/2 - 120
+							},
+							32,WHITE
+						);
+					}
+					DrawRectangle(
+						FILES_X_POSITION + i * 14,
+						GetScreenHeight()/2 - 120,
+						14,30,WHITE
+					);
+				}
 			}
 			else {
 				/* DrawRectangleRoundedLines(
@@ -327,14 +348,14 @@ int main(){
 								32,WHITE
 							);
 						}
-						DrawTextCodepoint(
+						/* DrawTextCodepoint(
 							fontSDF,' ',
 							(Vector2){
 								FILES_X_POSITION + i * 14,
 								GetScreenHeight()/2 - 255
 							},
 							32,WHITE
-						);
+						); */
 						DrawRectangle(
 							FILES_X_POSITION + i * 14,
 							GetScreenHeight()/2 - 255,
@@ -372,7 +393,6 @@ int main(){
 					}
 					DrawTextEx(
 						fontSDF,
-						// fileNames[i]->chars,
 						isSearching ? resultNames[i]->chars : fileNames[i]->chars,
 						(Vector2){
 							FILES_X_POSITION,
@@ -471,7 +491,7 @@ int main(){
 		deleteLine(&resultNames[i]);
 	}
 	UnloadFontData(fontSDF.glyphs,fontSDF.glyphCount);
-	UnloadTexture(fontSDF.texture);
 	deleteLine(&searchQuery);
+	// UnloadTexture(fontSDF.texture);
 	return 0; 
 }
