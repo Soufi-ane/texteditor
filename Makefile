@@ -1,5 +1,5 @@
 Flags = -Iinclude -lraylib -lm -lpthread -ldl -lrt -lGL
-Debug = -g -Wall -Werror
+Debug = -g -Wall
 InstallDir = /usr/local/bin
 FontsDir = /usr/local/share/fonts
 AssetsDir = ./assets
@@ -9,7 +9,7 @@ CC = gcc
 SRC = src/*.c
 OUT = build/note
 
-all: $(OUT) fonts
+all: $(OUT)
 
 run : $(OUT)
 	./$(OUT)
