@@ -11,12 +11,12 @@
 enum Mode {
 	NORMAL,
 	INSERT,
-	NEW,
-	OPEN,
-	SEARCH,
-	NONE,
+	// NEW,
+	// OPEN,
+	// SEARCH,
+	// NONE,
 };
-enum Mode currentMode = NONE;
+enum Mode currentMode = NORMAL;
 
 void getLocalDate(char* year,char* month,char* day) {
 	time_t t = time(NULL);
@@ -38,6 +38,8 @@ int linesNum = 1;
 int filesCount = 0;
 int longPressDelay = 100;
 int isChoosingDir = 0;
+int isOpeningFile = 0;
+int isTakingNote = 0;
 
 int main(){
 	Line* searchQuery = createLine(50);
@@ -102,19 +104,37 @@ int main(){
 			} 
 		} 
 		while((c = GetCharPressed()) >= 8){
-			if(currentMode == NONE ){
+			if(currentMode == NORMAL){
 				if(c == 'n'){
 					currentMode = INSERT;
+					isTakingNote = 1;
 				} 
 				else if(c == 'o'){
-					currentMode = OPEN;
+					isOpeningFile = 1;
 				} 
 				else if(c == 'd'){
 					currentMode = INSERT;
 					isChoosingDir = 1;
 				} 
+				else if(c == '/'){
+					isSearching = 1;
+					find(
+						fileNames,
+						filesCount,
+						searchQuery,
+						resultNames,
+						&numResults
+					);
+				} 
+				else if(c == 'j') currentFileIndex = 
+					currentFileIndex < filesCount - 1 ? currentFileIndex + 1 
+					: 0;
+				else if(c == 'k' )currentFileIndex = 
+					currentFileIndex > 0  ? currentFileIndex - 1
+					: filesCount - 1;
+				}
 			}  
-			else if (currentMode == OPEN){
+			else if (isOpeningFile){
 				if(isSearching){
 					if(c >= 32 && searchQuery->length < 50){
 						addChar(searchQuery,c);
@@ -128,7 +148,7 @@ int main(){
 					} 
 				}
 				else {
-					if (c == '/'){
+					/* if (c == '/'){
 						isSearching = 1;
 						find(
 							fileNames,
@@ -144,7 +164,7 @@ int main(){
 					else if(c == 'k' )currentFileIndex = 
 						currentFileIndex > 0  ? currentFileIndex - 1
 						: filesCount - 1;
-				}
+				} */
 			}
 			//todo
 			/* else if(currentMode == NORMAL){
@@ -165,7 +185,7 @@ int main(){
 					currentMode = INSERT;
 				}
 				else if(c == 'e') {
-					currentMode = OPEN;
+					isOpeningFile = 1;
 				}
 			}
 			else if(linesNum < LINES_COUNT  && currentMode == INSERT){
@@ -221,7 +241,7 @@ int main(){
 			} 
 		}
 		if(IsKeyPressed(KEY_ENTER)){
-			if(currentMode == OPEN){
+			if(isOpeningFile){
 				char path[100];
 				sprintf(path,"%s/.local/notes/%s",HOME_DIR,
 						fileNames[currentFileIndex]->chars);
@@ -272,10 +292,10 @@ int main(){
 					3.0f,fgColor
 			);
 		}
-		if(currentMode == NONE || currentMode == OPEN){
+		if(currentMode == NORMAL){
 			DrawRectangle(0,270,960,400,(Color) {0,0,0,230});
-			if(currentMode == NONE ){
-				if(!isChoosingDir){
+			// if(currentMode == NORMAL){
+				if(!isChoosingDir && !isOpeningFile){
 					DrawTextEx(
 						fontSDF,"Press Something!",
 						(Vector2){
@@ -308,7 +328,10 @@ int main(){
 						},
 						32,0,WHITE
 					);
-				} else {
+				} else if (isOpeningFile) {
+
+				}
+				/* else {
 					int i;
 					for(i=0;i<100;i++){
 						if(dir[i]== '\0') break;
@@ -326,15 +349,12 @@ int main(){
 						GetScreenHeight()/2 - 120,
 						14,30,WHITE
 					);
-				}
-			}
-			else {
-				/* DrawRectangleRoundedLines(
-					(Rectangle){70,280,820,45},
-					0.8f,
-					200,
-					WHITE
-				); */
+				} */
+			// }
+			// else {
+			if(isOpeningFile) {
+
+			
 				if(isSearching){
 					if(searchQuery->length){
 						int i ;
@@ -401,9 +421,9 @@ int main(){
 						32,0,i == currentFileIndex ? BLACK : WHITE
 					);
 				}
-			}
+			// }
 		}
-		if(currentMode != NONE && currentMode != OPEN){
+		} else {
 			DrawTextEx(
 				fontSDF,day,
 				(Vector2) DAY_POSITION,32,0,BLACK
@@ -429,9 +449,7 @@ int main(){
 		}
 		DrawTextEx(
 			fontSDF,
-			currentMode == NORMAL ? "NORMAL" : currentMode == INSERT ?
-			"INSERT" : currentMode == NONE ? "NONE" : currentMode ==  NEW ? 
-			"NEW" : currentMode == OPEN ? "OPEN" : "SEARCH",
+			currentMode == NORMAL ? "NORMAL" : "INSERT",
 			(Vector2) MODE_POSITION,
 			32,0,BLACK
 		);
