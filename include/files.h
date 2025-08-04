@@ -1,12 +1,15 @@
 #ifndef FILES_H
 #define FILES_H
-// #include <raylib.h>
+#include <raylib.h>
+#include "note.h"
 
 #define MAX_FILE_NAME_LENGTH 100
-#define MAX_FILES_NUM 100
 
+
+void refreshDiplayedFiles(Editor* e);
 
 void getDirContent(
+  Editor* e,
 	Line* files[],
 	int* count,
 	const char* path
@@ -19,25 +22,9 @@ void loadFontSDF(
 	Font* font
 );
 
-void writeFile(
-	char* name,
-	char* day,
-	char* month,
-	char* year,
-	char* title,
-	Line** noteText,
-	int linesN
-);
+void writeFile(Editor* e);
 
-void readNote(
-	Line* note[],
-	Line* title,
-	char* y,
-	char* m,
-	char* d,
-	int* Nlines,
-	char* path
-);
+void readNote(Editor* e, char* path);
 
 void find(
 	Line* fileNames[],

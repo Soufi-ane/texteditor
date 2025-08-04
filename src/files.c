@@ -1,68 +1,107 @@
 #include <stdio.h>
 #include <raylib.h>
+#include <stdlib.h>
 #include <ray.h>
 #include "note.h"
 #include <dirent.h>
 
-void getDirContent(Line* files[],int* count,const char* path){
+
+
+void refreshDiplayedFiles(Editor* e){
+  int j = 0;
+  for(
+      int i = e->displayedFilesStart;
+      j < MAX_DISPLAYED_FILES;
+      i++,j++)
+  {
+    e->displayedNames[j] = e->fileNames[i];
+  }
+}
+
+void getDirContent(Editor* e,Line* files[],int* count,const char* path){
 	struct dirent* entry;
 	DIR* dir = opendir(path);
 	int i = 0;
 	while((entry = readdir(dir)) != NULL){
 		if(entry->d_type == DT_REG){
 			files[i] = createLine(LINE_LENGTH);
-			addLine(files[i++],entry->d_name);
+			addLine(e,files[i++],entry->d_name);
 		}
 		*count = i;
 	}
 	closedir(dir);
 }
-void writeFile(char* name,char* day,char* month,char* year,
-		char* title,Line** noteText,int linesN){
-	FILE* file = fopen(name,"w");
-	fprintf(file,day);
-	fprintf(file,month);
-	fprintf(file,year);
-	fprintf(file," ");
-	fprintf(file,title);
-	fprintf(file,"\n");
-	for(int i=0; i<linesN; i++){
-		fprintf(file,noteText[i]->chars);
+void writeFile(Editor* e){
+  char savePath[100];
+  sprintf(
+    savePath,
+    "%s/.local/notes/%s", 
+    e->HOME_DIR, 
+    e->currentFileName->length > 1 ? e->currentFileName->chars : "untitled");
+	FILE* file = fopen(savePath,"w");
+  printf("saving file %s ...\n",savePath);
+	fprintf(file,"----------------\n");
+	fprintf(file,"date: ");
+	fprintf(file,e->note.date.day);
+	fprintf(file,"-");
+	fprintf(file,e->note.date.month);
+	fprintf(file,"-");
+	fprintf(file,e->note.date.year);
+	fprintf(file,"\ntitle: ");
+	fprintf(file,e->note.title->chars);
+  fprintf(file,"----------------\n\n");
+	for(int i=0; i<e->note.linesNum; i++){
+		fprintf(file,e->note.body[i]->chars);
 	}
+  char msg[100];
+  sprintf(msg,"File saved: %s",e->currentFileName->chars);
+  addLine(e,e->message,msg);
 	fclose(file);
 }
 
-void readNote(
-	Line* note[],
-	Line* title,
-	char* y,
-	char* m,
-	char* d,
-	int* Nlines,
-	char* path
-){
+void readNote(Editor* e, char* path){
 	FILE* noteFile = fopen(path,"r");
+  if(!noteFile) exit(1);
 	char line[100];
 	int i = 0;
 	int charsN = 0;
 	while(fgets(line,sizeof(line),noteFile) != NULL){
-		printf("%s\n",line);
-		note[i] = createLine(LINE_LENGTH);
-		if(i > 0) addLine(note[i-1],line);
-		else {
-			sscanf(
+    printf("reading line\n");
+		e->note.body[i] = createLine(LINE_LENGTH);
+		if (i > 3) {
+      if(line[0] != '\n'){
+        addLine(e,e->note.body[i-4],line);
+        printf("[%d] found a line:\n\t[%s]\n",i,line);
+        e->note.linesNum++;
+      }
+    } 
+		else if(i == 1) {
+			int d = sscanf(
 				line,
-				"%2c%2c%4c %20[^\n]%n",
-				d,m,y,
-				title->chars,
-				&charsN
-			);
-			title->length = charsN - 9;
-			printf("[%s] ==> %d\n",title->chars,title->length);
+				"date: %2c-%2c-%4c%n",
+				e->note.date.day,e->note.date.month,e->note.date.year,&charsN);
+      if(d < 3) {
+        printf("sscanf returned %d\n",d);
+        return;
+      }
 		}
-		i++;
+		else if(i == 2){
+			int d = sscanf(
+				line,
+				"title: %20[^\n]%n",
+				e->note.title->chars, &charsN
+			);
+      if(d < 1) {
+        printf("sscanf returned %d\n",d);
+        return;
+      }
+			e->note.title->length = charsN - 7;
+		}
+    if(line[0] != '\n') i++;
+    else e->note.body[i-1]->length = 0;
 	}
-	*Nlines = --i;
+	if(e->note.linesNum > 1) e->note.linesNum = i - 4; // 4 for metadata;
+  printf("lines : %d\n",e->note.linesNum);
 }
 
 void loadFontSDF(
@@ -95,7 +134,6 @@ void find(
 ){
 	int p = 0;
 	int scores[numFiles];
-	printf("============================\n");
 	for(int i=0;i<numFiles;i++){
 		int score = 0;
 		for(int j=0;j<query->length;j++){
@@ -107,19 +145,11 @@ void find(
 				if(qChar == fChar) score++;
 			}
 		}
-		// first
 		// firstNote
 		if(score >= query->length){
 			scores[i] = score;
 			resultFiles[p++] = fileNames[i];
 		}
-		printf("----------------------\n");
-		printf("[%s] %d\n",fileNames[i]->chars,score);
 	}
 	*numResult = p;
 }
-
-
-
-
-

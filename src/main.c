@@ -1,515 +1,361 @@
+#include "files.h"
+#include "note.h"
+#include "ray.h"
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
-#include "note.h"
-#include "ray.h"
-#include "files.h"
+#include <time.h>
 
-
-enum Mode {
-	NORMAL,
-	INSERT,
-	// NEW,
-	// OPEN,
-	// SEARCH,
-	// NONE,
-};
-enum Mode currentMode = NORMAL;
-
-void getLocalDate(char* year,char* month,char* day) {
-	time_t t = time(NULL);
-	struct tm* locaTime = localtime(&t);
-	strftime(year,5,"%Y",locaTime);
-	strftime(month,3,"%m",locaTime);
-	strftime(day,3,"%d",locaTime);
+void getLocalDate(Date* d) {
+  time_t t = time(NULL);
+  struct tm *locaTime = localtime(&t);
+  strftime(d->year, 5, "%Y", locaTime);
+  strftime(d->month, 3, "%m", locaTime);
+  strftime(d->day, 3, "%d", locaTime);
 }
 
-int currentFileIndex = 0;
+Editor editor = {
+  .mode = NORMAL,
+  .isChoosingDir = false,
+  .isOpeningFile = false,
+  .isTakingNote = false,
+  .isSearching = false,
+  .isNamingFile = false,
+  .isDebugging = false,
+  .isMenuOpen = true,
+  .isInsertingTitle = true,
+  .displayedFilesStart = 0,
+  .filesCount = 0,
+  .numResults = 0,
+  .note = {
+    .linesNum = 1,
+  },
+  .currentFileIndex = 0,
+  .cursor = {
+    .col = 61,
+    .last_col = 0,
+    .row = -1,
+    .width = 15,
+    .height = 35,
+  },
+};
+
 char dir[100];
-Line* fileNames[MAX_FILES_NUM];
-Line* resultNames[MAX_FILES_NUM];
-int isSearching = 0;
-int numResults = 0;
-char year[5],month[3],day[3];
-int isInsertingTitle = 1;
-int linesNum = 1;
-int filesCount = 0;
-int longPressDelay = 100;
-int isChoosingDir = 0;
-int isOpeningFile = 0;
-int isTakingNote = 0;
 
-int main(){
-	Line* searchQuery = createLine(50);
-	Color fgColor = GetColor(0xD9D9D9FF);
-	const char* HOME_DIR = getenv("HOME");
-	if(HOME_DIR == NULL) printf("ERRR!\n"); 
-	sprintf(dir,"%s/.local/notes",HOME_DIR);
-	getDirContent(fileNames,&filesCount,dir);
-	getLocalDate(year,month,day);
-	Line* firstLine = createLine(LINE_LENGTH);
-	Line* currentLine = firstLine;
-	Line* note[LINES_COUNT - 1];
-	Line* title = createLine(TITLE_LENGTH);
-	note[0] = firstLine;
+int main() {
+  editor.currentFileName = createLine(FILE_NAME_LENGTH);
+  editor.message = createLine(LINE_LENGTH);
+  editor.searchQuery = createLine(50);
+  Color fgColor = GetColor(0xD9D9D9FF);
+  editor.HOME_DIR  = getenv("HOME");
+  if (editor.HOME_DIR == NULL)
+    printf("ERRR!\n");
+  sprintf(dir, "%s/.local/notes", editor.HOME_DIR);
+  getDirContent(&editor,editor.fileNames, &editor.filesCount, dir);
+  getLocalDate(&editor.note.date);
+  Line *firstLine = createLine(LINE_LENGTH);
+  editor.currentLine = firstLine;
+  editor.note.title = createLine(TITLE_LENGTH);
+  editor.note.body[0] = firstLine;
 
+  refreshDiplayedFiles(&editor);
 
-	InitWindow(SCREEN_WIDTH,SCREEN_HEIGHT,"Note");
-	SetExitKey(KEY_NULL);
-	int fileSize = 0;
-	Font fontSDF = {0};
-	loadFontSDF(
-		// "assets/fonts/JetBrainsMonoNF.ttf",
-		"/usr/local/share/fonts/JetBrainsMonoNF.ttf",
-		&fileSize,
-		128,
-		&fontSDF
-	);
+  InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Note");
+  SetExitKey(KEY_NULL);
+  int fileSize = 0;
+  Font fontSDF = {0};
+  loadFontSDF(
+      // "assets/fonts/JetBrainsMonoNF.ttf",
+      "/usr/local/share/fonts/JetBrainsMonoNF.ttf",
+      &fileSize,
+      128,
+      &fontSDF);
 
-	SetTargetFPS(240);
-	SetConfigFlags(FLAG_MSAA_4X_HINT);
-	while(!WindowShouldClose()){
-		if(currentMode != INSERT) {SetExitKey(KEY_Q);}
-		else if(currentMode == INSERT) {SetExitKey(KEY_NULL);}
-		int c ;
-		if(IsKeyDown(KEY_BACKSPACE)){
-			if(longPressDelay < 1){
-				if(isSearching){
-					popChar(searchQuery);
-					find(
-						fileNames,filesCount,searchQuery,
-						resultNames,&numResults
-					);
-				} 
-				if(isInsertingTitle) popChar(title);
-				else {
-					if(currentLine->length < 1 && linesNum > 1) {
-						// deleteLine(&currentLine);
-						currentLine = note[--linesNum - 1];
-						currentLine->length--;
-					}
-					else if (currentLine->length > 0) popChar(currentLine);
-				} 
-				longPressDelay = 3;
-			} else longPressDelay--;
-		}
-		if(IsKeyReleased(KEY_BACKSPACE)) longPressDelay = 100;
-		if(IsKeyPressed(KEY_CAPS_LOCK) ){
-			if(!isSearching) currentMode = NORMAL;
-			else{
-				isSearching = 0;
-				emptyLine(searchQuery,50);
-			} 
-		} 
-		while((c = GetCharPressed()) >= 8){
-			if(currentMode == NORMAL){
-				if(c == 'n'){
-					currentMode = INSERT;
-					isTakingNote = 1;
-				} 
-				else if(c == 'o'){
-					isOpeningFile = 1;
-				} 
-				else if(c == 'd'){
-					currentMode = INSERT;
-					isChoosingDir = 1;
-				} 
-				else if(c == '/'){
-					isSearching = 1;
-					find(
-						fileNames,
-						filesCount,
-						searchQuery,
-						resultNames,
-						&numResults
-					);
-				} 
-				else if(c == 'j') currentFileIndex = 
-					currentFileIndex < filesCount - 1 ? currentFileIndex + 1 
-					: 0;
-				else if(c == 'k' )currentFileIndex = 
-					currentFileIndex > 0  ? currentFileIndex - 1
-					: filesCount - 1;
-				}
-			}  
-			else if (isOpeningFile){
-				if(isSearching){
-					if(c >= 32 && searchQuery->length < 50){
-						addChar(searchQuery,c);
-						find(
-							fileNames,
-							filesCount,
-							searchQuery,
-							resultNames,
-							&numResults
-						);
-					} 
-				}
-				else {
-					/* if (c == '/'){
-						isSearching = 1;
-						find(
-							fileNames,
-							filesCount,
-							searchQuery,
-							resultNames,
-							&numResults
-						);
-					} 
-					else if(c == 'j') currentFileIndex = 
-						currentFileIndex < filesCount - 1 ? currentFileIndex + 1 
-						: 0;
-					else if(c == 'k' )currentFileIndex = 
-						currentFileIndex > 0  ? currentFileIndex - 1
-						: filesCount - 1;
-				} */
-			}
-			//todo
-			/* else if(currentMode == NORMAL){
-				if(c == 'k') {
-					currentLine = note[linesNum - 2];
-				}
-			} */
-			else if(currentMode != INSERT){
-				if( currentMode == NORMAL && 
-					(c == 'i' || c == 'I' || c == 'a' || c == 'A')
-				  ){
-					currentMode = INSERT;
-					SetExitKey(KEY_NULL);
-				} 
-				else if(c == 't'){
-					popChar(title);
-					isInsertingTitle = 1;
-					currentMode = INSERT;
-				}
-				else if(c == 'e') {
-					isOpeningFile = 1;
-				}
-			}
-			else if(linesNum < LINES_COUNT  && currentMode == INSERT){
-				if(currentLine->length > 60 /* 65 */ ){ 
-					// printf("new line");
-					Line* newLine;
-					// addChar(currentLine, '\0');
-					newLine = createLine(LINE_LENGTH);
-					if(linesNum == LINES_COUNT - 1){
-						printf("some stuff\n");
-						// note[linesNum] = newLine;
-					}
-					else {
-						addChar(currentLine, '\n');
-						note[linesNum++] = newLine;
-						currentLine = newLine;
-						addChar(currentLine,c);
-					} 
-				}
-				else if(c >= 32 ){
-					if(isInsertingTitle){
-						if(title->length < TITLE_LENGTH - 1) addChar(title,c);
-					} 
-					else{
-						printf("Added char\n");
-						addChar(currentLine,c);
-					} 
-				} 
-			}
-		}
-		if(IsKeyPressed(KEY_ESCAPE)){
-			printf("escape\n");
-			currentMode = NORMAL;
-		}
-		if(IsKeyPressed(KEY_BACKSPACE)){
-			if(isSearching){
-				popChar(searchQuery);
-				find(
-					fileNames,
-					filesCount,
-					searchQuery,
-					resultNames,
-					&numResults
-				);
-			} 
-			if(isInsertingTitle) popChar(title);
-			else {
-				if(currentLine->length < 1 && linesNum > 1) {
-					currentLine = note[--linesNum - 1];
-					currentLine->length--;
-				}
-				else if (currentLine->length > 0) popChar(currentLine);
-			} 
-		}
-		if(IsKeyPressed(KEY_ENTER)){
-			if(isOpeningFile){
-				char path[100];
-				sprintf(path,"%s/.local/notes/%s",HOME_DIR,
-						fileNames[currentFileIndex]->chars);
-				readNote(note,title,year,month,day,&linesNum,path);
-				currentLine = note[linesNum -1];
-				// remove \n if it's the last thing.
-				if(currentLine->chars[currentLine->length - 1] == '\n'){
-					currentLine->length--;
-				}
-				isInsertingTitle = 0;
-				currentMode = INSERT;
-			} 
-			else {
-				if(isInsertingTitle){
-					addChar(title,'\n');
-					isInsertingTitle = 0;
-				} 
-				else {
-					if(linesNum < LINES_COUNT - 1){
-						addChar(currentLine,'\n');
-						Line* newLine = createLine(LINE_LENGTH);
-						note[linesNum++] = newLine;
-						currentLine = newLine;
-					}
-				}
-			}
-		}
-		Vector2 titleSize = {0.0f,0.0f};
-		titleSize = MeasureTextEx(fontSDF,title->chars,40,0);
-		Vector2 titlePosition = {SCREEN_WIDTH/2.0f ,TOP_PADDING};
-		titlePosition.x = GetScreenWidth()/2 - titleSize.x/2;
-		ClearBackground(WHITE);
-		DrawLineEx(
-				(Vector2){100,70},
-				(Vector2){110,40},
-				3.0f,fgColor
-		);
-		DrawLineEx(
-				(Vector2){145,70},
-				(Vector2){155,40},
-				3.0f,fgColor
-		);
-		for(int l=0; l<LINES_COUNT;l++){
-			int yPos = LINE1_Y + l * LINE_HEIGHT;
-			DrawLineEx(
-					(Vector2){30,yPos},
-					(Vector2){930,yPos},
-					3.0f,fgColor
-			);
-		}
-		if(currentMode == NORMAL){
-			DrawRectangle(0,270,960,400,(Color) {0,0,0,230});
-			// if(currentMode == NORMAL){
-				if(!isChoosingDir && !isOpeningFile){
-					DrawTextEx(
-						fontSDF,"Press Something!",
-						(Vector2){
-							350,
-							LINE1_Y + LINE_HEIGHT * 4
-						},
-						32,0,WHITE
-					);
-					DrawTextEx(
-						fontSDF,"n : New note",
-						(Vector2){
-							LINE_X_POSITION * 3,
-							LINE1_Y + LINE_HEIGHT * 5
-						},
-						32,0,WHITE
-					);
-					DrawTextEx(
-						fontSDF,"o : Open a note",
-						(Vector2){
-							LINE_X_POSITION * 3,
-							LINE1_Y + LINE_HEIGHT * 6
-						},
-						32,0,WHITE
-					);
-					DrawTextEx(
-						fontSDF,"d : Select directory",
-						(Vector2){
-							LINE_X_POSITION * 3,
-							LINE1_Y + LINE_HEIGHT * 7
-						},
-						32,0,WHITE
-					);
-				} else if (isOpeningFile) {
+  SetTargetFPS(240);
+  SetConfigFlags(FLAG_MSAA_4X_HINT);
 
-				}
-				/* else {
-					int i;
-					for(i=0;i<100;i++){
-						if(dir[i]== '\0') break;
-						DrawTextCodepoint(
-							fontSDF,dir[i],
-							(Vector2){
-								FILES_X_POSITION + i * 14,
-								GetScreenHeight()/2 - 120
-							},
-							32,WHITE
-						);
-					}
-					DrawRectangle(
-						FILES_X_POSITION + i * 14,
-						GetScreenHeight()/2 - 120,
-						14,30,WHITE
-					);
-				} */
-			// }
-			// else {
-			if(isOpeningFile) {
+  printf("files count : %d\n",editor.filesCount);
+  while (!WindowShouldClose()) {
+    if (editor.mode != INSERT) {
+      SetExitKey(KEY_Q);
+    } else if (editor.mode == INSERT) {
+      SetExitKey(KEY_NULL);
+    }
+    handleKeys(&editor,editor.fileNames);
 
-			
-				if(isSearching){
-					if(searchQuery->length){
-						int i ;
-						for(i=0;i<searchQuery->length;i++){
-							DrawTextCodepoint(
-								fontSDF,searchQuery->chars[i],
-								(Vector2){
-									FILES_X_POSITION + i * 14,
-									GetScreenHeight()/2 - 255
-								},
-								32,WHITE
-							);
-						}
-						/* DrawTextCodepoint(
-							fontSDF,' ',
-							(Vector2){
-								FILES_X_POSITION + i * 14,
-								GetScreenHeight()/2 - 255
-							},
-							32,WHITE
-						); */
-						DrawRectangle(
-							FILES_X_POSITION + i * 14,
-							GetScreenHeight()/2 - 255,
-							14,30,WHITE
-						);
-					}
-					else {
-						DrawTextEx(
-						fontSDF,"Search...",
-						(Vector2){
-							FILES_X_POSITION,
-							GetScreenHeight()/2 - 253
-						},
-						28,0,(Color){255,255,255,180}
-					);
-					}
-				} else {
-					DrawTextEx(
-						fontSDF,"Press / to search",
-						(Vector2){
-							FILES_X_POSITION,
-							GetScreenHeight()/2 - 253
-						},
-						28,0,(Color){255,255,255,180}
-					);
-				}
-				for(int i=0;i<(isSearching ? numResults : filesCount);i++){
-					Vector2 nameSize = MeasureTextEx(fontSDF,fileNames[i]->chars,32,0);
-					titleSize = MeasureTextEx(fontSDF,title->chars,40,0);
-					if(i == currentFileIndex) {
-						DrawRectangle(
-							0,GetScreenHeight()/2 - 200 + (i * 40) - 5,960,
-							nameSize.y + 10, LIGHTGRAY
-						);
-					}
-					DrawTextEx(
-						fontSDF,
-						isSearching ? resultNames[i]->chars : fileNames[i]->chars,
-						(Vector2){
-							FILES_X_POSITION,
-							GetScreenHeight()/2 - 200 + (i * 40)
-						},
-						32,0,i == currentFileIndex ? BLACK : WHITE
-					);
-				}
-			// }
-		}
-		} else {
-			DrawTextEx(
-				fontSDF,day,
-				(Vector2) DAY_POSITION,32,0,BLACK
-			);
-			DrawTextEx(
-				fontSDF,month,
-				(Vector2) MONTH_POSITION,32,0,BLACK
-			);
-			DrawTextEx(
-				fontSDF,year,
-				(Vector2) YEAR_POSITION,32,0,BLACK
-			);
-			DrawTextEx(
-				fontSDF,
-				TextFormat("%d:%d",linesNum,currentLine->length),
-				(Vector2) {850,1025},32,0,BLACK
-			);
-			DrawTextEx(
-				fontSDF,
-				TextFormat("%d",title->length),
-				(Vector2) {450,1025},32,0,BLACK
-			);
-		}
-		DrawTextEx(
-			fontSDF,
-			currentMode == NORMAL ? "NORMAL" : "INSERT",
-			(Vector2) MODE_POSITION,
-			32,0,BLACK
-		);
-		for(int i=0;i<title->length;i++) {
-			if(title->chars[i] != '\n'){
-				DrawTextCodepoint(
-					fontSDF,
-					title->chars[i]
-					,(Vector2){
-						titlePosition.x + 20 * i,
-						titlePosition.y
-						}
-					,40,BLACK
-				);
-			}
-		}
-		int i;
-		for(i=0; i<linesNum;i++){
-			for(int j=0;j<note[i]->length;j++){
-				if(note[i]->chars[j] != '\n'){
-					DrawTextCodepoint(
-						fontSDF,
-						note[i]->chars[j],
-						(Vector2){
-							LINE_X_POSITION + j * 14,
-							LINE1_Y + 22  + (LINE_HEIGHT) * i
-						},
-						32,BLACK
-					);
-				}
-			}
-		}
-		DrawRectangle(
-			isInsertingTitle ? titlePosition.x + 20 * title->length :
-			LINE_X_POSITION + currentLine->length * 14 ,
-			isInsertingTitle ? titlePosition.y  :
-			LINE1_Y +22 + LINE_HEIGHT* (i-1) ,
-			isInsertingTitle ? 19 :14,isInsertingTitle ? 40 :30,BLACK
-		);
-		DrawFPS(10,10);
-		EndDrawing();
-	}
-	CloseWindow();
-	char savePath[100];
-	sprintf(savePath,"%s/.local/notes/%s",HOME_DIR,"myNote");
-	writeFile(savePath,day,month,year,title->chars,note,linesNum);
-	int i;
-	deleteLine(&title);
-	deleteLine(&firstLine);
-	for(i=1;i<linesNum;i++){
-		deleteLine(&note[i]);
-	}
-	for(i=0;i<filesCount;i++){
-		deleteLine(&fileNames[i]);
-	}
-	for(i=0;i<numResults;i++){
-		deleteLine(&resultNames[i]);
-	}
-	UnloadFontData(fontSDF.glyphs,fontSDF.glyphCount);
-	deleteLine(&searchQuery);
-	// UnloadTexture(fontSDF.texture);
-	return 0; 
+// drawing.
+
+    Vector2 titleSize = {0.0f, 0.0f};
+    titleSize = MeasureTextEx(fontSDF, editor.note.title->chars, 32, 0);
+    Vector2 titlePosition = {SCREEN_WIDTH / 2.0f, TOP_PADDING};
+    titlePosition.x = GetScreenWidth() / 2.0 - titleSize.x / 2;
+    ClearBackground(WHITE);
+    DrawLineEx((Vector2){100, 70}, (Vector2){110, 40}, 3.0f, fgColor);
+    DrawLineEx((Vector2){145, 70}, (Vector2){155, 40}, 3.0f, fgColor);
+    for (int l = 0; l < LINES_COUNT - 1; l++) {
+      int yPos = LINE1_Y + l * LINE_HEIGHT;
+      DrawLineEx((Vector2){30, yPos}, (Vector2){930, yPos}, 3.0f, fgColor);
+    }
+    DrawTextEx(fontSDF,
+      editor.mode == NORMAL ? "NORMAL" : "INSERT",
+      (Vector2)MODE_POSITION,
+      32, 0, BLACK);
+
+    //render title
+    for (int i = 0; i < editor.note.title->length; i++) {
+      if (editor.note.title->chars[i] != '\n') {
+        DrawTextCodepoint(fontSDF,
+          editor.note.title->chars[i],
+          (Vector2){titlePosition.x + 14 * i, titlePosition.y},
+          32, BLACK);
+      }
+    }
+    //cursor
+    if(editor.isTakingNote){
+      DrawRectangle(
+        // magic numbers
+        editor.cursor.col * (editor.cursor.row < 0 ? 7 : 14) 
+        + 50 + (editor.cursor.row < 0 ? 1 : 0) ,
+        editor.cursor.row < 0 ? TOP_PADDING : 
+        (editor.cursor.row - 1) * LINE_HEIGHT + LINE1_Y + 22,
+        editor.cursor.width, editor.cursor.height,
+        BLACK
+      );
+    }
+    //render lines
+    int i;
+    for (i = 0; i < editor.note.linesNum; i++) {
+      for (int j = 0; j < editor.note.body[i]->length; j++) {
+        if (editor.note.body[i]->chars[j] != '\n') {
+          DrawTextCodepoint(fontSDF,
+            editor.note.body[i]->chars[j],
+            (Vector2){LINE_X_POSITION + j * 14,
+            LINE1_Y + 22 + LINE_HEIGHT * (i - 1)},
+            32,
+            i == editor.cursor.row && j == editor.cursor.col ? WHITE : BLACK);
+        }
+      }
+    }
+
+    /* DrawRectangle(
+      editor.isInsertingTitle ? titlePosition.x + 20 * editor.title->length
+        : LINE_X_POSITION + editor.currentLine->length * 14,
+      editor.isInsertingTitle ? titlePosition.y
+        : LINE1_Y + 22 + LINE_HEIGHT * (i - 1),
+      editor.isInsertingTitle ? 19 : 14,
+      editor.isInsertingTitle ? 40 : 30,
+      BLACK); */
+
+    if(editor.isNamingFile) {
+      char placeholder[] = "File name";
+      Vector2 nameSize = {0.0f, 0.0f};
+      nameSize = MeasureTextEx(
+        fontSDF, 
+        editor.currentFileName->length> 0 ? editor.currentFileName->chars:
+        placeholder, 28, 0);
+      Vector2 namePosition = {SCREEN_WIDTH / 2.0f, 385};
+      namePosition.x = GetScreenWidth() / 2.0 - nameSize.x / 2;
+      DrawRectangle(0, 350, GetScreenWidth(), 100,(Color){0, 0, 0, 230});     
+      DrawTextEx(fontSDF,
+        editor.currentFileName->length > 0 ? editor.currentFileName->chars : 
+        placeholder, namePosition , 28, 0, (Color){255, 255, 255, 180});
+    }
+    if (editor.mode == NORMAL) {
+      // if (!editor.isChoosingDir && !editor.isOpeningFile) {
+      if(editor.isMenuOpen || editor.isOpeningFile){
+        DrawRectangle(0, 270, 960, 400, (Color){0, 0, 0, 230});
+      }
+      if (editor.isMenuOpen) {
+        DrawTextEx(fontSDF,
+          "Press Something!",
+          (Vector2){350, LINE1_Y + LINE_HEIGHT * 4},
+          32, 0, WHITE);
+        DrawTextEx(fontSDF,
+          "n : New note",
+          (Vector2){LINE_X_POSITION * 3, LINE1_Y + LINE_HEIGHT * 5},
+          32, 0, WHITE);
+        DrawTextEx(fontSDF,
+          "o : Open a note",
+          (Vector2){LINE_X_POSITION * 3, LINE1_Y + LINE_HEIGHT * 6},
+          32, 0, WHITE);
+        DrawTextEx(fontSDF,
+          "d : Select directory",
+          (Vector2){LINE_X_POSITION * 3, LINE1_Y + LINE_HEIGHT * 7},
+          32, 0, WHITE);
+      } else if (editor.isOpeningFile) {
+      }
+      /* else {
+              int i;
+              for(i=0;i<100;i++){
+                      if(dir[i]== '\0') break;
+                      DrawTextCodepoint(
+                              fontSDF,dir[i],
+                              (Vector2){
+                                      FILES_X_POSITION + i * 14,
+                                      GetScreenHeight()/2 - 120
+                              },
+                              32,WHITE
+                      );
+              }
+              DrawRectangle(
+                      FILES_X_POSITION + i * 14,
+                      GetScreenHeight()/2 - 120,
+                      14,30,WHITE
+              );
+      } */
+      // }
+      // else {
+      if (editor.isOpeningFile) {
+        if (editor.isSearching) {
+          if (editor.searchQuery->length) {
+            int i;
+            for (i = 0; i < editor.searchQuery->length; i++) {
+              DrawTextCodepoint(fontSDF,
+                editor.searchQuery->chars[i],
+                (Vector2){FILES_X_POSITION + i * 14,
+                   GetScreenHeight() / 2.0 - 255},
+                32, WHITE);
+            }
+            /* DrawTextCodepoint(
+                    fontSDF,' ',
+                    (Vector2){
+                            FILES_X_POSITION + i * 14,
+                            GetScreenHeight()/2 - 255
+                    },
+                    32,WHITE
+            ); */
+            DrawRectangle(FILES_X_POSITION + i * 14,
+              GetScreenHeight() / 2 - 255,
+              14, 30, WHITE);
+          } else {
+            DrawTextEx(fontSDF,
+              "Search...",
+              (Vector2){FILES_X_POSITION, GetScreenHeight() / 2 - 253},
+              28, 0, (Color){255, 255, 255, 180});
+          }
+        } else {
+          DrawTextEx(fontSDF,
+            "Press / to search",
+            (Vector2){FILES_X_POSITION, GetScreenHeight() / 2 - 253},
+            28, 0, (Color){255, 255, 255, 180});
+        }
+        for (
+            int i = 0;
+            i < (editor.isSearching ? editor.numResults : MAX_DISPLAYED_FILES);
+            i++) 
+        {
+          Vector2 nameSize = MeasureTextEx(fontSDF, editor.displayedNames[i]->chars, 32, 0);
+          // titleSize = MeasureTextEx(fontSDF, editor.title->chars, 40, 0);
+          if (i == editor.currentFileIndex) {
+            DrawRectangle(0,
+              GetScreenHeight() / 2 - 200 + (i * 40) - 5,
+              960, nameSize.y + 10, LIGHTGRAY);
+          }
+
+          DrawTextEx(fontSDF,
+           editor.isSearching ? editor.resultNames[i]->chars : 
+           editor.displayedNames[i]->chars,
+           (Vector2){FILES_X_POSITION,
+             GetScreenHeight() / 2 - 200 + (i * 40)},
+           32, 0,
+           i == editor.currentFileIndex ? BLACK : WHITE);
+        }
+      }
+    } 
+      DrawTextEx(fontSDF, editor.note.date.day, (Vector2)DAY_POSITION, 32, 0, BLACK);
+      DrawTextEx(fontSDF, editor.note.date.month, (Vector2)MONTH_POSITION, 32, 0, BLACK);
+      DrawTextEx(fontSDF, editor.note.date.year, (Vector2)YEAR_POSITION, 32, 0, BLACK);
+
+      DrawTextEx(fontSDF,
+        TextFormat("%02d:%02d", editor.note.linesNum, editor.currentLine->length),
+        (Vector2){850, 1025},
+        32, 0, BLACK);
+
+      DrawTextEx(fontSDF,
+        "1/1",
+        (Vector2){450, 1025},
+        32, 0, BLACK);
+
+    // debugging 
+    if(editor.isDebugging) {
+      DrawRectangle(0,SCREEN_HEIGHT - 600, 400,600, BLACK);
+      DrawTextEx(fontSDF,
+        TextFormat("%-17s [%d]","isInsertingTitle",editor.isInsertingTitle),
+        (Vector2){20, SCREEN_HEIGHT - 570},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%-17s [%d]", "isTakingNote",editor.isTakingNote),
+        (Vector2){20, SCREEN_HEIGHT - 540},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%-17s [%d]", "isMenuOpen",editor.isMenuOpen),
+        (Vector2){20, SCREEN_HEIGHT - 510},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%-17s [%d]", "isOpeningFile",editor.isOpeningFile),
+        (Vector2){20, SCREEN_HEIGHT - 480},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%-17s [%d]", "isSearching",editor.isSearching),
+        (Vector2){20, SCREEN_HEIGHT - 450},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%-17s [%d]", "isNamingFile",editor.isNamingFile),
+        (Vector2){20, SCREEN_HEIGHT - 420},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%-17s [%d]", "isChoosingDir",editor.isChoosingDir),
+        (Vector2){20, SCREEN_HEIGHT - 390},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%s (%d,%d)", "cursor",
+          editor.cursor.col,editor.cursor.row),
+        (Vector2){20, SCREEN_HEIGHT - 360},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%-17s [%d]", "last col",editor.cursor.last_col),
+        (Vector2){20, SCREEN_HEIGHT - 330},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%-16s [%03d]", "line length",editor.currentLine->length),
+        (Vector2){20, SCREEN_HEIGHT - 300},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%-16s [%03d]", "lines count",editor.note.linesNum),
+        (Vector2){20, SCREEN_HEIGHT - 270},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%s: [%s]", "file name",editor.currentFileName->chars),
+        (Vector2){20, SCREEN_HEIGHT - 240},
+        32, 0, GREEN);
+      DrawTextEx(fontSDF,
+        TextFormat("%s: [%s]", "message",editor.message->chars),
+        (Vector2){20, SCREEN_HEIGHT - 210},
+        32, 0, GREEN);
+    }
+    DrawTextEx(fontSDF,
+      TextFormat("%s",editor.message->chars),
+      (Vector2){20, SCREEN_HEIGHT - 60},
+      32, 0, BLACK);
+
+    EndDrawing();
+  }
+  CloseWindow();
+  int i;
+  deleteLine(&editor.note.title);
+  deleteLine(&firstLine);
+  for (i = 1; i < editor.note.linesNum; i++) {
+    deleteLine(&editor.note.body[i]);
+  }
+  for (i = 0; i < editor.filesCount; i++) {
+    deleteLine(&editor.fileNames[i]);
+  }
+  for (i = 0; i < editor.numResults; i++) {
+    deleteLine(&editor.resultNames[i]);
+  }
+  UnloadFontData(fontSDF.glyphs, fontSDF.glyphCount);
+  deleteLine(&editor.searchQuery);
+  // UnloadTexture(fontSDF.texture);
+  return 0;
 }
