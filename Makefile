@@ -23,7 +23,8 @@ $(OUT): $(SRC)
 	$(CC) -o $(OUT) $(SRC) $(Flags) 
 
 debug : $(SRC)
-	$(CC) -o $(OUT) $(SRC) $(Flags) $(Debug)
+	# $(CC) -o $(OUT) $(SRC) $(Flags) $(Debug)
+	$(CC) -o $(OUT) $(SRC) $(Flags) -g
 		
 fonts : 
 	mkdir -p $(FontsDir)
