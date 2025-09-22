@@ -175,6 +175,10 @@ int main() {
         y_offset++;
         x_offset = 0;
       }
+      if (editor.note->body[i] == '\n'){
+        y_offset++;
+        x_offset = -1;
+      }
       //cursor
       if(editor.cursor.index == i) {
         DrawRectangle(
@@ -199,11 +203,8 @@ int main() {
           LINE1_Y - TEXT_HEIGHT + (LINE_HEIGHT * y_offset)},
           32,
           editor.cursor.index == i ? RED : BLACK);
-      } else {
-        y_offset++;
-        x_offset = -1;
+        } 
       }
-    }
 
     if (editor.mode == NORMAL) {
       // if (!editor.isChoosingDir && !editor.isOpeningFile) {
