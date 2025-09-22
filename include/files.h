@@ -10,7 +10,7 @@ void refreshDiplayedFiles(Editor* e);
 
 void getDirContent(
   Editor* e,
-	Line* files[],
+	char* files[],
 	int* count,
 	const char* path
 );
@@ -27,10 +27,10 @@ void writeFile(Editor* e);
 void readNote(Editor* e, char* path);
 
 void find(
-	Line* fileNames[],
+	char* fileNames[],
 	int numFiles,
-	Line* query,
-	Line* resultFiles[],
+	char* query,
+	char* resultFiles[],
 	int* numResult
 );
 #endif

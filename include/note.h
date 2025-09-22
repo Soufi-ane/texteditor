@@ -4,7 +4,7 @@
 
 #define MAX_FILES_NUM       100
 #define LINES_COUNT         20
-#define LINE_LENGTH         100
+#define LINE_LENGTH         62
 #define TITLE_LENGTH        40
 #define FILE_NAME_LENGTH    50
 #define MAX_DISPLAYED_FILES 8
@@ -26,13 +26,6 @@ typedef enum {
   ERROR,
 } ErrorType ;
 
-
-typedef struct {
-	char* chars;
-	int length;
-	int size;
-} Line;
-
 typedef struct {
   char year[5];
   char month[3];
@@ -40,6 +33,7 @@ typedef struct {
 } Date;
 
 typedef struct {
+  int index;
   int col;
   int last_col;
   int row;
@@ -49,23 +43,25 @@ typedef struct {
 
 typedef struct {
   int linesNum;
-  Line *title;
+  char* title;
   Date date;
-  Line *body[LINES_COUNT - 1];
+  char* body;
+  int length;
+  int size;
 } Note;
 
 typedef struct {
   Mode mode;
-  Note note;
+  Note* note;
   const char* HOME_DIR;
   Cursor cursor;
-  Line* message;
-  Line* currentFileName;
-  Line* fileNames[MAX_FILES_NUM];
-  Line* displayedNames[MAX_DISPLAYED_FILES];
-  Line* searchQuery;
-  Line* resultNames[MAX_FILES_NUM];
-  Line* currentLine;
+  char* message;
+  char* currentFileName;
+  char* fileNames[MAX_FILES_NUM];
+  char* displayedNames[MAX_DISPLAYED_FILES];
+  char* searchQuery;
+  char* resultNames[MAX_FILES_NUM];
+  char* currentchar;
   bool isChoosingDir;
   bool isOpeningFile;
   bool isDebugging;
@@ -80,29 +76,26 @@ typedef struct {
   int currentFileIndex;
 } Editor;
 
-Line* createLine(int n);
-void deleteLine(Line** line);
+int get_position(Editor* e);
 
-void emptyLine(Line* line);
+void move_index_down(Editor* e);
 
-void addChar(
-  Editor* e,
-	Line* line,
-	char c
-);
+int get_line_length(Editor* e,int start);
 
-void addLine(
-  Editor* e,
-	Line* line,
-	char* text
-);
+char* createchar(int n);
 
-void remove_char(Editor* e,Line* line);
+void deletechar(char** line);
 
-void handleKeys(
-  Editor* editor,
-  Line *fileNames[MAX_FILES_NUM]
-);
+void emptychar(char* line);
 
+void addChar(Editor* e, char c);
+
+void addchar(Editor* e, char* line, char* text);
+
+void remove_char(Editor* e);
+
+void handleKeys(Editor* editor, char *fileNames[MAX_FILES_NUM]);
+
+void add_char_to_note_body(Editor* e,char c);
 
 #endif
