@@ -8,17 +8,29 @@ Install from source
 - [Raylib](https://github.com/raysan5/raylib)
 - build-essential
 
-### clone and install.
+### Clone and Install.
 
     git clone https://github.com/Soufi-ane/note.git
     cd note
-    sudo make install
+    make install
+
+### Run
+    note
 
 --------------------
-## Key Mapping (NORMAL)
+### Key Mapping (INSERT)
 
 | **Key**                 | **Action**                                         |
 |:-----------------------:|----------------------------------------------------|
+| `Esc` / `CapsLock`      | Go to `NORMAL` mode                                |           
+
+
+--------------------
+### Key Mapping (NORMAL)
+
+| **Key**                 | **Action**                                         |
+|:-----------------------:|----------------------------------------------------|
+| `q`                     | Quit
 | `o`                     | Open a note                                        |
 | `n`                     | Create a new note                                  |
 | `Esc` / `CapsLock`      | Go to `NORMAL` mode                                |           
