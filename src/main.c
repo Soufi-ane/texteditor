@@ -31,9 +31,9 @@ Editor editor = {
   .currentFileIndex = 0,
   .cursor = {
     .index = 0,
-    .col = 61,
+    .col = 0,
     .last_col = 0,
-    .row = -1,
+    .row = 0,
     .width = 15,
     .height = 35,
   },
@@ -89,9 +89,6 @@ int main() {
       SetExitKey(KEY_NULL);
     }
     handleKeys(&editor,editor.fileNames);
-
-    // printf("buffer size : %zu, length : %d\n",editor.note->size,editor.note->length);
-
 
     // drawing.
     Vector2 titleSize = {0.0f, 0.0f};
@@ -176,8 +173,13 @@ int main() {
         x_offset = 0;
       }
       if (editor.note->body[i] == '\n'){
-        y_offset++;
-        x_offset = -1;
+        DrawTextCodepoint(fontSDF,
+          '~',
+          (Vector2){LINE_X_POSITION + 14 * x_offset,
+          LINE1_Y - TEXT_HEIGHT + (LINE_HEIGHT * y_offset)},
+          32, editor.cursor.index == i ? RED : BLACK);
+          y_offset++;
+          x_offset = -1;
       }
       //cursor
       if(editor.cursor.index == i) {
@@ -188,6 +190,7 @@ int main() {
           BLACK
         );
       }
+      // cursor for insert mode 
       if(editor.mode == INSERT && editor.cursor.index == i+1) {
         DrawRectangle(
           LINE_X_POSITION + 14 * (x_offset + 1) ,
@@ -203,7 +206,7 @@ int main() {
           LINE1_Y - TEXT_HEIGHT + (LINE_HEIGHT * y_offset)},
           32,
           editor.cursor.index == i ? RED : BLACK);
-        } 
+        }
       }
 
     if (editor.mode == NORMAL) {
