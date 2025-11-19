@@ -461,6 +461,7 @@ void handle_enter(Editor* e){
     } else {
       if (e->cursor.row < LINES_COUNT - 2) {
         add_char_to_note_body(e,'\n');
+        e->cursor.col = 0;
       }
     }
   }
