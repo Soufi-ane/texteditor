@@ -54,11 +54,6 @@ void writeFile(Editor* e){
 	fprintf(file,"-");
 	fprintf(file,e->note->date.year);
 	fprintf(file,"\ntitle: ");
-  /* if(e->note->title->length){
-    fprintf(file,e->note->title);
-  } else {
-    fprintf(file,"untitled");
-  } */
   fprintf(file,"----------------\n\n");
   e->note->body[e->note->length] = '\0';
   printf("[[%.*s]]\n",e->note->length,e->note->body);
@@ -142,7 +137,6 @@ void loadFontSDF(
 	font->texture = LoadTextureFromImage(atlas);
 	UnloadImage(atlas);
 	UnloadFileData(fontFile) ;
-	// LoadShader(0,TextFormat("resources/shaders/glsl330/sdf.fs",GLSL_VERSION));
 	SetTextureFilter(font->texture,TEXTURE_FILTER_BILINEAR);
 }
 

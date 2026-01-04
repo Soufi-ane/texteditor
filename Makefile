@@ -11,13 +11,12 @@ OUT = build/note
 
 all: $(OUT)
 
-run : $(OUT)
+run : clean $(OUT)
 	./$(OUT)
 
 install: $(OUT) fonts 
 	mkdir -p $(InstallDir)
 	cp $(OUT) $(InstallDir)
-	fc-cache -fv
 
 $(OUT): $(SRC)
 	$(CC) -o $(OUT) $(SRC) $(Flags) 

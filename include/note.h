@@ -98,4 +98,5 @@ void handleKeys(Editor* editor, char *fileNames[MAX_FILES_NUM]);
 
 void add_char_to_note_body(Editor* e,char c);
 
+void getLocalDate(Date* d);
 #endif
