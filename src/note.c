@@ -20,18 +20,22 @@ int get_lines_count(Note* note){
 }
 
 int get_current_line_index(Editor* e){
-  int index = 0;
-  for(int i=e->cursor.index; i > 0; i--){
+  int i,index = 0;
+  for(i=e->cursor.index - 1;i > 0 ;i--){
     if(e->note->body[i] == '\n') index++; 
   }
   return index ;
 }
 
 void update_cursor_position(Editor* e){
+  static int calls =0;
+  printf(" %d - update_cursor_position();\n",++calls);
   int i; // index of the start of the line;
   for(i = e->cursor.index; (i>0 && e->note->body[i-1] != '\n'); i--);
   e->cursor.col = (e->cursor.index - i) % 62;
+  // printf("current linne index : %d\n", get_current_line_index(e));
   e->cursor.row = get_current_line_index(e);
+  printf("new cursor (%d,%d)\n",e->cursor.row,e->cursor.col);
 }
   
 void update_last_col(Editor* e){ e->cursor.last_col = e->cursor.col; }
@@ -67,12 +71,18 @@ void move_index_right(Editor* e) {
 void move_index_down(Editor* e){
   if(get_current_line_index(e) < get_lines_count(e->note) - 1){
     int current_line_len = get_line_length(e,-1);
-    int rest_of_chars_in_line = current_line_len - e->cursor.col - 1;
-    int next_line_len = get_line_length(e,e->cursor.index + rest_of_chars_in_line + 2);
+    int chars_left = current_line_len - e->cursor.col - 1;
+    chars_left = chars_left < 0 ? 0 : chars_left;
+    int next_line_len = get_line_length(e,e->cursor.index + chars_left + 1);
+    printf("current_line_len : %d\n",current_line_len);
+    printf("next_line_len : %d\n",next_line_len);
+    printf("chars_left : %d\n",chars_left);
     if(next_line_len > e->cursor.last_col){
-      e->cursor.index += rest_of_chars_in_line + e->cursor.last_col + 1;
+      printf("here\n");
+      e->cursor.index += chars_left + e->cursor.last_col + 1;
     } else {
-      e->cursor.index += rest_of_chars_in_line + next_line_len - 1;
+      printf("--here\n");
+      e->cursor.index += next_line_len + chars_left + 1;
     }
     if(e->cursor.index < 0) e->cursor.index = 0;
     update_cursor_position(e);
@@ -82,11 +92,17 @@ void move_index_down(Editor* e){
 void move_index_up(Editor* e){
   int line_index = get_current_line_index(e);
   if(line_index > 0){
-    int prev_line_len = get_line_length(e,e->cursor.index - e->cursor.col - 1 /* don't change*/);
+    int prev_line_len = get_line_length(e,e->cursor.index - e->cursor.col - 2 /* don't change*/);
+    printf("prev_line_len: %d\n",prev_line_len);
     if(prev_line_len - 1 > e->cursor.last_col){
       e->cursor.index -= e->cursor.col + prev_line_len - e->cursor.last_col;
+      printf("- %d  ",e->cursor.col + prev_line_len - e->cursor.last_col);
+      printf("(%c)\n",e->note->body[e->cursor.index]);
     } else {
+      printf("here\n");
       e->cursor.index -= e->cursor.col + (prev_line_len ? 2 : 1);
+      printf("- %d  ",e->cursor.col + (prev_line_len ? 2 : 1));
+      printf("(%c)\n",e->note->body[e->cursor.index]);
     }
     if(e->cursor.index < 0) e->cursor.index = 0;
     update_cursor_position(e);

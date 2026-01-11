@@ -114,10 +114,10 @@ int main() {
         x_offset = 0;
       }
       if (editor.note->body[i] == '\n'){
-        DrawTextCodepoint(fontSDF, '~',
+        /* DrawTextCodepoint(fontSDF, '~',
           (Vector2){LINE_X_POSITION + 14 * x_offset,
           LINE1_Y - TEXT_HEIGHT + (LINE_HEIGHT * y_offset)},
-          32, editor.cursor.index == i ? RED : BLACK);
+          32, editor.cursor.index == i ? RED : BLACK); */
 
           y_offset++;
           x_offset = 0;
@@ -125,8 +125,8 @@ int main() {
       // cursor
       if(editor.cursor.index == i) {
         DrawRectangle(
-          LINE_X_POSITION + 14 * x_offset ,
-          LINE1_Y - TEXT_HEIGHT + (LINE_HEIGHT * y_offset),
+          LINE_X_POSITION + 14 * editor.cursor.col,
+          LINE1_Y - TEXT_HEIGHT + (LINE_HEIGHT * editor.cursor.row),
           editor.cursor.width, editor.cursor.height,
           BLACK
         );
