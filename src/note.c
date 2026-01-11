@@ -158,7 +158,7 @@ void move_to_beginning_of_line(Editor* e) {
 
 void move_to_end_of_line(Editor* e) {
   int len = get_line_length(e,-1);
-  e->cursor.index += len - e->cursor.col - 1;
+  e->cursor.index += len - e->cursor.col - (len > 1 ? 2 : 1) ;
   update_last_col(e);
   update_cursor_position(e);
 }
