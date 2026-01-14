@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "draw.h"
 
 Editor editor = {
   .mode = NORMAL,
@@ -20,7 +21,6 @@ char dir[100];
 int main() {
   Note newNote = {
     .linesNum = 1,
-    .length = 0,
   };
   editor.note = &newNote;
   editor.currentFileName = malloc(sizeof(char) * FILE_NAME_LENGTH);
@@ -33,7 +33,7 @@ int main() {
   sprintf(dir, "%s/.local/notes", editor.HOME_DIR);
   getDirContent(&editor,editor.fileNames, &editor.filesCount, dir);
   getLocalDate(&editor.note->date);
-  editor.note->title =  malloc(sizeof(char) * TITLE_LENGTH);
+  editor.note->title =  malloc(sizeof(char) * TITLE_SIZE);
   editor.note->title[0] = '\0';
   editor.note->body = malloc(sizeof(char) * 100);
   editor.note->size = 100;
@@ -82,6 +82,9 @@ int main() {
     //render title
     for (int i = 0; i < strlen(editor.note->title); i++) {
       if (editor.note->title[i] != '\n') {
+        if(i == editor.cursor.index - 1 && editor.isInsertingTitle){ 
+          DrawCursor(&editor, titlePosition.x + 14 * editor.cursor.col, titlePosition.y);
+        }
         DrawTextCodepoint(fontSDF,
           editor.note->title[i],
           (Vector2){titlePosition.x + 14 * i, titlePosition.y},
@@ -107,7 +110,7 @@ int main() {
     //render body
     int y_offset = 0;
     int i,x_offset;
-    for (i = 0,x_offset=0; i <= editor.note->length; i++) {
+    for (i = editor.note->displayStart,x_offset=0; i <= editor.note->length && y_offset < LINES_COUNT -1; i++) {
       // todo: line wrap
       if(x_offset >= 62) {
         y_offset++;
@@ -123,12 +126,11 @@ int main() {
           x_offset = 0;
       }
       // cursor
-      if(editor.cursor.index == i) {
-        DrawRectangle(
+      if(editor.cursor.index == i && editor.isTakingNote) {
+        DrawCursor(
+          &editor,
           LINE_X_POSITION + 14 * editor.cursor.col,
-          LINE1_Y - TEXT_HEIGHT + (LINE_HEIGHT * editor.cursor.row),
-          editor.cursor.width, editor.cursor.height,
-          BLACK
+          LINE1_Y - TEXT_HEIGHT + (LINE_HEIGHT * editor.cursor.row)
         );
       }
       if (editor.note->body[i] != '\n' && i != editor.note->length) {
@@ -137,7 +139,7 @@ int main() {
           (Vector2){LINE_X_POSITION + 14 * x_offset,
           LINE1_Y - TEXT_HEIGHT + (LINE_HEIGHT * y_offset)},
           32,
-          editor.cursor.index == i ? RED : BLACK);
+          editor.cursor.index == i && editor.isTakingNote ? RED : BLACK);
         x_offset++;
         }
       }
@@ -211,7 +213,7 @@ int main() {
            (Vector2){FILES_X_POSITION,
              GetScreenHeight() / 2 - 200 + (i * 40)},
            32, 0,
-           i == editor.currentFileIndex ? BLACK : WHITE);
+           i + editor.displayedFilesStart  == editor.currentFileIndex ? BLACK : WHITE);
         }
       }
     } 
@@ -226,68 +228,68 @@ int main() {
 
     // debugging 
     if(editor.isDebugging) {
-      DrawRectangle(0,SCREEN_HEIGHT - 600, 400,600, BLACK);
+      DrawRectangle(170,SCREEN_HEIGHT - 600, 400,600, BLACK);
       DrawTextEx(fontSDF,
         TextFormat("%-17s [%d]","isInsertingTitle",editor.isInsertingTitle),
-        (Vector2){20, SCREEN_HEIGHT - 570},
+        (Vector2){200, SCREEN_HEIGHT - 570},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("%-17s [%d]", "isTakingNote",editor.isTakingNote),
-        (Vector2){20, SCREEN_HEIGHT - 540},
+        (Vector2){200, SCREEN_HEIGHT - 540},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("%-17s [%d]", "isMenuOpen",editor.isMenuOpen),
-        (Vector2){20, SCREEN_HEIGHT - 510},
+        (Vector2){200, SCREEN_HEIGHT - 510},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("%-17s [%d]", "isOpeningFile",editor.isOpeningFile),
-        (Vector2){20, SCREEN_HEIGHT - 480},
+        (Vector2){200, SCREEN_HEIGHT - 480},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("%-17s [%d]", "isSearching",editor.isSearching),
-        (Vector2){20, SCREEN_HEIGHT - 450},
+        (Vector2){200, SCREEN_HEIGHT - 450},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("%-17s [%d]", "isNamingFile",editor.isNamingFile),
-        (Vector2){20, SCREEN_HEIGHT - 420},
+        (Vector2){200, SCREEN_HEIGHT - 420},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
-        TextFormat("%-17s [%d]", "isChoosingDir",editor.isChoosingDir),
-        (Vector2){20, SCREEN_HEIGHT - 390},
+        TextFormat("%-17s [%d]", "displayStart",editor.note->displayStart),
+        (Vector2){200, SCREEN_HEIGHT - 390},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("%s (%d,%d)", "cursor",
           editor.cursor.col,editor.cursor.row),
-        (Vector2){20, SCREEN_HEIGHT - 360},
+        (Vector2){200, SCREEN_HEIGHT - 360},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("%-16s [%03d]", "last_col",editor.cursor.last_col),
-        (Vector2){20, SCREEN_HEIGHT - 300},
+        (Vector2){200, SCREEN_HEIGHT - 300},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("%-17s [%d]", "index",editor.cursor.index),
-        (Vector2){20, SCREEN_HEIGHT - 330},
+        (Vector2){200, SCREEN_HEIGHT - 330},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("%-16s [%03d]", "lines count",editor.note->linesNum),
-        (Vector2){20, SCREEN_HEIGHT - 270},
+        (Vector2){200, SCREEN_HEIGHT - 270},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("%s: [%s]", "file name",editor.currentFileName),
-        (Vector2){20, SCREEN_HEIGHT - 240},
+        (Vector2){200, SCREEN_HEIGHT - 240},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("%s: [%s]", "message",editor.message),
-        (Vector2){20, SCREEN_HEIGHT - 210},
+        (Vector2){200, SCREEN_HEIGHT - 210},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
         TextFormat("note length [%d]",editor.note->length),
-        (Vector2){20, SCREEN_HEIGHT - 180},
+        (Vector2){200, SCREEN_HEIGHT - 180},
         32, 0, GREEN);
     }
     DrawTextEx(fontSDF,
       TextFormat("%s",editor.message),
-      (Vector2){20, SCREEN_HEIGHT - 60},
+      (Vector2){200, SCREEN_HEIGHT - 60},
       32, 0, BLACK);
 
     EndDrawing();

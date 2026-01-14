@@ -5,7 +5,7 @@
 #define MAX_FILES_NUM       100
 #define LINES_COUNT         20
 #define LINE_LENGTH         62
-#define TITLE_LENGTH        40
+#define TITLE_SIZE          40
 #define FILE_NAME_LENGTH    50
 #define MAX_DISPLAYED_FILES 8
 #define TAB_SIZE 2
@@ -48,6 +48,7 @@ typedef struct {
   char* body;
   int length;
   int size;
+  int displayStart; 
 } Note;
 
 typedef struct {
@@ -70,6 +71,7 @@ typedef struct {
   bool isNamingFile;
   bool isMenuOpen;
   bool isInsertingTitle;
+  bool isNoteBookMode;
   int displayedFilesStart;
   int filesCount;
   int numResults;
@@ -99,4 +101,8 @@ void handleKeys(Editor* editor, char *fileNames[MAX_FILES_NUM]);
 void add_char_to_note_body(Editor* e,char c);
 
 void getLocalDate(Date* d);
+
+void update_cursor_position(Editor* e);
+
+int get_first_diplayed_index(Editor* e,bool isUp);
 #endif

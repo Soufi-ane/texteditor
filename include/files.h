@@ -26,6 +26,8 @@ void writeFile(Editor* e);
 
 void readNote(Editor* e, char* path);
 
+void readFile(Editor* e, char* path);
+
 void find(
 	char* fileNames[],
 	int numFiles,

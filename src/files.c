@@ -33,28 +33,25 @@ void getDirContent(Editor* e,char* files[],int* count,const char* path){
 void writeFile(Editor* e){
   char savePath[100];
   char date_str[11];
-  snprintf(
-    date_str,sizeof(date_str),"%s-%s-%s",
-    e->note->date.day,
-    e->note->date.month,
-    e->note->date.year
-  );
-  sprintf(
-    savePath,
-    "%s/.local/notes/%s", 
-    e->HOME_DIR, 
-    strlen(e->currentFileName) > 1 ? e->currentFileName : date_str);
+
+  snprintf(date_str,sizeof(date_str),"%s-%s-%s", e->note->date.day,
+  e->note->date.month, e->note->date.year);
+
+  sprintf( savePath, "%s/.local/notes/%s", e->HOME_DIR,
+  strlen(e->currentFileName) > 1 ? e->currentFileName : date_str);
+
 	FILE* file = fopen(savePath,"w");
   printf("saving file %s ...\n",savePath);
-	fprintf(file,"----------------\n");
-	fprintf(file,"date: ");
-	fprintf(file,e->note->date.day);
-	fprintf(file,"-");
-	fprintf(file,e->note->date.month);
-	fprintf(file,"-");
-	fprintf(file,e->note->date.year);
-	fprintf(file,"\ntitle: ");
-  fprintf(file,"----------------\n\n");
+
+  if(e->isNoteBookMode){
+    fprintf(file,"----------------\n");
+    fprintf(file,"date: ");
+    fprintf(file,"%s-%s-%s\n",e->note->date.day,e->note->date.month,e->note->date.year);
+    fprintf(file,"title: ");
+    if(!strlen(e->note->title)) fprintf(file,"Untitled\n");
+    else fprintf(file,"%s\n",e->note->title);
+    fprintf(file,"----------------\n\n");
+  }
   e->note->body[e->note->length] = '\0';
   printf("[[%.*s]]\n",e->note->length,e->note->body);
   fprintf(file,"%s",e->note->body);
@@ -62,6 +59,34 @@ void writeFile(Editor* e){
   sprintf(msg,"File saved: %s",e->currentFileName);
   memcpy(e->message,msg,strlen(msg));
 	fclose(file);
+}
+
+void readFile(Editor* e, char* path){
+	FILE* f = fopen(path,"r");
+  if(!f) {
+    printf("Coudn't open the file %s path\n");
+    exit(1);
+  } 
+  printf("Reading %s\n",path);
+  char* line = NULL;
+  size_t read;
+  size_t len;
+  e->note->body = malloc(100);
+  e->note->size = 100;
+  int i;
+	while((read = getline(&line,&len,f)) != -1){
+    if(e->note->length + read > e->note->size - 1){
+      int new_size = read + e->note->length + LINE_LENGTH;
+      e->note->body = realloc(e->note->body,new_size);
+      e->note->size = new_size;
+    }
+    for(i = 0; i < read;i++) {
+      if(line[i] == '\n') e->note->linesNum++;
+      e->note->body[i] = line[i++];
+    }
+	}
+  e->note->length = i;
+  printf("total size : %d\n",e->note->length);
 }
 
 void readNote(Editor* e, char* path){

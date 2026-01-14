@@ -10,6 +10,29 @@
 
 double longPressTime = 0.0f;
 
+void add_char_to_line(Editor* e,char* line,int size,char c){
+  size_t len = strlen(line);
+  if(len > size -1 || !size || c == '\n' || e->cursor.index > len || e->cursor.index < 0) return;
+  if(e->cursor.index == len){
+    line[len] = c;
+  }else {
+    int i;
+    for(i=len; i > e->cursor.index; i--) line[i] = line[i-1];
+    line[i] = c; 
+  }
+  line[len+1] = '\0';
+  e->cursor.index++;
+  update_cursor_position(e);
+}
+
+void pop_char_from_line(Editor* e,char* line){
+  size_t len = strlen(line);
+  if(!len) return;
+  line[len-1] = '\0';
+  e->cursor.index--;
+  update_cursor_position(e);
+}
+
 int get_lines_count(Note* note){
   if(!note->length) return 0;
   int count = 1;
@@ -19,9 +42,10 @@ int get_lines_count(Note* note){
   return count;
 }
 
-int get_current_line_index(Editor* e){
+int get_line_index(Editor* e,int start){
   int i,index = 0;
-  for(i=e->cursor.index - 1;i > 0 ;i--){
+  int start_index = start > -1 ? start : e->cursor.index;
+  for(i=start_index - 1;i > 0 ;i--){
     if(e->note->body[i] == '\n') index++; 
   }
   return index ;
@@ -29,13 +53,15 @@ int get_current_line_index(Editor* e){
 
 void update_cursor_position(Editor* e){
   static int calls =0;
-  printf(" %d - update_cursor_position();\n",++calls);
   int i; // index of the start of the line;
   for(i = e->cursor.index; (i>0 && e->note->body[i-1] != '\n'); i--);
   e->cursor.col = (e->cursor.index - i) % 62;
-  // printf("current linne index : %d\n", get_current_line_index(e));
-  e->cursor.row = get_current_line_index(e);
-  printf("new cursor (%d,%d)\n",e->cursor.row,e->cursor.col);
+  int line_index = get_line_index(e,-1); 
+    
+  int num_hidden_lines = line_index + 2 - LINES_COUNT;
+  int index_start = get_line_index(e,e->note->displayStart) ;
+  if(num_hidden_lines < 0) num_hidden_lines = 0;
+  e->cursor.row = line_index - index_start;
 }
   
 void update_last_col(Editor* e){ e->cursor.last_col = e->cursor.col; }
@@ -52,6 +78,12 @@ void handle_caps_lock_and_escape(Editor* e){
   e->isMenuOpen = false;
   e->isNamingFile = false;
   e->isOpeningFile = false;
+  if(e->isInsertingTitle){
+    e->isTakingNote = true;
+    e->cursor.index = 0;
+    e->isInsertingTitle = false;
+    update_cursor_position(e);
+  }
   if(e->mode == INSERT){
     e->mode = NORMAL;
     if(e->note->body[e->cursor.index - 1] != '\n') {
@@ -69,42 +101,33 @@ void move_index_right(Editor* e) {
 }
 
 void move_index_down(Editor* e){
-  if(get_current_line_index(e) < get_lines_count(e->note) - 1){
+  if(get_line_index(e,-1) < get_lines_count(e->note) - 1){
     int current_line_len = get_line_length(e,-1);
     int chars_left = current_line_len - e->cursor.col - 1;
     chars_left = chars_left < 0 ? 0 : chars_left;
     int next_line_len = get_line_length(e,e->cursor.index + chars_left + 1);
-    printf("current_line_len : %d\n",current_line_len);
-    printf("next_line_len : %d\n",next_line_len);
-    printf("chars_left : %d\n",chars_left);
     if(next_line_len > e->cursor.last_col){
-      printf("here\n");
       e->cursor.index += chars_left + e->cursor.last_col + 1;
     } else {
-      printf("--here\n");
       e->cursor.index += next_line_len + chars_left + 1;
     }
     if(e->cursor.index < 0) e->cursor.index = 0;
+    e->note->displayStart = get_first_diplayed_index(e,false);
     update_cursor_position(e);
   }
 }
 
 void move_index_up(Editor* e){
-  int line_index = get_current_line_index(e);
+  int line_index = get_line_index(e,-1);
   if(line_index > 0){
     int prev_line_len = get_line_length(e,e->cursor.index - e->cursor.col - 2 /* don't change*/);
-    printf("prev_line_len: %d\n",prev_line_len);
     if(prev_line_len - 1 > e->cursor.last_col){
       e->cursor.index -= e->cursor.col + prev_line_len - e->cursor.last_col;
-      printf("- %d  ",e->cursor.col + prev_line_len - e->cursor.last_col);
-      printf("(%c)\n",e->note->body[e->cursor.index]);
     } else {
-      printf("here\n");
       e->cursor.index -= e->cursor.col + (prev_line_len ? 2 : 1);
-      printf("- %d  ",e->cursor.col + (prev_line_len ? 2 : 1));
-      printf("(%c)\n",e->note->body[e->cursor.index]);
     }
     if(e->cursor.index < 0) e->cursor.index = 0;
+    e->note->displayStart = get_first_diplayed_index(e,true);
     update_cursor_position(e);
   }
 }
@@ -231,9 +254,7 @@ void remove_current_char(Editor* e,char* line){
 void handle_tab(Editor* e) {
   if(e->mode == INSERT) {
     if(e->isTakingNote ){
-      for(int i = 0;i < TAB_SIZE; ++i){
-        addChar(e,' ');
-      }
+      for(int i = 0;i < TAB_SIZE; ++i) addChar(e,' ');
     }
   }
 }
@@ -245,6 +266,7 @@ void handle_move_down_files(Editor* e){
   else if(e->currentFileIndex == MAX_DISPLAYED_FILES - 1) {
     if(e->displayedFilesStart < e->filesCount - MAX_DISPLAYED_FILES) {
       e->displayedFilesStart++;
+    e->currentFileIndex++;
     }else {
       e->displayedFilesStart = 0;
       e->currentFileIndex = 0;
@@ -275,11 +297,21 @@ void handle_move_up_files(Editor* e){
 }
 
 void handle_backspace(Editor* e) {
-  if(e->mode == INSERT) remove_char(e);
+  if(e->mode == INSERT) {
+    if(e->isTakingNote) remove_char(e);
+    else if(e->isInsertingTitle) pop_char_from_line(e,e->note->title);
+  } 
 }
 
 void handle_normal_mode_keys(Editor* e, int c){
   switch(c){
+    case 't':
+      e->mode = INSERT;
+      e->isInsertingTitle = true;
+      e->isTakingNote = false;
+      e->cursor.index = strlen(e->note->title);
+      update_cursor_position(e);
+      break;
     case '?':
       e->isDebugging = !e->isDebugging;
       break;
@@ -302,12 +334,12 @@ void handle_normal_mode_keys(Editor* e, int c){
     case 'i':
       e->mode = INSERT;
       break;
-    /* case 'e':
+    case 'm':
       e->isMenuOpen = true;
       e->isChoosingDir = false;
       e->isNamingFile = false;
       e->isOpeningFile = false;
-      break; */
+      break;
     case '$':
       move_to_end_of_line(e);
       break;
@@ -330,15 +362,17 @@ void handle_normal_mode_keys(Editor* e, int c){
       }
       break;
     case 'o':
-      if(e->isTakingNote){
-        if(e->note->linesNum < LINES_COUNT - 1){
-          move_to_new_line(e);
-          e->mode = INSERT;
-        }
-      }
-      else {
+      if(e->isMenuOpen){
         e->isOpeningFile = true;
         e->isMenuOpen = false;
+      }
+      else {
+        if(e->isTakingNote){
+          if(e->note->linesNum < LINES_COUNT - 1){
+            move_to_new_line(e);
+            e->mode = INSERT;
+          }
+        }
       }
       break;
     case '/':
@@ -402,7 +436,12 @@ void handle_enter(Editor* e){
       "%s/.local/notes/%s",
       e->HOME_DIR,
       e->fileNames[e->currentFileIndex]);
-    readNote(e, path);
+    for(int i =0 ; i < e->filesCount -1 ; i++){
+      printf("[%d] %s\n",i,e->fileNames[i]);
+    }
+    printf("Opening [%d] %s\n",e->currentFileIndex,e->fileNames[e->currentFileIndex]);
+    if(e->isNoteBookMode) readNote(e,path);
+    else readFile(e, path);
     /* if (e->currentLine->chars[e->currentLine->length - 1] == '\n') {
       e->currentLine->length--;
     } */
@@ -418,9 +457,11 @@ void handle_enter(Editor* e){
       e->isInsertingTitle = false;
       e->isTakingNote = true;
     } else {
-      if (e->cursor.row < LINES_COUNT - 2) {
+      // if (e->cursor.row < LINES_COUNT - 2) {
         add_char_to_note_body(e,'\n');
-      }
+        e->note->displayStart = get_first_diplayed_index(e,false);
+        update_cursor_position(e);
+      // }
     }
   }
 }
@@ -461,8 +502,26 @@ void handleKeys(
 
 }
 
+int get_first_diplayed_index(Editor* e,bool isUp){
+  int line_index = get_line_index(e,-1);
+  if(isUp && e->cursor.row > 0) return e->note->displayStart;
+  if(isUp) {
+    int i,j;
+    for(j = 0,i = e->cursor.index ; i > -2 && j < 1 ;i--){
+      if(e->note->body[i] == '\n') j++; 
+    }
+    return i+2;
+  }
+  int num_hidden_lines = line_index + 2 - LINES_COUNT;
+  int i,j;
+  for(i=0,j=0; j < num_hidden_lines; i++){
+    if(e->note->body[i] == '\n') j++; 
+  }
+  return i;
+}
+
 void add_char_to_note_body(Editor* e,char c) {
-  if(e->note->length < LINE_LENGTH * LINES_COUNT) {
+  // if(e->note->length < LINE_LENGTH * LINES_COUNT) {
     if(e->cursor.col < LINE_LENGTH) {
       int line_len = get_line_length(e,-1); 
       if(line_len > 61){
@@ -483,7 +542,7 @@ void add_char_to_note_body(Editor* e,char c) {
       move_index_right(e);
       e->note->length++;
     }
-  }
+  // }
   update_cursor_position(e);
   update_last_col(e);
   e->note->body[e->note->length] = '\0';
@@ -496,6 +555,8 @@ void addChar(Editor* e,char c){
       e->note->size += LINE_LENGTH;
     }
     add_char_to_note_body(e,c);
+  } else if(e->isInsertingTitle){
+    add_char_to_line(e,e->note->title,TITLE_SIZE,c);
   }
 }
 
