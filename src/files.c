@@ -76,8 +76,8 @@ void readFile(Editor* e, char* path){
   int i,index = 0;
 	while((read = getline(&line,&size,f)) != -1){
     printf("LINE[%s]",line);
-    if(e->note->length + read > e->note->size - 1){
-      int new_size = read + e->note->length + LINE_LENGTH;
+    if(index + read +1 > e->note->size - 1){
+      int new_size = read + index + LINE_LENGTH + 1;
       e->note->body = realloc(e->note->body,new_size);
       e->note->size = new_size;
     }
