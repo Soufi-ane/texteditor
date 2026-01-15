@@ -10,6 +10,16 @@
 
 double longPressTime = 0.0f;
 
+void move_index_to_last_line(Editor* e){
+  int i,j;
+  for(j=0, i=e->note->length -1; i>0 && j < 1;i--){
+    if(e->note->body[i] == '\n') j++;
+  }
+  e->cursor.index = i+2;
+  e->note->displayStart = get_first_diplayed_index(e,false);
+  update_cursor_position(e);
+}
+
 void add_char_to_line(Editor* e,char* line,int size,char c){
   size_t len = strlen(line);
   if(len > size -1 || !size || c == '\n' || e->cursor.index > len || e->cursor.index < 0) return;
@@ -305,6 +315,9 @@ void handle_backspace(Editor* e) {
 
 void handle_normal_mode_keys(Editor* e, int c){
   switch(c){
+    case 'G':
+      move_index_to_last_line(e);
+      break;
     case 't':
       e->mode = INSERT;
       e->isInsertingTitle = true;
