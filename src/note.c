@@ -508,6 +508,7 @@ int get_first_diplayed_index(Editor* e,bool isUp){
   if(isUp) {
     int i,j;
     for(j = 0,i = e->cursor.index ; i > -2 && j < 1 ;i--){
+      if(i < 0) continue;
       if(e->note->body[i] == '\n') j++; 
     }
     return i+2;
