@@ -69,23 +69,25 @@ void readFile(Editor* e, char* path){
   } 
   printf("Reading %s\n",path);
   char* line = NULL;
+  size_t size = 0;
   size_t read;
-  size_t len;
   e->note->body = malloc(100);
   e->note->size = 100;
-  int i;
-	while((read = getline(&line,&len,f)) != -1){
+  int i,index = 0;
+	while((read = getline(&line,&size,f)) != -1){
+    printf("LINE[%s]",line);
     if(e->note->length + read > e->note->size - 1){
       int new_size = read + e->note->length + LINE_LENGTH;
       e->note->body = realloc(e->note->body,new_size);
       e->note->size = new_size;
     }
-    for(i = 0; i < read;i++) {
+    for(i=0; i < read;i++) {
       if(line[i] == '\n') e->note->linesNum++;
-      e->note->body[i] = line[i++];
+      e->note->body[index++] = line[i];
     }
 	}
-  e->note->length = i;
+  free(line);
+  e->note->length = index;
   printf("total size : %d\n",e->note->length);
 }
 
