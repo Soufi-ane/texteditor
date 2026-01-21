@@ -9,7 +9,9 @@
 
 Editor editor = {
   .mode = NORMAL,
-  .isTakingNote = true,
+  .conf = {
+    .isTakingNote = true,
+  },
   .cursor = {
     .width = 15,
     .height = 35,
@@ -31,7 +33,7 @@ int main() {
   if (editor.HOME_DIR == NULL)
     printf("ERRR!\n");
   sprintf(dir, "%s/.local/notes", editor.HOME_DIR);
-  getDirContent(&editor,editor.fileNames, &editor.filesCount, dir);
+  getDirContent(&editor,editor.fileNames, &editor.conf.filesCount, dir);
   getLocalDate(&editor.note->date);
   editor.note->title =  malloc(sizeof(char) * TITLE_SIZE);
   editor.note->title[0] = '\0';
@@ -39,7 +41,7 @@ int main() {
   editor.note->size = 100;
   editor.note->body[0] = '\0';
 
-  refreshDiplayedFiles(&editor);
+  // refreshDisplayedFiles(&editor);
 
   InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Note");
   SetExitKey(KEY_NULL);
@@ -54,7 +56,7 @@ int main() {
   SetTargetFPS(240);
   SetConfigFlags(FLAG_MSAA_4X_HINT);
 
-  printf("files count : %d\n",editor.filesCount);
+  printf("files count : %d\n",editor.conf.filesCount);
   while (!WindowShouldClose()) {
     if (editor.mode != INSERT) {
       SetExitKey(KEY_Q);
@@ -82,7 +84,7 @@ int main() {
     //render title
     for (int i = 0; i < strlen(editor.note->title); i++) {
       if (editor.note->title[i] != '\n') {
-        if(i == editor.cursor.index - 1 && editor.isInsertingTitle){ 
+        if(i == editor.cursor.index - 1 && editor.conf.isInsertingTitle){ 
           DrawCursor(&editor, titlePosition.x + 14 * editor.cursor.col, titlePosition.y);
         }
         DrawTextCodepoint(fontSDF,
@@ -92,7 +94,7 @@ int main() {
       }
     }
 
-    if(editor.isNamingFile) {
+    if(editor.conf.isNamingFile) {
       char placeholder[] = "File name";
       Vector2 nameSize = {0.0f, 0.0f};
       nameSize = MeasureTextEx(
@@ -126,7 +128,7 @@ int main() {
           x_offset = 0;
       }
       // cursor
-      if(editor.cursor.index == i && editor.isTakingNote) {
+      if(editor.cursor.index == i && editor.conf.isTakingNote) {
         DrawCursor(
           &editor,
           LINE_X_POSITION + 14 * editor.cursor.col,
@@ -139,16 +141,16 @@ int main() {
           (Vector2){LINE_X_POSITION + 14 * x_offset,
           LINE1_Y - TEXT_HEIGHT + (LINE_HEIGHT * y_offset)},
           32,
-          editor.cursor.index == i && editor.isTakingNote ? RED : BLACK);
+          editor.cursor.index == i && editor.conf.isTakingNote ? RED : BLACK);
         x_offset++;
         }
       }
 
     if (editor.mode == NORMAL) {
-      if(editor.isMenuOpen || editor.isOpeningFile){
+      if(editor.conf.isMenuOpen || editor.conf.isOpeningFile){
         DrawRectangle(0, 270, 960, 400, (Color){0, 0, 0, 230});
       }
-      if (editor.isMenuOpen) {
+      if (editor.conf.isMenuOpen) {
         DrawTextEx(fontSDF,
           "Press Something!",
           (Vector2){350, LINE1_Y + LINE_HEIGHT * 4},
@@ -165,10 +167,10 @@ int main() {
           "d : Select directory",
           (Vector2){LINE_X_POSITION * 3, LINE1_Y + LINE_HEIGHT * 7},
           32, 0, WHITE);
-      } else if (editor.isOpeningFile) {
+      } else if (editor.conf.isOpeningFile) {
       }
-      if (editor.isOpeningFile) {
-        if (editor.isSearching) {
+      if (editor.conf.isOpeningFile) {
+        if (editor.conf.isSearching) {
           if (strlen(editor.searchQuery)) {
             int i;
             for (i = 0; i < strlen(editor.searchQuery); i++) {
@@ -184,36 +186,43 @@ int main() {
           } else {
             DrawTextEx(fontSDF,
               "Search...",
-              (Vector2){FILES_X_POSITION, GetScreenHeight() / 2 - 253},
+              (Vector2){FILES_X_POSITION, (float) GetScreenHeight() / 2 - 253},
               28, 0, (Color){255, 255, 255, 180});
           }
         } else {
           DrawTextEx(fontSDF,
             "Press / to search",
-            (Vector2){FILES_X_POSITION, GetScreenHeight() / 2 - 253},
+            (Vector2){FILES_X_POSITION, (float) GetScreenHeight() / 2 - 253},
             28, 0, (Color){255, 255, 255, 180});
         }
         for (
-            int i = 0;
-            i < (editor.isSearching ? editor.numResults : 
-              (editor.filesCount < MAX_DISPLAYED_FILES ? editor.filesCount:
-               MAX_DISPLAYED_FILES ));
+            //todo
+            int i = editor.conf.displayedFilesStart;
+            i < (editor.conf.isSearching ? editor.conf.numResults : 
+              ((editor.conf.filesCount < MAX_DISPLAYED_FILES || 
+                editor.conf.displayedFilesStart + MAX_DISPLAYED_FILES > editor.conf.filesCount)
+                ? editor.conf.filesCount : editor.conf.displayedFilesStart + MAX_DISPLAYED_FILES ));
             i++) 
         {
-          Vector2 nameSize = MeasureTextEx(fontSDF, editor.displayedNames[i], 32, 0);
-          if (i == editor.currentFileIndex) {
+          if (i == editor.conf.currentFileIndex) {
             DrawRectangle(0,
-              GetScreenHeight() / 2 - 200 + (i * 40) - 5,
-              960, nameSize.y + 10, LIGHTGRAY);
+              GetScreenHeight() / 2 - 200 + ((i - editor.conf.displayedFilesStart) * 40) - 5,
+              960, 40, LIGHTGRAY);
           }
 
+          DrawTextureEx(editor.media.menu_icons[0],
+            (Vector2){ 
+            FILES_X_POSITION - 50,
+             (float) GetScreenHeight() / 2 - 200 + ((i - editor.conf.displayedFilesStart) * 40)}
+             , 0.0f, 1.0f, WHITE);
+
           DrawTextEx(fontSDF,
-           editor.isSearching ? editor.resultNames[i] : 
-           editor.displayedNames[i],
+           editor.conf.isSearching ? editor.resultNames[i] : 
+           editor.fileNames[i],
            (Vector2){FILES_X_POSITION,
-             GetScreenHeight() / 2 - 200 + (i * 40)},
+             (float) GetScreenHeight() / 2 - 200 + ((i - editor.conf.displayedFilesStart) * 40)},
            32, 0,
-           i + editor.displayedFilesStart  == editor.currentFileIndex ? BLACK : WHITE);
+           i == editor.conf.currentFileIndex ? BLACK : WHITE);
         }
       }
     } 
@@ -227,34 +236,34 @@ int main() {
         32, 0, BLACK);
 
     // debugging 
-    if(editor.isDebugging) {
+    if(editor.conf.isDebugging) {
       DrawRectangle(170,SCREEN_HEIGHT - 600, 400,600, BLACK);
       DrawTextEx(fontSDF,
-        TextFormat("%-17s [%d]","isInsertingTitle",editor.isInsertingTitle),
+        TextFormat("%-17s [%d]","isInsertingTitle",editor.conf.isInsertingTitle),
         (Vector2){200, SCREEN_HEIGHT - 570},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
-        TextFormat("%-17s [%d]", "isTakingNote",editor.isTakingNote),
+        TextFormat("%-17s [%d]", "isTakingNote",editor.conf.isTakingNote),
         (Vector2){200, SCREEN_HEIGHT - 540},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
-        TextFormat("%-17s [%d]", "isMenuOpen",editor.isMenuOpen),
+        TextFormat("%-17s [%d]", "isMenuOpen",editor.conf.isMenuOpen),
         (Vector2){200, SCREEN_HEIGHT - 510},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
-        TextFormat("%-17s [%d]", "isOpeningFile",editor.isOpeningFile),
+        TextFormat("%-17s [%d]", "isOpeningFile",editor.conf.isOpeningFile),
         (Vector2){200, SCREEN_HEIGHT - 480},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
-        TextFormat("%-17s [%d]", "isSearching",editor.isSearching),
+        TextFormat("%-17s [%d]", "isSearching",editor.conf.isSearching),
         (Vector2){200, SCREEN_HEIGHT - 450},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
-        TextFormat("%-17s [%d]", "isNamingFile",editor.isNamingFile),
+        TextFormat("%-17s [%d]", "isNamingFile",editor.conf.isNamingFile),
         (Vector2){200, SCREEN_HEIGHT - 420},
         32, 0, GREEN);
       DrawTextEx(fontSDF,
-        TextFormat("%-17s [%d]", "displayStart",editor.note->displayStart),
+        TextFormat("%-17s [%d]", "currentFileIndex",editor.conf.currentFileIndex),
         (Vector2){200, SCREEN_HEIGHT - 390},
         32, 0, GREEN);
       DrawTextEx(fontSDF,

@@ -1,5 +1,6 @@
 #ifndef NOTE_H
 #define NOTE_H
+
 #include <raylib.h>
 
 #define MAX_FILES_NUM       100
@@ -9,6 +10,8 @@
 #define FILE_NAME_LENGTH    50
 #define MAX_DISPLAYED_FILES 8
 #define TAB_SIZE 2
+
+#define NUM_MENU_ICONS 1
 
 #define LONG_PRESS_DELAY    0.3f
 #define REPEAT_RATE         0.015f
@@ -52,17 +55,10 @@ typedef struct {
 } Note;
 
 typedef struct {
-  Mode mode;
-  Note* note;
-  const char* HOME_DIR;
-  Cursor cursor;
-  char* message;
-  char* currentFileName;
-  char* fileNames[MAX_FILES_NUM];
-  char* displayedNames[MAX_DISPLAYED_FILES];
-  char* searchQuery;
-  char* resultNames[MAX_FILES_NUM];
-  char* currentchar;
+  Texture2D menu_icons[NUM_MENU_ICONS];
+} Media;
+
+typedef struct {
   bool isChoosingDir;
   bool isOpeningFile;
   bool isDebugging;
@@ -76,6 +72,22 @@ typedef struct {
   int filesCount;
   int numResults;
   int currentFileIndex;
+} Config;
+
+typedef struct {
+  Mode mode;
+  Note* note;
+  const char* HOME_DIR;
+  Cursor cursor;
+  Config conf;
+  Media media;
+  char* message;
+  char* currentFileName;
+  char* fileNames[MAX_FILES_NUM];
+  char* displayedNames[MAX_DISPLAYED_FILES];
+  char* searchQuery;
+  char* resultNames[MAX_FILES_NUM];
+  char* currentchar;
 } Editor;
 
 int get_position(Editor* e);
@@ -105,4 +117,5 @@ void getLocalDate(Date* d);
 void update_cursor_position(Editor* e);
 
 int get_first_diplayed_index(Editor* e,bool isUp);
+
 #endif

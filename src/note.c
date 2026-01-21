@@ -2,10 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <math.h>
 #include <time.h>
 #include "note.h"
-#include "ray.h"
 #include "files.h"
 
 double longPressTime = 0.0f;
@@ -85,13 +83,13 @@ void move_index_left(Editor* e) {
 }
 
 void handle_caps_lock_and_escape(Editor* e){
-  e->isMenuOpen = false;
-  e->isNamingFile = false;
-  e->isOpeningFile = false;
-  if(e->isInsertingTitle){
-    e->isTakingNote = true;
+  e->conf.isMenuOpen = false;
+  e->conf.isNamingFile = false;
+  e->conf.isOpeningFile = false;
+  if(e->conf.isInsertingTitle){
+    e->conf.isTakingNote = true;
     e->cursor.index = 0;
-    e->isInsertingTitle = false;
+    e->conf.isInsertingTitle = false;
     update_cursor_position(e);
   }
   if(e->mode == INSERT){
@@ -263,53 +261,42 @@ void remove_current_char(Editor* e,char* line){
 
 void handle_tab(Editor* e) {
   if(e->mode == INSERT) {
-    if(e->isTakingNote ){
+    if(e->conf.isTakingNote ){
       for(int i = 0;i < TAB_SIZE; ++i) addChar(e,' ');
     }
   }
 }
 
 void handle_move_down_files(Editor* e){
-  if(e->currentFileIndex < MAX_DISPLAYED_FILES - 1){
-    e->currentFileIndex++;
-  }
-  else if(e->currentFileIndex == MAX_DISPLAYED_FILES - 1) {
-    if(e->displayedFilesStart < e->filesCount - MAX_DISPLAYED_FILES) {
-      e->displayedFilesStart++;
-    e->currentFileIndex++;
-    }else {
-      e->displayedFilesStart = 0;
-      e->currentFileIndex = 0;
+  if(e->conf.currentFileIndex < e->conf.filesCount - 1){
+    e->conf.currentFileIndex++;
+    if(e->conf.currentFileIndex + e->conf.displayedFilesStart > MAX_DISPLAYED_FILES -1){ 
+      e->conf.displayedFilesStart++;
     }
-    refreshDiplayedFiles(e);
   }
   else {
-    e->currentFileIndex = 0;
+    e->conf.currentFileIndex = 0;
+    e->conf.displayedFilesStart = 0;
   }
 }
 
 void handle_move_up_files(Editor* e){
-  if(e->currentFileIndex > 0){
-    e->currentFileIndex--;
-    if(e->currentFileIndex == e->displayedFilesStart ) {
-      refreshDiplayedFiles(e);
+  if(e->conf.currentFileIndex > 0){
+    e->conf.currentFileIndex--;
+    if(e->conf.currentFileIndex - e->conf.displayedFilesStart < 0) {
+      e->conf.displayedFilesStart--;
     }
   }
   else {
-    if(e->displayedFilesStart == 0){
-      e->currentFileIndex = MAX_DISPLAYED_FILES - 1;
-      e->displayedFilesStart = e->filesCount - MAX_DISPLAYED_FILES;
-    }else {
-      e->displayedFilesStart--;
-    }
-    refreshDiplayedFiles(e);
+    e->conf.currentFileIndex = e->conf.filesCount - 1;
+    e->conf.displayedFilesStart = e->conf.filesCount - MAX_DISPLAYED_FILES ;
   }
 }
 
 void handle_backspace(Editor* e) {
   if(e->mode == INSERT) {
-    if(e->isTakingNote) remove_char(e);
-    else if(e->isInsertingTitle) pop_char_from_line(e,e->note->title);
+    if(e->conf.isTakingNote) remove_char(e);
+    else if(e->conf.isInsertingTitle) pop_char_from_line(e,e->note->title);
   } 
 }
 
@@ -320,27 +307,27 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 't':
       e->mode = INSERT;
-      e->isInsertingTitle = true;
-      e->isTakingNote = false;
+      e->conf.isInsertingTitle = true;
+      e->conf.isTakingNote = false;
       e->cursor.index = strlen(e->note->title);
       update_cursor_position(e);
       break;
     case '?':
-      e->isDebugging = !e->isDebugging;
+      e->conf.isDebugging = !e->conf.isDebugging;
       break;
     case 'n':
       e->mode = INSERT; 
-      e->isNamingFile = true;
-      e->isMenuOpen = false;
+      e->conf.isNamingFile = true;
+      e->conf.isMenuOpen = false;
       break;
     case 'a':
       e->mode = INSERT;
       if(e->cursor.col < 61 && get_line_length(e,-1)) move_index_right(e);
-      e->isTakingNote = true;
+      e->conf.isTakingNote = true;
       break;
     case 's':
       if(!strlen(e->currentFileName)){
-        e->isNamingFile = true;
+        e->conf.isNamingFile = true;
         e->mode = INSERT;
       } else writeFile(e);
       break;
@@ -348,10 +335,11 @@ void handle_normal_mode_keys(Editor* e, int c){
       e->mode = INSERT;
       break;
     case 'm':
-      e->isMenuOpen = true;
-      e->isChoosingDir = false;
-      e->isNamingFile = false;
-      e->isOpeningFile = false;
+      load_menu_icons(e->media.menu_icons);
+      e->conf.isMenuOpen = true;
+      e->conf.isChoosingDir = false;
+      e->conf.isNamingFile = false;
+      e->conf.isOpeningFile = false;
       break;
     case '$':
       move_to_end_of_line(e);
@@ -360,27 +348,27 @@ void handle_normal_mode_keys(Editor* e, int c){
       move_to_beginning_of_line(e);
       break;
     case 'x':
-      if(e->isTakingNote){
+      if(e->conf.isTakingNote){
         remove_current_char(e,e->note->body);
       }
       break;
     case 'b':
-      if(e->isTakingNote){
+      if(e->conf.isTakingNote){
         move_to_word_beginning(e,e->note->body);
       }
       break;
     case 'e':
-      if(e->isTakingNote){
+      if(e->conf.isTakingNote){
         move_to_word_ending(e,e->note->body);
       }
       break;
     case 'o':
-      if(e->isMenuOpen){
-        e->isOpeningFile = true;
-        e->isMenuOpen = false;
+      if(e->conf.isMenuOpen){
+        e->conf.isOpeningFile = true;
+        e->conf.isMenuOpen = false;
       }
       else {
-        if(e->isTakingNote){
+        if(e->conf.isTakingNote){
           if(e->note->linesNum < LINES_COUNT - 1){
             move_to_new_line(e);
             e->mode = INSERT;
@@ -389,14 +377,14 @@ void handle_normal_mode_keys(Editor* e, int c){
       }
       break;
     case '/':
-      e->isSearching = true;
+      e->conf.isSearching = true;
       /* find(e->fileNames, e->filesCount,
           e->searchQuery, e->resultNames,
           &e->numResults); */
       break;
     case 'h':
-      if(e->isTakingNote) {
-        if(e->isInsertingTitle) {}
+      if(e->conf.isTakingNote) {
+        if(e->conf.isInsertingTitle) {}
         else {
           if(e->cursor.col > 0){
             move_index_left(e);
@@ -406,28 +394,28 @@ void handle_normal_mode_keys(Editor* e, int c){
       }
       break;
     case 'l':
-      if(e->isTakingNote) {
-        if(e->isInsertingTitle) {}
+      if(e->conf.isTakingNote) {
+        if(e->conf.isInsertingTitle) {}
         else {
           move_index_right(e);
         } 
       }
       break;
     case 'j':
-      if(e->isOpeningFile) handle_move_down_files(e);
-      else if(e->isTakingNote) {
-        if(e->isInsertingTitle) {
+      if(e->conf.isOpeningFile) handle_move_down_files(e);
+      else if(e->conf.isTakingNote) {
+        if(e->conf.isInsertingTitle) {
           addChar(e,'\n');
-          e->isInsertingTitle = false;
+          e->conf.isInsertingTitle = false;
         }else {
           move_index_down(e);
         }
       }
       break;
     case 'k':
-      if(e->isOpeningFile) handle_move_up_files(e);
-      else if(e->isTakingNote) {
-        if(e->isInsertingTitle) {}
+      if(e->conf.isOpeningFile) handle_move_up_files(e);
+      else if(e->conf.isTakingNote) {
+        if(e->conf.isInsertingTitle) {}
         else {
             move_index_up(e);
         }
@@ -443,38 +431,30 @@ void handle_insert_mode_keys(Editor* e,int c){
 };
 
 void handle_enter(Editor* e){
-  if (e->isOpeningFile) {
+  if (e->conf.isOpeningFile) {
     char path[100];
     sprintf(path,
       "%s/.local/notes/%s",
       e->HOME_DIR,
-      e->fileNames[e->currentFileIndex]);
-    for(int i =0 ; i < e->filesCount -1 ; i++){
+      e->fileNames[e->conf.currentFileIndex]);
+    for(int i =0 ; i < e->conf.filesCount -1 ; i++){
       printf("[%d] %s\n",i,e->fileNames[i]);
     }
-    printf("Opening [%d] %s\n",e->currentFileIndex,e->fileNames[e->currentFileIndex]);
-    if(e->isNoteBookMode) readNote(e,path);
+    printf("Opening [%d] %s\n",e->conf.currentFileIndex,e->fileNames[e->conf.currentFileIndex]);
+    if(e->conf.isNoteBookMode) readNote(e,path);
     else readFile(e, path);
-    /* if (e->currentLine->chars[e->currentLine->length - 1] == '\n') {
-      e->currentLine->length--;
-    } */
-    e->currentFileName = e->fileNames[e->currentFileIndex];
-    e->isOpeningFile = false;
-    e->isTakingNote = true;
-    } 
-    else if (e->isNamingFile){
-      //
-    }
-    if(e->mode == INSERT){
-    if (e->isInsertingTitle ) {
-      e->isInsertingTitle = false;
-      e->isTakingNote = true;
-    } else {
-      // if (e->cursor.row < LINES_COUNT - 2) {
-        add_char_to_note_body(e,'\n');
-        e->note->displayStart = get_first_diplayed_index(e,false);
-        update_cursor_position(e);
-      // }
+    e->currentFileName = e->fileNames[e->conf.currentFileIndex];
+    e->conf.isOpeningFile = false;
+    e->conf.isTakingNote = true;
+  } 
+  if(e->mode == INSERT){
+  if (e->conf.isInsertingTitle ) {
+    e->conf.isInsertingTitle = false;
+    e->conf.isTakingNote = true;
+  } else {
+      add_char_to_note_body(e,'\n');
+      e->note->displayStart = get_first_diplayed_index(e,false);
+      update_cursor_position(e);
     }
   }
 }
@@ -563,13 +543,13 @@ void add_char_to_note_body(Editor* e,char c) {
 }
 
 void addChar(Editor* e,char c){
-  if(e->isTakingNote) {
+  if(e->conf.isTakingNote) {
     if(e->note->length > e->note->size - 2){
       e->note->body = realloc(e->note->body,e->note->length + LINE_LENGTH);
       e->note->size += LINE_LENGTH;
     }
     add_char_to_note_body(e,c);
-  } else if(e->isInsertingTitle){
+  } else if(e->conf.isInsertingTitle){
     add_char_to_line(e,e->note->title,TITLE_SIZE,c);
   }
 }

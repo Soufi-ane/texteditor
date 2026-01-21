@@ -1,3 +1,4 @@
+#include "files.h"
 #include <stdio.h>
 #include <raylib.h>
 #include <stdlib.h>
@@ -6,14 +7,16 @@
 #include "note.h"
 #include <dirent.h>
 
-void refreshDiplayedFiles(Editor* e){
-  int j = 0;
-  for(
-      int i = e->displayedFilesStart;
-      j < MAX_DISPLAYED_FILES;
-      i++,j++)
-  {
-    e->displayedNames[j] = e->fileNames[i];
+char* menu_icons_names[NUM_MENU_ICONS] = {
+  "sticky-note.png"
+};
+
+void load_menu_icons(Texture2D* icons){
+  for(int i = 0 ; i < NUM_MENU_ICONS; i++){
+    Image icon_image = LoadImage(TextFormat("assets/img/%s",menu_icons_names[i])); 
+    Texture2D icon_texture = LoadTextureFromImage(icon_image);
+    icons[i] = icon_texture;
+    UnloadImage(icon_image);
   }
 }
 
@@ -43,7 +46,7 @@ void writeFile(Editor* e){
 	FILE* file = fopen(savePath,"w");
   printf("saving file %s ...\n",savePath);
 
-  if(e->isNoteBookMode){
+  if(e->conf.isNoteBookMode){
     fprintf(file,"----------------\n");
     fprintf(file,"date: ");
     fprintf(file,"%s-%s-%s\n",e->note->date.day,e->note->date.month,e->note->date.year);
@@ -64,7 +67,7 @@ void writeFile(Editor* e){
 void readFile(Editor* e, char* path){
 	FILE* f = fopen(path,"r");
   if(!f) {
-    printf("Coudn't open the file %s path\n");
+    printf("Coudn't open the file %s path\n",path);
     exit(1);
   } 
   printf("Reading %s\n",path);
@@ -103,7 +106,7 @@ void readNote(Editor* e, char* path){
 	while((read = getline(&line,&len,noteFile)) != -1){
     printf("i = %d\n",i);
     if(i>4) {
-      printf("line : [%s][%d]",line,read);
+      printf("line : [%s][%zu]",line,read);
       current_length += read;
       if(i == 5){ 
         e->note->body = malloc(read + 1);

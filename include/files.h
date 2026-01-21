@@ -5,22 +5,13 @@
 
 #define MAX_FILE_NAME_LENGTH 100
 
+extern char* menu_icons_names[];
 
-void refreshDiplayedFiles(Editor* e);
+void load_menu_icons(Texture2D* icons);
 
-void getDirContent(
-  Editor* e,
-	char* files[],
-	int* count,
-	const char* path
-);
+void getDirContent(Editor* e, char* files[], int* count, const char* path);
 
-void loadFontSDF(
-	char* path,
-	int* fileSize,
-	int size,
-	Font* font
-);
+void loadFontSDF(char* path, int* fileSize, int size, Font* font);
 
 void writeFile(Editor* e);
 
@@ -28,12 +19,7 @@ void readNote(Editor* e, char* path);
 
 void readFile(Editor* e, char* path);
 
-void find(
-	char* fileNames[],
-	int numFiles,
-	char* query,
-	char* resultFiles[],
-	int* numResult
-);
+void find(char* fileNames[], int numFiles, char* query, char* resultFiles[], int* numResult);
+
 #endif
 

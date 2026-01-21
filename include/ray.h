@@ -13,6 +13,6 @@
 #define MONTH_POSITION {112, 38}
 #define YEAR_POSITION {155, 38}
 #define GLSL_VERSION 330
-#define FILES_X_POSITION 100
+#define FILES_X_POSITION 200
 
 #endif
