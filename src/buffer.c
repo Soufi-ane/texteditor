@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <raylib.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -211,26 +212,30 @@ void move_to_word_ending(Editor* e,char* line){
   update_last_col(e);
 }
 
-void move_to_word_beginning(Editor* e,char* line){
-  // int i = e->cursor.index; 
-  // todo
-  /* while(isspace(e->note->body[i-1])){
-    if(e->note->body[i-1] == '\n'){
-    } else {
-      move_cursor_left(e);
-    }
-    i--;
-  }
-  if(!isalnum(e->note->body[i - 1]) && e->cursor.index > 1) {
+void move_to_word_beginning(Editor* e){
+  Line *current = e->buffer.lines[e->buffer.current_line_index];
+  if(e->cursor.index == 0 && e->buffer.current_line_index) {
+    e->buffer.current_line_index--;
+    current = e->buffer.lines[e->buffer.current_line_index];
+    e->cursor.index = current->length ? current->length - 1 : 0;
+  } 
+  size_t i = e->cursor.index; 
+  while(isspace(current->chars[i - 1])){
+    printf("1. skipping [%c]\n",current->chars[i]);
     move_cursor_left(e);
     i--;
   }
-  while(i > 0 && (isalnum(e->note->body[i - 1]) || e->note->body[i - 1] == '_')) {
-    if(e->cursor.col > 0) move_cursor_left(e);
+  if(!isalnum(current->chars[i - 1]) && e->cursor.index > 1) {
+    printf("2. skipping [%c]\n",current->chars[i]);
+    move_cursor_left(e);
     i--;
-  } */
-  // e->cursor.index = i;
-  update_last_col(e);
+  }
+  while(i > 0 && (isalnum(current->chars[i - 1]) || current->chars[i - 1] == '_')) {
+    printf("3. skipping [%c]\n",current->chars[i]);
+    move_cursor_left(e);
+    i--;
+  }
+  e->cursor.index = i;
 }
 
 void remove_current_char(Editor* e){
@@ -329,10 +334,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       remove_current_char(e);
       break;
     case 'b':
-      // todo
-      /* if(e->conf.isTakingNote){
-        move_to_word_beginning(e,e->note->body);
-      } */
+      move_to_word_beginning(e);
       break;
     case 'e':
       // todo

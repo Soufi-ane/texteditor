@@ -151,4 +151,6 @@ void move_to_end_of_line(Editor* e);
 
 void move_to_beginning_of_line(Editor* e);
 
+void move_to_word_beginning(Editor* e);
+
 #endif
