@@ -155,7 +155,7 @@ void move_cursor_down(Editor* e){
   e->buffer.current_line_index++;
   Line *current = e->buffer.lines[e->buffer.current_line_index];
   if(current->length < e->cursor.index){
-    e->cursor.index = current->length - 1;
+    e->cursor.index = current->length ? current->length - 1 : 0;
   }
 }
 
@@ -164,7 +164,7 @@ void move_cursor_up(Editor* e){
   e->buffer.current_line_index--;
   Line *current = e->buffer.lines[e->buffer.current_line_index];
   if(current->length < e->cursor.index){
-    e->cursor.index = current->length - 1;
+    e->cursor.index = current->length ? current->length - 1 : 0;
   }
 }
 
