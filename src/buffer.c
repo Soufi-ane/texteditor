@@ -175,10 +175,9 @@ void move_to_beginning_of_line(Editor* e) {
 }
 
 void move_to_end_of_line(Editor* e) {
-  // todo
-  // int len = get_line_length(e,-1);
-  // e->cursor.index += len - e->cursor.col - (len > 1 ? 2 : 1) ;
-  // update_last_col(e);
+  Line *current = e->buffer.lines[e->buffer.current_line_index];
+  if(e->cursor.index == current->length - 1) return;
+  e->cursor.index += current->length - e->cursor.index - 1;
 }
 
 void move_to_new_line(Editor* e){

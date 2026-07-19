@@ -147,4 +147,6 @@ void add_char_to_line(Editor* e, Line* line, char c, bool append);
 
 void remove_current_char(Editor* e);
 
+void move_to_end_of_line(Editor* e);
+
 #endif
