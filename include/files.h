@@ -1,7 +1,7 @@
 #ifndef FILES_H
 #define FILES_H
 #include <raylib.h>
-#include "note.h"
+#include "buffer.h"
 
 #define MAX_FILE_NAME_LENGTH 100
 
@@ -19,7 +19,9 @@ void readNote(Editor* e, char* path);
 
 void readFile(Editor* e, char* path);
 
-void find(char* fileNames[], int numFiles, char* query, char* resultFiles[], int* numResult);
+void find(char* fileNames[], int numFiles, char* query, int result_ids[], int* numResult);
+
+bool str_includes(char* str,char* sub_str);
 
 #endif
 
