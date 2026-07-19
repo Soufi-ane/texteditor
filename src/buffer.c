@@ -221,17 +221,14 @@ void move_to_word_beginning(Editor* e){
   } 
   size_t i = e->cursor.index; 
   while(isspace(current->chars[i - 1])){
-    printf("1. skipping [%c]\n",current->chars[i]);
     move_cursor_left(e);
     i--;
   }
   if(!isalnum(current->chars[i - 1]) && e->cursor.index > 1) {
-    printf("2. skipping [%c]\n",current->chars[i]);
     move_cursor_left(e);
     i--;
   }
   while(i > 0 && (isalnum(current->chars[i - 1]) || current->chars[i - 1] == '_')) {
-    printf("3. skipping [%c]\n",current->chars[i]);
     move_cursor_left(e);
     i--;
   }
