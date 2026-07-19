@@ -168,10 +168,8 @@ void move_cursor_up(Editor* e){
 }
 
 void move_to_beginning_of_line(Editor* e) {
-  //todo
-  // e->cursor.index -= e->cursor.col;
-  // e->cursor.last_col = 0;
-  // update_last_col(e);
+  if(!e->cursor.index) return;
+  e->cursor.index = 0;
 }
 
 void move_to_end_of_line(Editor* e) {

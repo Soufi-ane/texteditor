@@ -149,4 +149,6 @@ void remove_current_char(Editor* e);
 
 void move_to_end_of_line(Editor* e);
 
+void move_to_beginning_of_line(Editor* e);
+
 #endif
