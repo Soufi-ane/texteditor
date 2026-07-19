@@ -186,30 +186,29 @@ void move_to_new_line(Editor* e){
   // e->note->length++;
 }
 
-void move_to_word_ending(Editor* e,char* line){
-  // int i = e->cursor.index; 
-  // todo
-  /* while(isspace(e->note->body[i+1])){
-    if(e->note->body[i+1] == '\n'){
-      int current_line_len = get_line_length(e,-1);
-      int rest_of_chars = current_line_len - e->cursor.col;
-      int next_line_len = get_line_length(e,e->cursor.index + rest_of_chars + 2) - 1;
-    } else {
-      move_cursor_right(e);
-    }
-    i++;
+void move_to_word_ending(Editor* e){
+  Line *current = e->buffer.lines[e->buffer.current_line_index];
+  bool next_exists = e->buffer.current_line_index < e->buffer.length - 1;
+  if(next_exists && (!current->length || e->cursor.index == current->length - 1)){
+    e->buffer.current_line_index++;
+    current = e->buffer.lines[e->buffer.current_line_index];
+    e->cursor.index = 0;
+    if(!current->length) return move_to_word_ending(e);
   }
-  if(!isalnum(e->note->body[i+1]) && i < e->note->length - 1){
+  size_t i = e->cursor.index; 
+  while(isspace(current->chars[i + 1])){
     move_cursor_right(e);
     i++;
   }
-  while(i < e->note->length &&
-      (isalnum(e->note->body[i+1]) || e->note->body[i + 1] == '_')) {
+  if(!isalnum(current->chars[i + 1]) && i < current->length - 1){
     move_cursor_right(e);
     i++;
-  } */
-  // e->cursor.index = i;
-  update_last_col(e);
+  }
+  while(i < current->length && (isalnum(current->chars[i + 1]) || current->chars[i + 1] == '_')) {
+    move_cursor_right(e);
+    i++;
+  }
+  e->cursor.index = i;
 }
 
 void move_to_word_beginning(Editor* e){
@@ -334,10 +333,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       move_to_word_beginning(e);
       break;
     case 'e':
-      // todo
-      /* if(e->conf.isTakingNote){
-        move_to_word_ending(e,e->note->body);
-      } */
+      move_to_word_ending(e);
       break;
     case 'o':
       if(e->conf.isMenuOpen){
