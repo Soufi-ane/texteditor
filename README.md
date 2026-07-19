@@ -1,5 +1,5 @@
-# Note
-#### It's just a note taking app ... or is it !?
+# Texteditor
+#### It's just a text editor
 
 Install from source
 -------------------
@@ -10,12 +10,12 @@ Install from source
 
 ### Clone and Install.
 
-    git clone https://github.com/Soufi-ane/note.git
-    cd note
+    git clone https://github.com/Soufi-ane/texteditor.git
+    cd texteditor
     make install
 
 ### Run
-    note
+    texteditor
 
 --------------------
 ### Key Mapping (INSERT)
@@ -26,7 +26,7 @@ Install from source
 
 
 --------------------
-### Key Mapping (NORMAL)
+### Key Mapping (NORMAL) inspired by vim
 
 | **Key**                 | **Action**                                         |
 |:-----------------------:|----------------------------------------------------|
@@ -34,8 +34,8 @@ Install from source
 | `o`                     | Open a note                                        |
 | `n`                     | Create a new note                                  |
 | `Esc` / `CapsLock`      | Go to `NORMAL` mode                                |           
-| `i`                     | Go to `INSERT` mode at the current possition       |
-| `a`                     | Go to `INSERT` mode at the next possition          |
+| `i`                     | Go to `INSERT` mode at the current position        |
+| `a`                     | Go to `INSERT` mode at the next position           |
 | `o`                     | Go to `INSERT` mode in a new line                  |
 | `h`                     | Move left                                          |
 | `j`                     | Move Down                                          |
@@ -46,5 +46,4 @@ Install from source
 | `0`                     | Move to the beginning of the line                  |
 | `$`                     | Move to the end of the line                        |
 | `x`                     | Remove current char                                |
-| `t`                     | Edit title                                         |
 
