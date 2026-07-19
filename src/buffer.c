@@ -167,34 +167,6 @@ void move_cursor_up(Editor* e){
   }
 }
 
-void remove_char(Editor* e){
-  // todo
-	/* if(e->note->length){
-    if(e->cursor.index == e->note->length){
-      if(e->cursor.col > 0) {
-        move_cursor_left(e);
-      } else {
-        e->cursor.index -= 2;
-        int len = get_line_length(e,-1);
-        e->cursor.index++;
-      }
-      e->note->length--;
-    }else {
-      int p = e->cursor.index;
-      if(p > 0) {
-        for(int i = p - 1; i < e->note->length; i++) {
-          e->note->body[i] = e->note->body[i+1];
-        }
-        move_cursor_left(e);
-        e->note->length--;
-      }
-    }
-    e->note->body[e->note->length] = '\0';
-	} 
-  update_last_col(e);
-  */
-}
-
 void move_to_beginning_of_line(Editor* e) {
   //todo
   // e->cursor.index -= e->cursor.col;
@@ -264,16 +236,15 @@ void move_to_word_beginning(Editor* e,char* line){
   update_last_col(e);
 }
 
-
-void remove_current_char(Editor* e,char* line){
-  // todo
-  /* if(get_line_length(e,-1)) {
-    move_cursor_right(e);
-    remove_char(e);
-    if(e->cursor.col > strlen(line) - 1 && strlen(line)) {
-      move_cursor_left(e);
+void remove_current_char(Editor* e){
+  Line* current = e->buffer.lines[e->buffer.current_line_index];
+  if(!current->length) return;
+  if(e->cursor.index < current->length - 1){
+    for(int i = e->cursor.index; i <= current->length; i++) {
+      current->chars[i] = current->chars[i + 1];
     }
-  } */
+  } else move_cursor_left(e);
+  current->length--;
 }
 
 void handle_tab(Editor* e) {
@@ -358,10 +329,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       move_to_beginning_of_line(e);
       break;
     case 'x':
-      // todo
-      /* if(e->conf.isTakingNote){
-        remove_current_char(e,e->note->body);
-      } */
+      remove_current_char(e);
       break;
     case 'b':
       // todo

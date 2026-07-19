@@ -121,8 +121,6 @@ void addChar(Editor* e, char c);
 
 void addchar(Editor* e, char* line, char* text);
 
-void remove_char(Editor* e);
-
 void handleKeys(Editor* editor, char *fileNames[MAX_FILES_NUM]);
 
 void add_char_to_note_body(Editor* e,char c);
@@ -146,5 +144,7 @@ size_t get_lines_wraps(Editor *e, size_t from, size_t to);
 void move_cursor_right(Editor* e);
 
 void add_char_to_line(Editor* e, Line* line, char c, bool append);
+
+void remove_current_char(Editor* e);
 
 #endif
