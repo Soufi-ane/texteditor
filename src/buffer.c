@@ -31,10 +31,8 @@ void start_new_line(Editor *e){
     e->buffer.capacity = new_capacity;
   } 
   if(e->buffer.current_line_index < e->buffer.length - 1){
-    // shift lines
     for(size_t index = e->buffer.length; index > e->buffer.current_line_index; index--){
       e->buffer.lines[index] = e->buffer.lines[index - 1];
-      printf("lines[%zu] = lines[%zu]\n", index, index - 1);
     }
     e->buffer.lines[e->buffer.current_line_index + 1] = new_line(DEFAULT_LINE_SIZE);
   }
@@ -435,10 +433,7 @@ void handle_enter(Editor* e){
     // e->conf.isTakingNote = true;
   } 
   if(e->mode == INSERT){
-    // todo
     start_new_line(e);
-    // add_char_to_line(e, e->buffer.lines[e->buffer.current_line], '\n');
-    // e->note->displayStart = get_first_diplayed_index(e,false);
   }
 }
 
