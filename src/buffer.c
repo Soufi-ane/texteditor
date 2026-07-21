@@ -21,7 +21,7 @@ void handle_append(Editor *e){
 }
 
 void start_new_line(Editor *e){
-  printf("start_new_line()\n");
+  Line *current = e->buffer.lines[e->buffer.current_line_index];
   if(e->buffer.length > e->buffer.capacity - 1){
     size_t new_capacity = e->buffer.capacity + 10;
     e->buffer.lines = realloc(e->buffer.lines, sizeof(Line*) * new_capacity);
@@ -30,10 +30,25 @@ void start_new_line(Editor *e){
     }
     e->buffer.capacity = new_capacity;
   } 
+  if(e->buffer.current_line_index < e->buffer.length - 1){
+    // shift lines
+    for(size_t index = e->buffer.length; index > e->buffer.current_line_index; index--){
+      e->buffer.lines[index] = e->buffer.lines[index - 1];
+      printf("lines[%zu] = lines[%zu]\n", index, index - 1);
+    }
+    e->buffer.lines[e->buffer.current_line_index + 1] = new_line(DEFAULT_LINE_SIZE);
+  }
+  size_t prev = e->buffer.current_line_index;
+  if(e->buffer.lines[prev]->length) {
+    for(size_t i = e->cursor.index; i < e->buffer.lines[prev]->length; i++){
+      add_char_to_line(e, e->buffer.lines[prev + 1], e->buffer.lines[prev]->chars[i], true);
+    }
+    e->buffer.lines[prev]->length = e->cursor.index;
+  }  
+  e->cursor.index = 0;
+  e->buffer.length++;
   e->buffer.current_line_index++;
   e->buffer.num_chars++;
-  e->buffer.length++;
-  e->cursor.index = 0;
 }
 
 void move_cursor_to_last_line(Editor* e){
