@@ -54,6 +54,7 @@ int main() {
 
   while (!WindowShouldClose()) {
     ed.s_width = GetScreenWidth();
+    ed.s_height = GetScreenHeight();
     if (ed.mode != INSERT) {
       SetExitKey(KEY_Q);
     } else if (ed.mode == INSERT) {

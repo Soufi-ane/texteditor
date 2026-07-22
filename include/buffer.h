@@ -98,6 +98,7 @@ typedef struct {
   int result_ids[MAX_FILES_NUM];
   int numResults;
   int s_width;
+  int s_height;
 } Editor;
 
 int get_position(Editor* e);
@@ -127,6 +128,8 @@ Line *new_line(size_t capacity);
 Buffer *new_buffer(size_t capacity);
 
 size_t get_max_line_length(Editor *e);
+
+size_t get_max_num_lines(Editor *e);
 
 void free_line(Line *line);
 

@@ -15,6 +15,11 @@ size_t get_max_line_length(Editor *e){
   return (e->s_width - x_padding) / e->conf.letter_spacing; 
 }
 
+size_t get_max_num_lines(Editor *e){ 
+  size_t y_padding = e->conf.padding.top + e->conf.padding.bottom;
+  return (e->s_height - y_padding) / e->conf.line_height + 2; 
+}
+
 void handle_append(Editor *e){
   e->mode = INSERT;
   if(e->cursor.index > 0) move_cursor_right(e);
@@ -108,7 +113,8 @@ void pop_char_from_line(Editor* e, Line *line){
 }
 
 void update_cursor_position(Editor* e){
-  size_t max_line_len = get_max_line_length(e);
+  /* size_t max_line_len = get_max_line_length(e);
+  size_t max_num_lines = get_max_num_lines(e);
   Line *current_line = e->buffer.lines[e->buffer.current_line_index];
   size_t prev_wraps = get_lines_wraps(e, 0, e->buffer.current_line_index);
   e->cursor.col = current_line->length % max_line_len;
