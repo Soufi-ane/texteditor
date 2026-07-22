@@ -432,6 +432,12 @@ void handle_normal_mode_keys(Editor* e, int c){
       if(e->conf.isOpeningFile) handle_move_up_files(e);
       else move_cursor_up(e);
       break;
+    case '+':
+      SetWindowSize(e->s_width, e->s_height + 1);
+      break;
+    case '-':
+      SetWindowSize(e->s_width, e->s_height - 1);
+      break;
   }
 }
 
