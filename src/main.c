@@ -118,7 +118,6 @@ int main() {
         x_offset = 0;
       }
 
-
       if(ed.conf.isMenuOpen || ed.conf.isOpeningFile){
         DrawRectangle(0, 270, 960, 400, (Color){0, 0, 0, 230});
       }
@@ -143,7 +142,6 @@ int main() {
 
     if (ed.conf.isOpeningFile) {
       if (ed.conf.isSearching) {
-        printf("query : [%s]\n",ed.searchQuery);
         if (strlen(ed.searchQuery)) {
           int i;
           for (i = 0; i < strlen(ed.searchQuery); i++) {

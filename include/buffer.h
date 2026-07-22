@@ -32,12 +32,6 @@ typedef enum {
 } ErrorType ;
 
 typedef struct {
-  char year[5];
-  char month[3];
-  char day[3];
-} Date;
-
-typedef struct {
   size_t index;
   size_t col;
   size_t row;
@@ -104,7 +98,6 @@ typedef struct {
   int result_ids[MAX_FILES_NUM];
   int numResults;
   int s_width;
-  char* currentchar;
 } Editor;
 
 int get_position(Editor* e);
@@ -124,8 +117,6 @@ void addchar(Editor* e, char* line, char* text);
 void handleKeys(Editor* editor, char *fileNames[MAX_FILES_NUM]);
 
 void add_char_to_note_body(Editor* e,char c);
-
-void getLocalDate(Date* d);
 
 void update_cursor_position(Editor* e);
 
