@@ -20,6 +20,22 @@ size_t get_max_num_lines(Editor *e){
   return (e->s_height - y_padding) / e->conf.line_height + 2; 
 }
 
+void update_scroll(Editor *e, bool is_up){
+  size_t wraps = get_lines_wraps(e, e->buffer.d_start, e->buffer.d_start + e->buffer.d_length);
+  size_t max = get_max_num_lines(e) - wraps;
+  size_t current_index = e->buffer.current_line_index;
+  e->buffer.d_length = e->buffer.length < max ? e->buffer.length : max;
+
+  if(is_up){
+    if(current_index < e->buffer.d_start && e->buffer.d_start) e->buffer.d_start--;
+  }
+  else {
+    if(current_index > e->buffer.d_start + e->buffer.d_length - 1) {
+      e->buffer.d_start = current_index - max + 1;
+    }
+  } 
+}
+
 void handle_append(Editor *e){
   e->mode = INSERT;
   if(e->cursor.index > 0) move_cursor_right(e);
@@ -83,6 +99,7 @@ void add_char_to_line(Editor* e, Line* line, char c, bool append){
     e->buffer.num_chars++;
   }
   line->chars[line->length] = '\0';
+  update_scroll(e, false);
 }
 
 void pop_char_from_line(Editor* e, Line *line){
@@ -110,6 +127,7 @@ void pop_char_from_line(Editor* e, Line *line){
     e->cursor.index--;
   }
   e->buffer.num_chars--;
+  update_scroll(e, true);
 }
 
 void update_cursor_position(Editor* e){
@@ -125,11 +143,12 @@ void update_cursor_position(Editor* e){
     row_offset -= e->cursor.index / max_line_len;
     e->cursor.col = e->cursor.index < max_line_len ? e->cursor.index : e->cursor.index % max_line_len;
     e->cursor.row -= row_offset;
-  }
+  } */
 } 
 
 size_t get_lines_wraps(Editor *e, size_t from, size_t to){
   if(from > to) return 0;
+  if(to >= e->buffer.capacity) to = e->buffer.capacity - 1;
   size_t wraps = 0;
   size_t max = get_max_line_length(e);
   for(size_t i = from; i <= to; i++){
@@ -176,6 +195,7 @@ void move_cursor_down(Editor* e){
   if(current->length < e->cursor.index){
     e->cursor.index = current->length ? current->length - 1 : 0;
   }
+  update_scroll(e, false);
 }
 
 void move_cursor_up(Editor* e){
@@ -185,6 +205,7 @@ void move_cursor_up(Editor* e){
   if(current->length < e->cursor.index){
     e->cursor.index = current->length ? current->length - 1 : 0;
   }
+  update_scroll(e, true);
 }
 
 void move_to_beginning_of_line(Editor* e) {
@@ -440,6 +461,7 @@ void handle_enter(Editor* e){
   } 
   if(e->mode == INSERT){
     start_new_line(e);
+    update_scroll(e, false);
   }
 }
 
@@ -526,6 +548,7 @@ Buffer *new_buffer(size_t capacity){
   }
   buff->capacity = capacity;
   buff->length = 1;
+  buff->d_length = 1;
   buff->num_chars = 0;
   buff->current_line_index = 0;
   return buff;

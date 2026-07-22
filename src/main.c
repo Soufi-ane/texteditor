@@ -90,29 +90,37 @@ int main() {
 
     // todo : render body
     size_t y_offset = 0;
-    size_t i, x_offset;
+    size_t i, x_offset = 0;
 
-    //cursor
-    DrawCursor(
-      &ed, ed.conf.padding.left + ed.conf.letter_spacing * ed.cursor.col,
-      ed.conf.padding.top + (ed.conf.line_height * ed.cursor.row) - ed.cursor.height
-    );
-    for (i = 0; i < ed.buffer.length; i++) {
+    for (
+      i = ed.buffer.d_start;
+      i < ed.buffer.d_start + ed.buffer.d_length && i < ed.buffer.length;
+      i++
+    ) {
+
       Line *current_line = ed.buffer.lines[i];
-      for(size_t m = 0; m < current_line->length; m++){
-        
-        DrawTextCodepoint(fontSDF,
-          current_line->chars[m],
-          (Vector2){ed.conf.padding.left + ed.conf.letter_spacing * x_offset,
-          ed.conf.padding.top + (ed.conf.line_height * y_offset) - ed.cursor.height},
-          32,
-          ed.cursor.index == m && y_offset == ed.cursor.row ? RED : BLACK
-        );
+      for(size_t m = 0; m <= current_line->length; m++){
 
-        x_offset++;
-        if((m + 1) % get_max_line_length(&ed) == 0) {
-          y_offset++;
-          x_offset = 0;
+        if(i == ed.buffer.current_line_index && m == ed.cursor.index)
+        //cursor
+          DrawCursor(
+            &ed, ed.conf.padding.left + ed.conf.letter_spacing * x_offset,
+            ed.conf.padding.top + (ed.conf.line_height * y_offset) - ed.cursor.height
+          );
+        if(m < current_line->length) {
+          DrawTextCodepoint(fontSDF,
+            current_line->chars[m],
+            (Vector2){ed.conf.padding.left + ed.conf.letter_spacing * x_offset,
+            ed.conf.padding.top + (ed.conf.line_height * y_offset) - ed.cursor.height},
+            32,
+            m == ed.cursor.index && i == ed.buffer.current_line_index ? RED : BLACK
+          );
+
+          x_offset++;
+          if((m + 1) % get_max_line_length(&ed) == 0) {
+            y_offset++;
+            x_offset = 0;
+          }
         }
       }
         y_offset++;

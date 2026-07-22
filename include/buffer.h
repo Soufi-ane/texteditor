@@ -53,6 +53,8 @@ typedef struct {
   // size_t curren_col;
   size_t length; 
   size_t capacity; 
+  size_t d_start;
+  size_t d_length;
   Line **lines;
   Line file_name;
 } Buffer ;
@@ -150,5 +152,7 @@ void move_to_word_beginning(Editor* e);
 void move_to_word_ending(Editor* e);
 
 void start_new_line(Editor *e);
+
+void update_scroll(Editor *e, bool is_up);
 
 #endif
