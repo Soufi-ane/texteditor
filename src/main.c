@@ -1,4 +1,5 @@
 #include <raylib.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,10 +11,11 @@
 Editor ed = {
   .mode = NORMAL,
   .conf = {
-    .line_height = 45,
-    .letter_spacing = 14,
+    .line_height = LINE_HEIGHT,
+    .letter_spacing = LETTER_SPACING,
     .padding = {
-      .top = 100,
+      .top = LINE_HEIGHT,
+      .bottom = LINE_HEIGHT,
       .right = 50,
       .left = 50
     }
