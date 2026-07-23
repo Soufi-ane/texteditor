@@ -138,7 +138,7 @@ int main() {
             char_x,
             pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height},
             32,
-            m == ed.cursor.index && i == ed.buffer.current_line_index ? RED : BLACK
+            m == ed.cursor.index && i == ed.buffer.current_line_index ? GRAY : BLACK
           );
 
           x_offset++;
