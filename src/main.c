@@ -34,7 +34,7 @@ int main() {
   ed.currentFileName = malloc(sizeof(char) * FILE_NAME_LENGTH);
   ed.message = malloc(sizeof(char) * 129);
   ed.searchQuery = malloc(sizeof(char) * QUERY_LENGTH);
-  Color fgColor = GetColor(0xD9D9D955);
+  Color fg_color = GetColor(0xD9D9D955);
   ed.HOME_DIR  = getenv("HOME");
   if (ed.HOME_DIR == NULL)
     printf("ERRR!\n");
@@ -68,9 +68,8 @@ int main() {
 
     ClearBackground(WHITE);
     for (int l = 0; l < LINES_COUNT - 1; l++) {
-      int yPos = ed.conf.padding.top + l * ed.conf.line_height ;
-      DrawLineEx((Vector2){30, yPos}, (Vector2){ed.s_width - 30, yPos}, 3.0f, fgColor);
       int yPos = pad.top + l * ed.conf.line_height ;
+      DrawLineEx((Vector2){30, yPos}, (Vector2){ed.s_width - 30, yPos}, 3.0f, fg_color);
     }
     DrawTextEx(fontSDF,
       ed.mode == NORMAL ? "NORMAL" : "INSERT",
