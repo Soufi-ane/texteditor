@@ -57,6 +57,7 @@ int main() {
   while (!WindowShouldClose()) {
     ed.s_width = GetScreenWidth();
     ed.s_height = GetScreenHeight();
+    Padding pad = ed.conf.padding;
     if (ed.mode != INSERT) {
       SetExitKey(KEY_Q);
     } else if (ed.mode == INSERT) {
@@ -69,6 +70,7 @@ int main() {
     for (int l = 0; l < LINES_COUNT - 1; l++) {
       int yPos = ed.conf.padding.top + l * ed.conf.line_height ;
       DrawLineEx((Vector2){30, yPos}, (Vector2){ed.s_width - 30, yPos}, 3.0f, fgColor);
+      int yPos = pad.top + l * ed.conf.line_height ;
     }
     DrawTextEx(fontSDF,
       ed.mode == NORMAL ? "NORMAL" : "INSERT",
@@ -135,19 +137,19 @@ int main() {
       if (ed.conf.isMenuOpen) {
         DrawTextEx(fontSDF,
           "Press Something!",
-          (Vector2){350, ed.conf.padding.top + ed.conf.line_height * 4},
+          (Vector2){350, pad.top + ed.conf.line_height * 4},
           32, 0, WHITE);
         DrawTextEx(fontSDF,
           "n : New note",
-          (Vector2){ed.conf.padding.left * 3, ed.conf.padding.top + ed.conf.line_height * 5},
+          (Vector2){pad.left * 3, pad.top + ed.conf.line_height * 5},
           32, 0, WHITE);
         DrawTextEx(fontSDF,
           "o : Open a note",
-          (Vector2){ed.conf.padding.left * 3,ed.conf.padding.top + ed.conf.line_height * 6},
+          (Vector2){pad.left * 3,pad.top + ed.conf.line_height * 6},
           32, 0, WHITE);
         DrawTextEx(fontSDF,
           "d : Select directory",
-          (Vector2){ed.conf.padding.left * 3, ed.conf.padding.top + ed.conf.line_height * 7},
+          (Vector2){pad.left * 3, pad.top + ed.conf.line_height * 7},
           32, 0, WHITE);
       } 
 
@@ -158,23 +160,23 @@ int main() {
           for (i = 0; i < strlen(ed.searchQuery); i++) {
             DrawTextCodepoint(fontSDF,
               ed.searchQuery[i],
-              (Vector2){ed.conf.padding.left + i * ed.conf.letter_spacing,
+              (Vector2){pad.left + i * ed.conf.letter_spacing,
                  GetScreenHeight() / 2.0 - 255},
               32, WHITE);
           }
-          DrawRectangle(ed.conf.padding.left + i * ed.conf.letter_spacing,
+          DrawRectangle(pad.left + i * ed.conf.letter_spacing,
             GetScreenHeight() / 2 - 255,
             14, 30, WHITE);
         } else {
           DrawTextEx(fontSDF,
             "Search...",
-            (Vector2){ed.conf.padding.left, (float) GetScreenHeight() / 2 - 253},
+            (Vector2){pad.left, (float) GetScreenHeight() / 2 - 253},
             28, 0, (Color){255, 255, 255, 180});
         }
       } else {
         DrawTextEx(fontSDF,
           "Press / to search",
-          (Vector2){ed.conf.padding.left, (float) GetScreenHeight() / 2 - 253},
+          (Vector2){pad.left, (float) GetScreenHeight() / 2 - 253},
           28, 0, (Color){255, 255, 255, 180});
       }
       for (
@@ -193,14 +195,14 @@ int main() {
 
         DrawTextureEx(ed.media.menu_icons[0],
           (Vector2){ 
-          ed.conf.padding.left - 50,
+          pad.left - 50,
            (float) GetScreenHeight() / 2 - 200 + ((i - ed.conf.displayedFilesStart) * 40)}
            , 0.0f, 1.0f, WHITE);
 
         DrawTextEx(fontSDF,
          ed.conf.isSearching ? ed.fileNames[ed.result_ids[i]] : 
          ed.fileNames[i],
-         (Vector2){ed.conf.padding.left,
+         (Vector2){pad.left,
            (float) GetScreenHeight() / 2 - 200 + ((i - ed.conf.displayedFilesStart) * 40)},
          32, 0,
          i == ed.conf.currentFileIndex ? BLACK : WHITE);
