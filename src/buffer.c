@@ -12,6 +12,7 @@ double longPressTime = 0.0f;
 
 size_t get_max_line_length(Editor *e){ 
   size_t x_padding = e->conf.padding.left + e->conf.padding.right;
+  if(e->conf.ln_mode != NONE) x_padding += e->conf.ln_mode;
   return (e->s_width - x_padding) / e->conf.letter_spacing; 
 }
 
@@ -34,6 +35,12 @@ void update_scroll(Editor *e, bool is_up){
       e->buffer.d_start = current_index - max + 1;
     }
   } 
+}
+
+void update_line_number_padding(Editor *e){
+  int pad = 1;
+  for(int i = e->buffer.length - 1; i > 0; i /= 10) pad++;
+  e->conf.ln_padding = pad - (pad > 1 ? 1 : 0);
 }
 
 void handle_append(Editor *e){
@@ -100,6 +107,7 @@ void add_char_to_line(Editor* e, Line* line, char c, bool append){
   }
   line->chars[line->length] = '\0';
   update_scroll(e, false);
+  update_line_number_padding(e);
 }
 
 void pop_char_from_line(Editor* e, Line *line){
@@ -128,6 +136,7 @@ void pop_char_from_line(Editor* e, Line *line){
   }
   e->buffer.num_chars--;
   update_scroll(e, true);
+  update_line_number_padding(e);
 }
 
 void update_cursor_position(Editor* e){
@@ -196,6 +205,7 @@ void move_cursor_down(Editor* e){
     e->cursor.index = current->length ? current->length - 1 : 0;
   }
   update_scroll(e, false);
+  update_line_number_padding(e);
 }
 
 void move_cursor_up(Editor* e){
@@ -206,6 +216,7 @@ void move_cursor_up(Editor* e){
     e->cursor.index = current->length ? current->length - 1 : 0;
   }
   update_scroll(e, true);
+  update_line_number_padding(e);
 }
 
 void move_to_beginning_of_line(Editor* e) {
@@ -468,6 +479,7 @@ void handle_enter(Editor* e){
   if(e->mode == INSERT){
     start_new_line(e);
     update_scroll(e, false);
+    update_line_number_padding(e);
   }
 }
 

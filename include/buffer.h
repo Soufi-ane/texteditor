@@ -26,6 +26,12 @@ typedef enum {
 } Mode ;
 
 typedef enum {
+  NONE,
+  RELATIVE,
+  ABSOLUTE
+} LineNumbers;
+
+typedef enum {
   WARNING,
   INFO,
   ERROR,
@@ -77,6 +83,8 @@ typedef struct {
   bool isSearching;
   bool isNamingFile;
   bool isMenuOpen;
+  LineNumbers ln_mode;
+  size_t ln_padding;
   size_t displayedFilesStart;
   int filesCount;
   size_t currentFileIndex;

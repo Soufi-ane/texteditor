@@ -11,6 +11,8 @@
 Editor ed = {
   .mode = NORMAL,
   .conf = {
+    .ln_mode = ABSOLUTE,
+    .ln_padding = 1,
     .line_height = LINE_HEIGHT,
     .letter_spacing = LETTER_SPACING,
     .padding = {
@@ -100,21 +102,41 @@ int main() {
       i < ed.buffer.d_start + ed.buffer.d_length && i < ed.buffer.length;
       i++
     ) {
+      // line numbers
+      if(ed.conf.ln_mode != NONE) {
+        size_t index = ed.buffer.current_line_index;
+       DrawTextEx(fontSDF,
+         TextFormat( "%zu", 
+           ed.conf.ln_mode == ABSOLUTE ?  i + 1 :
+           index == i ? i + 1 :
+           (index < i ? i - index : index - i)
+         ),
+         (Vector2){
+           pad.left,
+           pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height
+          },
+         32, 0, GRAY);
+      }
 
       Line *current_line = ed.buffer.lines[i];
       for(size_t m = 0; m <= current_line->length; m++){
-
+        int cursor_x = pad.left + ed.conf.letter_spacing * x_offset;
+        if(ed.conf.ln_mode != NONE) cursor_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
         if(i == ed.buffer.current_line_index && m == ed.cursor.index)
         //cursor
           DrawCursor(
-            &ed, ed.conf.padding.left + ed.conf.letter_spacing * x_offset,
-            ed.conf.padding.top + (ed.conf.line_height * y_offset) - ed.cursor.height
+            &ed, 
+            cursor_x,
+            pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height
           );
         if(m < current_line->length) {
+          int char_x = pad.left + ed.conf.letter_spacing * x_offset;
+          if(ed.conf.ln_mode != NONE) char_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
           DrawTextCodepoint(fontSDF,
             current_line->chars[m],
-            (Vector2){ed.conf.padding.left + ed.conf.letter_spacing * x_offset,
-            ed.conf.padding.top + (ed.conf.line_height * y_offset) - ed.cursor.height},
+            (Vector2){
+            char_x,
+            pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height},
             32,
             m == ed.cursor.index && i == ed.buffer.current_line_index ? RED : BLACK
           );
