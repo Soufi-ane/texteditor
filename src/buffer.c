@@ -41,7 +41,7 @@ void update_scroll(Editor *e, bool is_up){
 
 void update_line_number_padding(Editor *e){
   int pad = 1;
-  for(int i = e->buffer.length - 1; i > 0; i /= 10) pad++;
+  for(int i = e->buffer.length; i > 0; i /= 10) pad++;
   e->conf.ln_padding = pad - (pad > 1 ? 1 : 0);
 }
 
