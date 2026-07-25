@@ -152,13 +152,12 @@ size_t get_lines_wraps(Editor *e, size_t from, size_t to){
   return wraps;
 }
   
-void update_last_col(Editor* e){ e->cursor.last_index = e->cursor.index; }
+void update_last_index(Editor* e){ e->cursor.last_index = e->cursor.index; }
 
 void move_cursor_left(Editor* e) {
   if(e->cursor.index) {
     e->cursor.index--;
-    // todo
-    // update_last_col(e);
+    update_last_index(e);
   }
   e->buffer.current_msg_index = -1;
 }
@@ -179,8 +178,7 @@ void move_cursor_right(Editor* e) {
   Line *current_line = e->buffer.lines[e->buffer.current_line_index];
   if(e->cursor.index < current_line->length + (e->mode == INSERT ? 1 : -1)){
     e->cursor.index++;
-    // todo 
-    // update_last_col(e);
+    update_last_index(e);
   }
   e->buffer.current_msg_index = -1;
 }
@@ -189,9 +187,13 @@ void move_cursor_down(Editor* e){
   if(e->buffer.current_line_index >= e->buffer.length - 1) return;
   e->buffer.current_line_index++;
   Line *current = e->buffer.lines[e->buffer.current_line_index];
-  if(current->length < e->cursor.index){
+
+  if(!current->length) e->cursor.index = 0;
+
+  else if(current->length - 1 < e->cursor.last_index){
     e->cursor.index = current->length ? current->length - 1 : 0;
-  }
+  } else e->cursor.index = e->cursor.last_index;
+
   update_scroll(e, false);
   update_line_number_padding(e);
   e->buffer.current_msg_index = -1;
@@ -201,9 +203,12 @@ void move_cursor_up(Editor* e){
   if(!e->buffer.current_line_index) return;
   e->buffer.current_line_index--;
   Line *current = e->buffer.lines[e->buffer.current_line_index];
-  if(current->length < e->cursor.index){
+  if(!current->length) e->cursor.index = 0;
+
+  else if(current->length - 1 < e->cursor.last_index){
     e->cursor.index = current->length ? current->length - 1 : 0;
-  }
+  } else e->cursor.index = e->cursor.last_index;
+
   update_scroll(e, true);
   update_line_number_padding(e);
   e->buffer.current_msg_index = -1;
@@ -212,12 +217,14 @@ void move_cursor_up(Editor* e){
 void move_to_beginning_of_line(Editor* e) {
   if(!e->cursor.index) return;
   e->cursor.index = 0;
+  update_last_index(e);
 }
 
 void move_to_end_of_line(Editor* e) {
   Line *current = e->buffer.lines[e->buffer.current_line_index];
   if(e->cursor.index == current->length - 1) return;
   e->cursor.index += current->length - e->cursor.index - 1;
+  update_last_index(e);
 }
 
 void move_to_new_line(Editor* e){
@@ -250,6 +257,7 @@ void move_to_word_ending(Editor* e){
     i++;
   }
   e->cursor.index = i;
+  update_last_index(e);
 }
 
 void move_to_word_beginning(Editor* e){
@@ -273,6 +281,7 @@ void move_to_word_beginning(Editor* e){
     i--;
   }
   e->cursor.index = i;
+  update_last_index(e);
 }
 
 void remove_current_char(Editor* e){
