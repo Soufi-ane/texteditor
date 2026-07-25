@@ -9,19 +9,6 @@
 #include "buffer.h"
 #include "tinyfiledialogs.h"
 
-char* menu_icons_names[NUM_MENU_ICONS] = {
-  "sticky-note.png"
-};
-
-void load_menu_icons(Texture2D* icons){
-  for(int i = 0 ; i < NUM_MENU_ICONS; i++){
-    Image icon_image = LoadImage(TextFormat("assets/img/%s",menu_icons_names[i])); 
-    Texture2D icon_texture = LoadTextureFromImage(icon_image);
-    icons[i] = icon_texture;
-    UnloadImage(icon_image);
-  }
-}
-
 void write_file(Editor* e){
 	FILE* file = fopen(e->buffer.file_path, "w");
   if(file == NULL){

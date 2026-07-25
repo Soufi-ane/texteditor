@@ -4,20 +4,12 @@
 #include <raylib.h>
 #include <stddef.h>
 
-#define MAX_FILES_NUM       100
-#define MAX_MESSAGES        1024
-#define LINES_COUNT         20
-#define TITLE_SIZE          40
-#define FILE_NAME_LENGTH    50
-#define MAX_DISPLAYED_FILES 8
-#define TAB_SIZE 2
+#define MAX_MESSAGES      1024
+#define FILE_NAME_LENGTH  50
+#define TAB_SIZE          2
 #define DEFAULT_LINE_SIZE 128
-
-#define NUM_MENU_ICONS 1
-#define QUERY_LENGTH 35
-
-#define LONG_PRESS_DELAY    0.3f
-#define REPEAT_RATE         0.015f
+#define LONG_PRESS_DELAY  0.3f
+#define REPEAT_RATE       0.015f
 
 extern double longPressDelay ;
 
@@ -71,10 +63,6 @@ typedef struct {
 } Buffer ;
 
 typedef struct {
-  Texture2D menu_icons[NUM_MENU_ICONS];
-} Media;
-
-typedef struct {
   size_t top;
   size_t right;
   size_t bottom;
@@ -105,16 +93,12 @@ typedef struct {
   const char* HOME_DIR;
   Cursor cursor;
   Config conf;
-  Media media;
   Message *messages[MAX_MESSAGES];
   bool is_full_screen;
   size_t num_msgs;
   char* message;
   char* currentFileName;
-  char* fileNames[MAX_FILES_NUM];
-  char* displayedNames[MAX_DISPLAYED_FILES];
   char* searchQuery;
-  int result_ids[MAX_FILES_NUM];
   int numResults;
   int s_width;
   int s_height;
@@ -133,8 +117,6 @@ void emptychar(char* line);
 void addChar(Editor* e, char c);
 
 void addchar(Editor* e, char* line, char* text);
-
-void handleKeys(Editor* editor, char *fileNames[MAX_FILES_NUM]);
 
 void add_char_to_note_body(Editor* e,char c);
 
@@ -171,5 +153,7 @@ void start_new_line(Editor *e);
 void update_scroll(Editor *e, bool is_up);
 
 void new_message(Editor *e, const char *message, MessageType type);
+
+void handle_keys(Editor* e);
 
 #endif
