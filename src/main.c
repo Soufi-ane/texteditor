@@ -81,21 +81,6 @@ int main() {
       (Vector2){ed.s_width - ed.cursor.width * 10, 35} ,
       32, 0, BLACK);
 
-    /* if(ed.conf.isNamingFile) {
-      char placeholder[] = "File name";
-      Vector2 nameSize = {0.0f, 0.0f};
-      nameSize = MeasureTextEx(
-        ed.conf.font, 
-        strlen(ed.currentFileName) > 0 ? ed.currentFileName :
-        placeholder, 28, 0);
-      Vector2 namePosition = {SCREEN_WIDTH / 2.0f, 400};
-      namePosition.x = GetScreenWidth() / 2.0 - nameSize.x / 2;
-      DrawRectangle(0, 365, GetScreenWidth(), 100,(Color){0, 0, 0, 230});     
-      DrawTextEx(ed.conf.font,
-        strlen(ed.currentFileName) > 0 ? ed.currentFileName :
-        placeholder, namePosition , 28, 0, (Color){255, 255, 255, 180});
-    } */
-
     // todo : render body
     size_t y_offset = 0;
     size_t i, x_offset = 0;
@@ -155,62 +140,6 @@ int main() {
         x_offset = 0;
       }
 
-
-    if (ed.conf.is_opening_file) {
-      /* if (ed.conf.is_searching) {
-        if (strlen(ed.searchQuery)) {
-          int i;
-          for (i = 0; i < strlen(ed.searchQuery); i++) {
-            DrawTextCodepoint(ed.conf.font,
-              ed.searchQuery[i],
-              (Vector2){pad.left + i * ed.conf.letter_spacing,
-                 GetScreenHeight() / 2.0 - 255},
-              32, WHITE);
-          }
-          DrawRectangle(pad.left + i * ed.conf.letter_spacing,
-            GetScreenHeight() / 2 - 255,
-            14, 30, WHITE);
-        } else {
-          DrawTextEx(ed.conf.font,
-            "Search...",
-            (Vector2){pad.left, (float) GetScreenHeight() / 2 - 253},
-            28, 0, (Color){255, 255, 255, 180});
-        }
-      } else { 
-        DrawTextEx(ed.conf.font,
-          "Press / to search",
-          (Vector2){pad.left, (float) GetScreenHeight() / 2 - 253},
-          28, 0, (Color){255, 255, 255, 180});
-      }
-      for (
-          int i = ed.conf.displayedFilesStart;
-          i < (ed.conf.isSearching ? ed.numResults : 
-            ((ed.conf.filesCount < MAX_DISPLAYED_FILES || 
-              ed.conf.displayedFilesStart + MAX_DISPLAYED_FILES > ed.conf.filesCount)
-              ? ed.conf.filesCount : ed.conf.displayedFilesStart + MAX_DISPLAYED_FILES ));
-          i++) 
-      {
-        if (i == ed.conf.currentFileIndex) {
-          DrawRectangle(0,
-            GetScreenHeight() / 2 - 200 + ((i - ed.conf.displayedFilesStart) * 40) - 5,
-            960, 40, LIGHTGRAY);
-        }
-
-        DrawTextureEx(ed.media.menu_icons[0],
-          (Vector2){ 
-          pad.left - 50,
-           (float) GetScreenHeight() / 2 - 200 + ((i - ed.conf.displayedFilesStart) * 40)}
-           , 0.0f, 1.0f, WHITE);
-
-        DrawTextEx(ed.conf.font,
-         ed.conf.isSearching ? ed.fileNames[ed.result_ids[i]] : 
-         ed.fileNames[i],
-         (Vector2){pad.left,
-           (float) GetScreenHeight() / 2 - 200 + ((i - ed.conf.displayedFilesStart) * 40)},
-         32, 0,
-         i == ed.conf.currentFileIndex ? BLACK : WHITE);
-         }*/
-      }
 
     // debugging 
     if(ed.conf.is_debugging) {
