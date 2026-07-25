@@ -10,6 +10,8 @@
 
 Editor ed = {
   .mode = NORMAL,
+  .s_width = SCREEN_WIDTH,
+  .s_height = SCREEN_HEIGHT,
   .conf = {
     .is_menu_open = true,
     .ln_mode = ABSOLUTE,
@@ -44,7 +46,7 @@ int main() {
   sprintf(dir, "%s/.local/notes", ed.HOME_DIR);
   // getDirContent(&ed,ed.fileNames, &ed.conf.filesCount, dir);
 
-  InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Note");
+  InitWindow(ed.s_width, ed.s_height, "Note");
   SetExitKey(KEY_NULL);
   int fileSize = 0;
   Font font_SDF = {0};
