@@ -573,6 +573,12 @@ Buffer *new_buffer(size_t capacity){
 }
 
 void new_message(Editor *e, const char *message, MessageType type){
+  if(e->num_msgs >= MAX_MESSAGES) {
+    for(int i = 0; i < e->num_msgs; i++){
+      e->messages[i] = e->messages[i + 1];
+      e->num_msgs--;
+    }
+  }
   Message *msg = malloc(sizeof(Message));
   msg->type = type;
   msg->text = message;

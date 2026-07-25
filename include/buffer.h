@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #define MAX_FILES_NUM       100
+#define MAX_MESSAGES        1024
 #define LINES_COUNT         20
 #define TITLE_SIZE          40
 #define FILE_NAME_LENGTH    50
@@ -107,7 +108,7 @@ typedef struct {
   Cursor cursor;
   Config conf;
   Media media;
-  Message *messages[1024];
+  Message *messages[MAX_MESSAGES];
   size_t num_msgs;
   char* message;
   char* currentFileName;
