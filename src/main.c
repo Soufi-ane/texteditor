@@ -71,7 +71,7 @@ int main() {
     handle_keys(&ed);
 
     ClearBackground(WHITE);
-    for (int l = 0; l < 10 - 1; l++) {
+    for (int l = 0; l < get_max_num_lines(&ed); l++) {
       int yPos = pad.top + l * ed.conf.line_height ;
       DrawLineEx((Vector2){30, yPos}, (Vector2){ed.s_width - 30, yPos}, 3.0f, fg_color);
     }
