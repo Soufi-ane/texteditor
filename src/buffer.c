@@ -1,13 +1,6 @@
 #include <ctype.h>
-#include <raylib.h>
 #include <stdbool.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include "buffer.h"
-#include "ray.h"
 #include "files.h"
 #include "tinyfiledialogs.h"
 
@@ -186,10 +179,7 @@ void move_cursor_left(Editor* e) {
 
 void handle_caps_lock_and_escape(Editor* e){
   e->conf.is_menu_open = false;
-  // e->conf.isNamingFile = false;
   e->conf.is_opening_file = false;
-  // e->conf.isSearching = false;
-  e->searchQuery[0] = '\0';
   if(e->mode == INSERT){
     e->mode = NORMAL;
     if(e->cursor.index) move_cursor_left(e);
@@ -417,10 +407,6 @@ void handle_normal_mode_keys(Editor* e, int c){
       try_saving_file(e);
       break;
     case '/':
-      // e->conf.isSearching = true;
-      // todo
-      /* e->conf.isInsertingTitle = false;
-      e->conf.isTakingNote = false; */
       e->mode = INSERT;
       break;
     case 'h':

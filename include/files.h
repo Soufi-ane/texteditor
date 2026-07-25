@@ -3,8 +3,6 @@
 #include <raylib.h>
 #include "buffer.h"
 
-#define MAX_FILE_NAME_LENGTH 100
-
 extern char* menu_icons_names[];
 
 void load_menu_icons(Texture2D* icons);

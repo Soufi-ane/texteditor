@@ -1,12 +1,8 @@
-#include "files.h"
 #include <stdio.h>
-#include <raylib.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <ray.h>
-#include <dirent.h>
-#include "buffer.h"
+#include "files.h"
 #include "tinyfiledialogs.h"
 
 void write_file(Editor* e){

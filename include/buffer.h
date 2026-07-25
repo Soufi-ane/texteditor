@@ -3,13 +3,7 @@
 
 #include <raylib.h>
 #include <stddef.h>
-
-#define MAX_MESSAGES      1024
-#define FILE_NAME_LENGTH  50
-#define TAB_SIZE          2
-#define DEFAULT_LINE_SIZE 128
-#define LONG_PRESS_DELAY  0.3f
-#define REPEAT_RATE       0.015f
+#include "conf.h"
 
 extern double longPressDelay ;
 

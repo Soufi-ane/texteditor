@@ -1,11 +1,6 @@
-#include <raylib.h>
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include "files.h"
-#include "buffer.h"
-#include "ray.h"
 #include "draw.h"
 
 Editor ed = {
@@ -36,22 +31,20 @@ char dir[100];
 int main() {
   Buffer *main_buffer = new_buffer(1); 
   ed.buffer = *main_buffer;
-  ed.currentFileName = malloc(sizeof(char) * FILE_NAME_LENGTH);
   ed.message = malloc(sizeof(char) * 129);
   Color fg_color = GetColor(0xD9D9D955);
   ed.HOME_DIR  = getenv("HOME");
   if (ed.HOME_DIR == NULL)
     printf("ERRR!\n");
   sprintf(dir, "%s/.local/notes", ed.HOME_DIR);
-  // getDirContent(&ed,ed.fileNames, &ed.conf.filesCount, dir);
 
   InitWindow(ed.s_width, ed.s_height, "Note");
   SetExitKey(KEY_NULL);
-  int fileSize = 0;
+  int file_size = 0;
   Font font_SDF = {0};
   loadFontSDF(
       "/usr/local/share/fonts/JetBrainsMonoNF.ttf",
-      &fileSize,
+      &file_size,
       128,
       &font_SDF);
   ed.conf.font = font_SDF;
