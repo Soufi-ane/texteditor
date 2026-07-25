@@ -198,6 +198,7 @@ void move_cursor_right(Editor* e) {
     // todo 
     // update_last_col(e);
   }
+  e->buffer.current_msg_index = -1;
 }
 
 void move_cursor_down(Editor* e){
@@ -209,6 +210,7 @@ void move_cursor_down(Editor* e){
   }
   update_scroll(e, false);
   update_line_number_padding(e);
+  e->buffer.current_msg_index = -1;
 }
 
 void move_cursor_up(Editor* e){
@@ -220,6 +222,7 @@ void move_cursor_up(Editor* e){
   }
   update_scroll(e, true);
   update_line_number_padding(e);
+  e->buffer.current_msg_index = -1;
 }
 
 void move_to_beginning_of_line(Editor* e) {
@@ -565,6 +568,15 @@ Buffer *new_buffer(size_t capacity){
   buff->d_length = 1;
   buff->num_chars = 0;
   buff->current_line_index = 0;
+  buff->current_msg_index = -1;
   return buff;
+}
+
+void new_message(Editor *e, const char *message, MessageType type){
+  Message *msg = malloc(sizeof(Message));
+  msg->type = type;
+  msg->text = message;
+  e->messages[e->num_msgs] = msg;
+  e->buffer.current_msg_index = e->num_msgs++;
 }
 

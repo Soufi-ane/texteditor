@@ -21,6 +21,12 @@
 extern double longPressDelay ;
 
 typedef enum {
+  INFO,
+  GOOD,
+  ERROR
+} MessageType;
+
+typedef enum {
   NORMAL,
   INSERT,
 } Mode ;
@@ -30,12 +36,6 @@ typedef enum {
   RELATIVE,
   ABSOLUTE
 } LineNumbers;
-
-typedef enum {
-  WARNING,
-  INFO,
-  ERROR,
-} ErrorType ;
 
 typedef struct {
   size_t index;
@@ -53,8 +53,14 @@ typedef struct {
 } Line;
 
 typedef struct {
+  const char *text;
+  MessageType type;
+} Message;
+
+typedef struct {
   size_t num_chars;
   size_t current_line_index;
+  int current_msg_index;
   // TODO : maybe
   // size_t curren_col;
   size_t length; 
@@ -62,7 +68,7 @@ typedef struct {
   size_t d_start;
   size_t d_length;
   Line **lines;
-  Line file_name;
+  char const * file_path;
 } Buffer ;
 
 typedef struct {
@@ -77,18 +83,19 @@ typedef struct {
 } Padding;
 
 typedef struct {
-  bool isChoosingDir;
-  bool isOpeningFile;
-  bool isDebugging;
-  bool isSearching;
-  bool isNamingFile;
-  bool isMenuOpen;
+  // bool isChoosingDir;
+  bool is_opening_file;
+  bool is_debugging;
+  // bool isSearching;
+  // bool isNamingFile;
+  bool is_menu_open;
   LineNumbers ln_mode;
   size_t ln_padding;
-  size_t displayedFilesStart;
-  int filesCount;
-  size_t currentFileIndex;
+  // size_t displayedFilesStart;
+  // int filesCount;
+  // size_t currentFileIndex;
   Padding padding;
+  Font font;
   size_t line_height;
   size_t letter_spacing;
 } Config;
@@ -100,6 +107,8 @@ typedef struct {
   Cursor cursor;
   Config conf;
   Media media;
+  Message *messages[1024];
+  size_t num_msgs;
   char* message;
   char* currentFileName;
   char* fileNames[MAX_FILES_NUM];
@@ -162,5 +171,7 @@ void move_to_word_ending(Editor* e);
 void start_new_line(Editor *e);
 
 void update_scroll(Editor *e, bool is_up);
+
+void new_message(Editor *e, const char *message, MessageType type);
 
 #endif

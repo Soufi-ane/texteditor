@@ -279,6 +279,8 @@ int main() {
       32, 0, BLACK);
 
     if (ed.conf.is_menu_open) DrawMenu(&ed);
+    if(ed.buffer.current_msg_index > -1) DrawCurrentMessage(&ed);
+
     EndDrawing();
   }
   CloseWindow();

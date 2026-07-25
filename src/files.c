@@ -71,7 +71,9 @@ void try_saving_file(Editor* e){
   if(e->buffer.file_path){
     if(access(e->buffer.file_path, W_OK) == 0){
       write_file(e);
+      new_message(e, "Saved!", GOOD);
     } else {
+      new_message(e, "Readonly file!", ERROR);
     }
   }
   else {
