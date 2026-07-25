@@ -19,16 +19,16 @@ void DrawMenu(Editor * e){
   DrawTextEx(e->conf.font,
     n_text,
     (Vector2){
-      e->s_width / 2 - n_width / 2,
-      e->s_height / 2 - 100
+      (float) e->s_width / 2 - n_width / 2,
+      (float) e->s_height / 2 - 100
     },
     32, 0, GRAY
   );
   DrawTextEx(e->conf.font,
     o_text,
     (Vector2){
-    e->s_width / 2 - o_width / 2,
-    e->s_height / 2 - 50
+    (float) e->s_width / 2 - o_width / 2,
+    (float) e->s_height / 2 - 50
     },
     32, 0, GRAY 
   );
