@@ -1,5 +1,14 @@
-#include <raylib.h>
 #include "buffer.h"
+#include "files.h"
+
+const char *get_mode_str(Mode mode){
+  switch (mode) {
+    case NORMAL :
+      return "NORMAL";
+    case INSERT :
+      return "INSERT";
+  }
+}
 
 void DrawCursor(Editor* e,int x,int y){
   DrawRectangle(x,y, e->cursor.width, e->cursor.height, BLACK);
@@ -48,10 +57,32 @@ void DrawCurrentMessage(Editor *e) {
     e->messages[e->buffer.current_msg_index]->text,
     (Vector2){
       e->conf.padding.left, 
-      e->s_height - e->conf.line_height
+      e->s_height - e->cursor.height 
     },
     32, 0, GRAY
   ); 
 }
 
+void DrawStatusLine(Editor *e){
+  int sline_y = e->s_height - e->cursor.height;
+  DrawRectangle(0, sline_y, e->s_width, e->cursor.height, BLACK);
+  if(e->buffer.current_msg_index > -1) return;
+  DrawTextEx(
+    e->conf.font, get_mode_str(e->mode),
+    (Vector2){
+      e->s_width - e->conf.letter_spacing * 7,
+      e->s_height - e->cursor.height
+    },
+    32, 0, GRAY
+  );
+  DrawTextEx(
+    e->conf.font, e->buffer.file_path ? 
+    get_file_name_from_path(e->buffer.file_path) : "Untitled",
+    (Vector2){
+      e->conf.padding.left,
+      e->s_height - e->cursor.height
+    },
+    32, 0, GRAY
+  );
+}
 

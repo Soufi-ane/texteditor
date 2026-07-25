@@ -5,6 +5,16 @@
 #include "files.h"
 #include "tinyfiledialogs.h"
 
+const char *get_file_name_from_path(const char *path){
+  if(path == NULL) return NULL;
+  const char *last_slash = strrchr(path, '/');
+  const char *file_name = path;
+  if(last_slash && last_slash >= file_name) {
+    file_name = last_slash + 1;
+  }
+  return file_name;
+}
+
 void write_file(Editor* e){
 	FILE* file = fopen(e->buffer.file_path, "w");
   if(file == NULL){

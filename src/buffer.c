@@ -13,7 +13,7 @@ size_t get_max_line_length(Editor *e){
 }
 
 size_t get_max_num_lines(Editor *e){ 
-  size_t y_padding = e->conf.padding.top + e->conf.padding.bottom;
+  size_t y_padding = e->conf.padding.top + e->conf.padding.bottom + e->cursor.height;
   return (e->s_height - y_padding) / e->conf.line_height + 2; 
 }
 
@@ -569,4 +569,5 @@ void new_message(Editor *e, const char *message, MessageType type){
   e->messages[e->num_msgs] = msg;
   e->buffer.current_msg_index = e->num_msgs++;
 }
+
 

@@ -17,5 +17,7 @@ bool str_includes(char* str,char* sub_str);
 
 void try_saving_file(Editor* e);
 
+const char *get_file_name_from_path(const char *path);
+
 #endif
 

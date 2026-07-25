@@ -9,4 +9,6 @@ void DrawMenu(Editor * e);
 
 void DrawCurrentMessage(Editor *e);
 
+void DrawStatusLine(Editor *e);
+
 #endif

@@ -68,11 +68,6 @@ int main() {
       int yPos = pad.top + l * ed.conf.line_height ;
       DrawLineEx((Vector2){30, yPos}, (Vector2){ed.s_width - 30, yPos}, 3.0f, fg_color);
     }
-    DrawTextEx(ed.conf.font,
-      ed.mode == NORMAL ? "NORMAL" : "INSERT",
-      (Vector2){ed.s_width - ed.cursor.width * 10, 35} ,
-      32, 0, BLACK);
-
     // todo : render body
     size_t y_offset = 0;
     size_t i, x_offset = 0;
@@ -195,8 +190,9 @@ int main() {
       (Vector2){200, SCREEN_HEIGHT - 60},
       32, 0, BLACK);
 
-    if (ed.conf.is_menu_open) DrawMenu(&ed);
+    DrawStatusLine(&ed);
     if(ed.buffer.current_msg_index > -1) DrawCurrentMessage(&ed);
+    if (ed.conf.is_menu_open) DrawMenu(&ed);
 
     EndDrawing();
   }
