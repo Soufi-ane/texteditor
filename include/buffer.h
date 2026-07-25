@@ -40,9 +40,7 @@ typedef enum {
 
 typedef struct {
   size_t index;
-  size_t col;
-  size_t row;
-  size_t last_col;
+  size_t last_index;
   size_t width;
   size_t height;
 } Cursor;

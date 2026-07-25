@@ -152,7 +152,7 @@ size_t get_lines_wraps(Editor *e, size_t from, size_t to){
   return wraps;
 }
   
-void update_last_col(Editor* e){ e->cursor.last_col = e->cursor.col; }
+void update_last_col(Editor* e){ e->cursor.last_index = e->cursor.index; }
 
 void move_cursor_left(Editor* e) {
   if(e->cursor.index) {
