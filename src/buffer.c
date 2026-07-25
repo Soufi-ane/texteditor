@@ -141,22 +141,6 @@ void pop_char_from_line(Editor* e, Line *line){
   update_line_number_padding(e);
 }
 
-void update_cursor_position(Editor* e){
-  /* size_t max_line_len = get_max_line_length(e);
-  size_t max_num_lines = get_max_num_lines(e);
-  Line *current_line = e->buffer.lines[e->buffer.current_line_index];
-  size_t prev_wraps = get_lines_wraps(e, 0, e->buffer.current_line_index);
-  e->cursor.col = current_line->length % max_line_len;
-  e->cursor.row = e->buffer.current_line_index + prev_wraps;
-  
-  if(e->cursor.index != current_line->length){
-    size_t row_offset = current_line->length / max_line_len;
-    row_offset -= e->cursor.index / max_line_len;
-    e->cursor.col = e->cursor.index < max_line_len ? e->cursor.index : e->cursor.index % max_line_len;
-    e->cursor.row -= row_offset;
-  } */
-} 
-
 size_t get_lines_wraps(Editor *e, size_t from, size_t to){
   if(from > to) return 0;
   if(to >= e->buffer.capacity) to = e->buffer.capacity - 1;
@@ -412,28 +396,11 @@ void handle_normal_mode_keys(Editor* e, int c){
       if(e->mode == NORMAL){
         move_cursor_left(e);
       }
-      // todo
-      /* if(e->conf.isTakingNote) {
-        if(e->conf.isInsertingTitle) {}
-        else {
-          if(e->cursor.col > 0){
-            move_cursor_left(e);
-            update_last_col(e);
-          } 
-        }
-      } */
       break;
     case 'l':
       if(e->mode == NORMAL){
         move_cursor_right(e);
       }
-      // todo
-      /* if(e->conf.isTakingNote) {
-        if(e->conf.isInsertingTitle) {}
-        else {
-          move_cursor_right(e);
-        } 
-      } */
       break;
     case 'j':
       move_cursor_down(e);

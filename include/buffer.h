@@ -139,8 +139,6 @@ void handleKeys(Editor* editor, char *fileNames[MAX_FILES_NUM]);
 
 void add_char_to_note_body(Editor* e,char c);
 
-void update_cursor_position(Editor* e);
-
 int get_first_diplayed_index(Editor* e,bool isUp);
 
 Line *new_line(size_t capacity);

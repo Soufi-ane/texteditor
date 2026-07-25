@@ -68,7 +68,6 @@ int main() {
       SetExitKey(KEY_NULL);
     }
     handleKeys(&ed,ed.fileNames);
-    update_cursor_position(&ed);
 
     ClearBackground(WHITE);
     for (int l = 0; l < LINES_COUNT - 1; l++) {
@@ -241,11 +240,6 @@ int main() {
       DrawTextEx(ed.conf.font,
         TextFormat("%-17s [%d]", "current_line_index",ed.buffer.current_line_index),
         (Vector2){200, SCREEN_HEIGHT - 390},
-        32, 0, GREEN);
-      DrawTextEx(ed.conf.font,
-        TextFormat("%s (%d,%d)", "cursor",
-          ed.cursor.col,ed.cursor.row),
-        (Vector2){200, SCREEN_HEIGHT - 360},
         32, 0, GREEN);
       DrawTextEx(ed.conf.font,
         TextFormat("%-16s [%s]", "query",ed.searchQuery),
