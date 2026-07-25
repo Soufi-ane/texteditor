@@ -7,6 +7,7 @@
 #include <string.h>
 #include <time.h>
 #include "buffer.h"
+#include "ray.h"
 #include "files.h"
 #include "tinyfiledialogs.h"
 
@@ -48,6 +49,27 @@ void update_line_number_padding(Editor *e){
 void handle_append(Editor *e){
   e->mode = INSERT;
   if(e->cursor.index > 0) move_cursor_right(e);
+}
+
+void toggle_full_screen(Editor *e){
+  int monitor = GetCurrentMonitor();
+  int m_width  = GetMonitorWidth(monitor);
+  int m_height = GetMonitorHeight(monitor);
+  if(e->is_full_screen) {
+    e->s_width = SCREEN_WIDTH;
+    e->s_height = SCREEN_HEIGHT;
+    SetWindowPosition(
+      m_width / 2 - SCREEN_WIDTH / 2,
+      m_height / 2 - SCREEN_HEIGHT / 2
+    );
+  }
+  else {
+    e->s_width = m_width;
+    e->s_height = m_height;
+    SetWindowPosition(0, 0);
+  }
+  SetWindowSize(e->s_width, e->s_height);
+  e->is_full_screen = !e->is_full_screen;
 }
 
 void start_new_line(Editor *e){
@@ -422,6 +444,9 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case '-':
       SetWindowSize(e->s_width, e->s_height - 1);
+      break;
+    case 'f':
+      toggle_full_screen(e);
       break;
   }
 }

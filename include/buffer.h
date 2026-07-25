@@ -107,6 +107,7 @@ typedef struct {
   Config conf;
   Media media;
   Message *messages[MAX_MESSAGES];
+  bool is_full_screen;
   size_t num_msgs;
   char* message;
   char* currentFileName;
