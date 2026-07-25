@@ -11,6 +11,7 @@
 Editor ed = {
   .mode = NORMAL,
   .conf = {
+    .is_menu_open = true,
     .ln_mode = ABSOLUTE,
     .ln_padding = 1,
     .line_height = LINE_HEIGHT,
@@ -18,8 +19,8 @@ Editor ed = {
     .padding = {
       .top = LINE_HEIGHT,
       .bottom = LINE_HEIGHT,
-      .right = 50,
-      .left = 50
+      .right = 70,
+      .left = 10
     }
   },
   .cursor = {
@@ -41,19 +42,20 @@ int main() {
   if (ed.HOME_DIR == NULL)
     printf("ERRR!\n");
   sprintf(dir, "%s/.local/notes", ed.HOME_DIR);
-  getDirContent(&ed,ed.fileNames, &ed.conf.filesCount, dir);
+  // getDirContent(&ed,ed.fileNames, &ed.conf.filesCount, dir);
 
   InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Note");
   SetExitKey(KEY_NULL);
   int fileSize = 0;
-  Font fontSDF = {0};
+  Font font_SDF = {0};
   loadFontSDF(
       "/usr/local/share/fonts/JetBrainsMonoNF.ttf",
       &fileSize,
       128,
-      &fontSDF);
+      &font_SDF);
+  ed.conf.font = font_SDF;
 
-  SetTargetFPS(240);
+  SetTargetFPS(120);
   SetConfigFlags(FLAG_MSAA_4X_HINT);
 
   while (!WindowShouldClose()) {
@@ -73,25 +75,25 @@ int main() {
       int yPos = pad.top + l * ed.conf.line_height ;
       DrawLineEx((Vector2){30, yPos}, (Vector2){ed.s_width - 30, yPos}, 3.0f, fg_color);
     }
-    DrawTextEx(fontSDF,
+    DrawTextEx(ed.conf.font,
       ed.mode == NORMAL ? "NORMAL" : "INSERT",
       (Vector2){ed.s_width - ed.cursor.width * 10, 35} ,
       32, 0, BLACK);
 
-    if(ed.conf.isNamingFile) {
+    /* if(ed.conf.isNamingFile) {
       char placeholder[] = "File name";
       Vector2 nameSize = {0.0f, 0.0f};
       nameSize = MeasureTextEx(
-        fontSDF, 
+        ed.conf.font, 
         strlen(ed.currentFileName) > 0 ? ed.currentFileName :
         placeholder, 28, 0);
       Vector2 namePosition = {SCREEN_WIDTH / 2.0f, 400};
       namePosition.x = GetScreenWidth() / 2.0 - nameSize.x / 2;
       DrawRectangle(0, 365, GetScreenWidth(), 100,(Color){0, 0, 0, 230});     
-      DrawTextEx(fontSDF,
+      DrawTextEx(ed.conf.font,
         strlen(ed.currentFileName) > 0 ? ed.currentFileName :
         placeholder, namePosition , 28, 0, (Color){255, 255, 255, 180});
-    }
+    } */
 
     // todo : render body
     size_t y_offset = 0;
@@ -105,7 +107,7 @@ int main() {
       // line numbers
       if(ed.conf.ln_mode != NONE) {
         size_t index = ed.buffer.current_line_index;
-       DrawTextEx(fontSDF,
+       DrawTextEx(ed.conf.font,
          TextFormat( "%zu", 
            ed.conf.ln_mode == ABSOLUTE ?  i + 1 :
            index == i ? i + 1 :
@@ -132,7 +134,7 @@ int main() {
         if(m < current_line->length) {
           int char_x = pad.left + ed.conf.letter_spacing * x_offset;
           if(ed.conf.ln_mode != NONE) char_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
-          DrawTextCodepoint(fontSDF,
+          DrawTextCodepoint(ed.conf.font,
             current_line->chars[m],
             (Vector2){
             char_x,
@@ -152,34 +154,13 @@ int main() {
         x_offset = 0;
       }
 
-      if(ed.conf.isMenuOpen || ed.conf.isOpeningFile){
-        DrawRectangle(0, 270, 960, 400, (Color){0, 0, 0, 230});
-      }
-      if (ed.conf.isMenuOpen) {
-        DrawTextEx(fontSDF,
-          "Press Something!",
-          (Vector2){350, pad.top + ed.conf.line_height * 4},
-          32, 0, WHITE);
-        DrawTextEx(fontSDF,
-          "n : New note",
-          (Vector2){pad.left * 3, pad.top + ed.conf.line_height * 5},
-          32, 0, WHITE);
-        DrawTextEx(fontSDF,
-          "o : Open a note",
-          (Vector2){pad.left * 3,pad.top + ed.conf.line_height * 6},
-          32, 0, WHITE);
-        DrawTextEx(fontSDF,
-          "d : Select directory",
-          (Vector2){pad.left * 3, pad.top + ed.conf.line_height * 7},
-          32, 0, WHITE);
-      } 
 
-    if (ed.conf.isOpeningFile) {
-      if (ed.conf.isSearching) {
+    if (ed.conf.is_opening_file) {
+      /* if (ed.conf.is_searching) {
         if (strlen(ed.searchQuery)) {
           int i;
           for (i = 0; i < strlen(ed.searchQuery); i++) {
-            DrawTextCodepoint(fontSDF,
+            DrawTextCodepoint(ed.conf.font,
               ed.searchQuery[i],
               (Vector2){pad.left + i * ed.conf.letter_spacing,
                  GetScreenHeight() / 2.0 - 255},
@@ -189,13 +170,13 @@ int main() {
             GetScreenHeight() / 2 - 255,
             14, 30, WHITE);
         } else {
-          DrawTextEx(fontSDF,
+          DrawTextEx(ed.conf.font,
             "Search...",
             (Vector2){pad.left, (float) GetScreenHeight() / 2 - 253},
             28, 0, (Color){255, 255, 255, 180});
         }
-      } else {
-        DrawTextEx(fontSDF,
+      } else { 
+        DrawTextEx(ed.conf.font,
           "Press / to search",
           (Vector2){pad.left, (float) GetScreenHeight() / 2 - 253},
           28, 0, (Color){255, 255, 255, 180});
@@ -220,79 +201,79 @@ int main() {
            (float) GetScreenHeight() / 2 - 200 + ((i - ed.conf.displayedFilesStart) * 40)}
            , 0.0f, 1.0f, WHITE);
 
-        DrawTextEx(fontSDF,
+        DrawTextEx(ed.conf.font,
          ed.conf.isSearching ? ed.fileNames[ed.result_ids[i]] : 
          ed.fileNames[i],
          (Vector2){pad.left,
            (float) GetScreenHeight() / 2 - 200 + ((i - ed.conf.displayedFilesStart) * 40)},
          32, 0,
          i == ed.conf.currentFileIndex ? BLACK : WHITE);
+         }*/
       }
-    }
 
     // debugging 
-    if(ed.conf.isDebugging) {
+    if(ed.conf.is_debugging) {
       DrawRectangle(170,SCREEN_HEIGHT - 600, 400,600, BLACK);
-      /* DrawTextEx(fontSDF,
+      /* DrawTextEx(ed.conf.font,
         TextFormat("%-17s [%d]","isInsertingTitle",ed.conf.isInsertingTitle),
         (Vector2){200, SCREEN_HEIGHT - 570},
         32, 0, GREEN);
-      DrawTextEx(fontSDF,
+      DrawTextEx(ed.conf.font,
         TextFormat("%-17s [%d]", "isTakingNote",ed.conf.isTakingNote),
         (Vector2){200, SCREEN_HEIGHT - 540},
         32, 0, GREEN); */
-      DrawTextEx(fontSDF,
-        TextFormat("%-17s [%d]", "isMenuOpen",ed.conf.isMenuOpen),
+      DrawTextEx(ed.conf.font,
+        TextFormat("%-17s [%d]", "isMenuOpen",ed.conf.is_menu_open),
         (Vector2){200, SCREEN_HEIGHT - 510},
         32, 0, GREEN);
-      DrawTextEx(fontSDF,
-        TextFormat("%-17s [%d]", "isOpeningFile",ed.conf.isOpeningFile),
+      DrawTextEx(ed.conf.font,
+        TextFormat("%-17s [%d]", "isOpeningFile",ed.conf.is_opening_file),
         (Vector2){200, SCREEN_HEIGHT - 480},
         32, 0, GREEN);
-      DrawTextEx(fontSDF,
+      /* DrawTextEx(ed.conf.font,
         TextFormat("%-17s [%d]", "isSearching",ed.conf.isSearching),
         (Vector2){200, SCREEN_HEIGHT - 450},
-        32, 0, GREEN);
-      DrawTextEx(fontSDF,
+        32, 0, GREEN); */
+      /* DrawTextEx(ed.conf.font,
         TextFormat("%-17s [%d]", "isNamingFile",ed.conf.isNamingFile),
         (Vector2){200, SCREEN_HEIGHT - 420},
-        32, 0, GREEN);
-      DrawTextEx(fontSDF,
+        32, 0, GREEN); */
+      DrawTextEx(ed.conf.font,
         TextFormat("%-17s [%d]", "current_line_index",ed.buffer.current_line_index),
         (Vector2){200, SCREEN_HEIGHT - 390},
         32, 0, GREEN);
-      DrawTextEx(fontSDF,
+      DrawTextEx(ed.conf.font,
         TextFormat("%s (%d,%d)", "cursor",
           ed.cursor.col,ed.cursor.row),
         (Vector2){200, SCREEN_HEIGHT - 360},
         32, 0, GREEN);
-      DrawTextEx(fontSDF,
+      DrawTextEx(ed.conf.font,
         TextFormat("%-16s [%s]", "query",ed.searchQuery),
         (Vector2){200, SCREEN_HEIGHT - 300},
         32, 0, GREEN);
-      DrawTextEx(fontSDF,
+      DrawTextEx(ed.conf.font,
         TextFormat("%-17s [%d]", "index",ed.cursor.index),
         (Vector2){200, SCREEN_HEIGHT - 330},
         32, 0, GREEN);
-      DrawTextEx(fontSDF,
-        TextFormat("%-16s [%03d]", "num_chars", ed.buffer.num_chars),
+      DrawTextEx(ed.conf.font,
+        TextFormat("%-16s [%03d]", "buff length", ed.buffer.length),
         (Vector2){200, SCREEN_HEIGHT - 270},
         32, 0, GREEN); 
-      DrawTextEx(fontSDF,
+      DrawTextEx(ed.conf.font,
         TextFormat("%s: [%03d]", "current length",ed.buffer.lines[ed.buffer.current_line_index]->length),
         (Vector2){200, SCREEN_HEIGHT - 240},
         32, 0, GREEN); 
       if(ed.buffer.capacity > ed.buffer.current_line_index + 1)
-      DrawTextEx(fontSDF,
+      DrawTextEx(ed.conf.font,
         TextFormat("%s: [%3d]", "next length", ed.buffer.lines[ed.buffer.current_line_index + 1]->length),
         (Vector2){200, SCREEN_HEIGHT - 210},
         32, 0, GREEN);
-      /* DrawTextEx(fontSDF,
+      /* DrawTextEx(ed.conf.font,
         TextFormat("note length [%d]",ed.note->length),
         (Vector2){200, SCREEN_HEIGHT - 180},
         32, 0, GREEN); */
     }
-    DrawTextEx(fontSDF,
+    DrawTextEx(ed.conf.font,
       TextFormat("%s",ed.message),
       (Vector2){200, SCREEN_HEIGHT - 60},
       32, 0, BLACK);
@@ -302,6 +283,6 @@ int main() {
   CloseWindow();
   int i;
   // writeFile(&ed);
-  UnloadFontData(fontSDF.glyphs, fontSDF.glyphCount);
+  UnloadFontData(ed.conf.font.glyphs, ed.conf.font.glyphCount);
   return 0;
 }

@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ray.h>
-#include "buffer.h"
 #include <dirent.h>
+#include "buffer.h"
 
 char* menu_icons_names[NUM_MENU_ICONS] = {
   "sticky-note.png"
@@ -20,47 +20,6 @@ void load_menu_icons(Texture2D* icons){
   }
 }
 
-void getDirContent(Editor* e,char* files[],int* count,const char* path){
-	struct dirent* entry;
-	DIR* dir = opendir(path);
-	int i = 0;
-	while((entry = readdir(dir)) != NULL){
-		if(entry->d_type == DT_REG){
-			files[i] = malloc(sizeof(char) * 128);
-      memcpy(files[i++],entry->d_name,strlen(entry->d_name) + 1);
-		}
-		*count = i;
-	}
-	closedir(dir);
-}
-void writeFile(Editor* e){
-  char savePath[100];
-  char date_str[11];
-
-  /* snprintf(date_str,sizeof(date_str),"%s-%s-%s", e->note->date.day,
-  e->note->date.month, e->note->date.year); */
-
-  sprintf( savePath, "%s/.local/notes/%s", e->HOME_DIR,
-  strlen(e->currentFileName) > 1 ? e->currentFileName : date_str);
-
-	FILE* file = fopen(savePath,"w");
-  printf("saving file %s ...\n",savePath);
-
-  /* if(e->conf.isNoteBookMode){
-    fprintf(file,"----------------\n");
-    fprintf(file,"date: ");
-    fprintf(file,"%s-%s-%s\n",e->note->date.day,e->note->date.month,e->note->date.year);
-    fprintf(file,"title: ");
-    if(!strlen(e->note->title)) fprintf(file,"Untitled\n");
-    else fprintf(file,"%s\n",e->note->title);
-    fprintf(file,"----------------\n\n");
-  } */
-  // e->note->body[e->note->length] = '\0';
-  // printf("[[%.*s]]\n",e->note->length,e->note->body);
-  // fprintf(file,"%s",e->note->body);
-  char msg[100];
-  sprintf(msg,"File saved: %s",e->currentFileName);
-  memcpy(e->message,msg,strlen(msg));
 	fclose(file);
 }
 
@@ -94,61 +53,7 @@ void readFile(Editor* e, char* path){
   // printf("total size : %d\n",e->note->length);
 }
 
-/* void readNote(Editor* e, char* path){
-	FILE* noteFile = fopen(path,"r");
-  if(!noteFile) exit(1);
-	int i = 0;
-  int position = 0;
-  char* line = NULL;
-  size_t len;
-  size_t read;
-  size_t current_length = 0;
-	while((read = getline(&line,&len,noteFile)) != -1){
-    printf("i = %d\n",i);
-    if(i>4) {
-      printf("line : [%s][%zu]",line,read);
-      current_length += read;
-      if(i == 5){ 
-        e->note->body = malloc(read + 1);
-      } else {
-        e->note->body = realloc(e->note->body,current_length + 1);
-      }
-      for(int n = 0; n < read;position++) {
-        if(line[n] == '\n') e->note->linesNum++;
-        e->note->body[position] = line[n++];
-      }
     }
-    else {
-      if(i == 1){
-        printf("[1] : %s",line);
-        int d = sscanf(
-          line,
-          "date: %2c-%2c-%4c",
-          e->note->date.day,e->note->date.month,e->note->date.year);
-        if(d < 3) {
-          printf("[date] sscanf returned %d\n",d);
-          return;
-        }
-      } 
-      else if(i == 2){
-        int read_chars;
-        int d = sscanf(
-          line,
-          "title: %20[^\n]%n",
-          e->note->title, &read_chars
-        );
-        if(d < 1) {
-          printf("sscanf returned %d\n",d);
-          return;
-        }
-        e->note->title[read_chars - 7] = '\0';
-      }
-    } 
-    i++;
-	}
-  e->note->length = position;
-  printf("total size : %d\n",e->note->length);
-} */
 
 void loadFontSDF(
 		char* path,

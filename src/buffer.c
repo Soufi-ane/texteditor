@@ -7,6 +7,8 @@
 #include <string.h>
 #include <time.h>
 #include "buffer.h"
+#include "files.h"
+#include "tinyfiledialogs.h"
 
 double longPressTime = 0.0f;
 
@@ -174,13 +176,14 @@ void move_cursor_left(Editor* e) {
     // todo
     // update_last_col(e);
   }
+  e->buffer.current_msg_index = -1;
 }
 
 void handle_caps_lock_and_escape(Editor* e){
-  e->conf.isMenuOpen = false;
-  e->conf.isNamingFile = false;
-  e->conf.isOpeningFile = false;
-  e->conf.isSearching = false;
+  e->conf.is_menu_open = false;
+  // e->conf.isNamingFile = false;
+  e->conf.is_opening_file = false;
+  // e->conf.isSearching = false;
   e->searchQuery[0] = '\0';
   if(e->mode == INSERT){
     e->mode = NORMAL;
@@ -305,7 +308,7 @@ void handle_tab(Editor* e) {
   } */
 }
 
-void handle_move_down_files(Editor* e){
+/* void handle_move_down_files(Editor* e){
   if(e->conf.currentFileIndex < e->conf.filesCount - 1){
     e->conf.currentFileIndex++;
     if(e->conf.currentFileIndex + e->conf.displayedFilesStart > MAX_DISPLAYED_FILES -1){ 
@@ -316,9 +319,9 @@ void handle_move_down_files(Editor* e){
     e->conf.currentFileIndex = 0;
     e->conf.displayedFilesStart = 0;
   }
-}
+} */
 
-void handle_move_up_files(Editor* e){
+/* void handle_move_up_files(Editor* e){
   if(e->conf.currentFileIndex > 0){
     e->conf.currentFileIndex--;
     if(e->conf.currentFileIndex - e->conf.displayedFilesStart < 0) {
@@ -329,7 +332,7 @@ void handle_move_up_files(Editor* e){
     e->conf.currentFileIndex = e->conf.filesCount - 1;
     e->conf.displayedFilesStart = e->conf.filesCount - MAX_DISPLAYED_FILES ;
   }
-}
+} */
 
 void handle_backspace(Editor* e) {
   if(e->mode == INSERT) {
@@ -345,31 +348,26 @@ void handle_normal_mode_keys(Editor* e, int c){
       move_cursor_to_last_line(e);
       break;
     case '?':
-      e->conf.isDebugging = !e->conf.isDebugging;
+      e->conf.is_debugging = !e->conf.is_debugging;
       break;
     /* case 'n':
       e->mode = INSERT; 
       e->conf.isNamingFile = true;
-      e->conf.isMenuOpen = false;
+      e->conf.is_menu_open = false;
       break; */
     case 'a':
       handle_append(e);
       break;
-    case 's':
-      // if(!strlen(e->currentFileName)){
-        // e->conf.isNamingFile = true;
-        // e->mode = INSERT;
-      // } else writeFile(e);
-      break;
     case 'i':
       e->mode = INSERT;
+      e->conf.is_menu_open = false;
       break;
     case 'm':
       // load_menu_icons(e->media.menu_icons);
-      e->conf.isMenuOpen = true;
-      e->conf.isChoosingDir = false;
-      e->conf.isNamingFile = false;
-      e->conf.isOpeningFile = false;
+      e->conf.is_menu_open = true;
+      // e->conf.isChoosingDir = false;
+      // e->conf.isNamingFile = false;
+      e->conf.is_opening_file = false;
       break;
     case '$':
       move_to_end_of_line(e);
@@ -402,7 +400,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       }
       break;
     case '/':
-      e->conf.isSearching = true;
+      // e->conf.isSearching = true;
       // todo
       /* e->conf.isInsertingTitle = false;
       e->conf.isTakingNote = false; */
@@ -436,12 +434,10 @@ void handle_normal_mode_keys(Editor* e, int c){
       } */
       break;
     case 'j':
-      if(e->conf.isOpeningFile) handle_move_down_files(e);
-      else move_cursor_down(e);
+      move_cursor_down(e);
       break;
     case 'k':
-      if(e->conf.isOpeningFile) handle_move_up_files(e);
-      else move_cursor_up(e);
+      move_cursor_up(e);
       break;
     case '+':
       SetWindowSize(e->s_width, e->s_height + 1);
@@ -459,7 +455,7 @@ void handle_insert_mode_keys(Editor* e,int c){
 };
 
 void handle_enter(Editor* e){
-  if (e->conf.isOpeningFile) {
+  /* if (e->conf.is_opening_file) {
     char path[100];
     sprintf(path,
       "%s/.local/notes/%s",
@@ -472,10 +468,10 @@ void handle_enter(Editor* e){
     // if(e->conf.isNoteBookMode) readNote(e,path);
     // else readFile(e, path);
     e->currentFileName = e->fileNames[e->conf.currentFileIndex];
-    e->conf.isOpeningFile = false;
+    e->conf.is_opening_file = false;
     // todo
     // e->conf.isTakingNote = true;
-  } 
+  }  */
   if(e->mode == INSERT){
     start_new_line(e);
     update_scroll(e, false);
