@@ -482,10 +482,7 @@ void handle_enter(Editor* e){
   }
 }
 
-void handleKeys(
-  Editor* e,
-  char *fileNames[MAX_FILES_NUM]
-){
+void handle_keys(Editor* e){
   int c;
   if ((c = GetCharPressed()) >= 8) {
     if (e->mode == NORMAL) handle_normal_mode_keys(e,c);
