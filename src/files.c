@@ -31,7 +31,6 @@ void read_file(Editor* e, char const * file_path){
   e->buffer = *new_buffer(128);
   e->buffer.file_path = file_path;
 	while((read = getline(&line,&size,f)) != -1){
-    // printf("LINE[%s]",line);
     if(e->buffer.length > e->buffer.capacity - 1){
       size_t new_capacity = e->buffer.capacity + 10;
       e->buffer.lines = realloc(e->buffer.lines, sizeof(Line*) * new_capacity);
@@ -43,9 +42,9 @@ void read_file(Editor* e, char const * file_path){
     for(size_t i = 0; i < read - 1; i++) {
       add_char_to_line(e, e->buffer.lines[line_index], line[i], true);
     }
-
-      line_index++;
-      e->buffer.length++;
+    e->buffer.num_chars += read;
+    line_index++;
+    e->buffer.length++;
     }
   free(line);
 }
