@@ -9,19 +9,15 @@ extern char* menu_icons_names[];
 
 void load_menu_icons(Texture2D* icons);
 
-void getDirContent(Editor* e, char* files[], int* count, const char* path);
-
 void loadFontSDF(char* path, int* fileSize, int size, Font* font);
 
-void writeFile(Editor* e);
-
-void readNote(Editor* e, char* path);
-
-void readFile(Editor* e, char* path);
+void read_file(Editor* e, char const * file_path);
 
 void find(char* fileNames[], int numFiles, char* query, int result_ids[], int* numResult);
 
 bool str_includes(char* str,char* sub_str);
+
+void try_saving_file(Editor* e);
 
 #endif
 

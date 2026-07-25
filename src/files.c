@@ -3,9 +3,11 @@
 #include <raylib.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <ray.h>
 #include <dirent.h>
 #include "buffer.h"
+#include "tinyfiledialogs.h"
 
 char* menu_icons_names[NUM_MENU_ICONS] = {
   "sticky-note.png"
@@ -20,40 +22,70 @@ void load_menu_icons(Texture2D* icons){
   }
 }
 
+void write_file(Editor* e){
+	FILE* file = fopen(e->buffer.file_path, "w");
+  if(file == NULL){
+    // TODO : show error
+    return;
+  }
+  for(size_t i = 0; i < e->buffer.length; i++){
+    Line *line = e->buffer.lines[i];
+    fwrite(line->chars, sizeof(char), sizeof(char) * line->length, file);
+    fputc('\n', file);
+  }
 	fclose(file);
 }
 
-void readFile(Editor* e, char* path){
-	FILE* f = fopen(path,"r");
+void read_file(Editor* e, char const * file_path){
+	FILE* f = fopen(file_path,"r");
   if(!f) {
-    printf("Coudn't open the file %s path\n",path);
-    exit(1);
+    printf("Coudn't open the file %s path\n",file_path);
+    return;
   } 
-  printf("Reading %s\n",path);
   char* line = NULL;
-  size_t size = 0;
+  size_t size = 0, line_index = 0;
   size_t read;
-  // e->note->body = malloc(100);
-  // e->note->size = 100;
-  int i,index = 0;
+  e->buffer = *new_buffer(128);
+  e->buffer.file_path = file_path;
 	while((read = getline(&line,&size,f)) != -1){
-    printf("LINE[%s]",line);
-    // if(index + read +1 > e->note->size - 1){
-      int new_size = read + index + 128 + 1;
-      // e->note->body = realloc(e->note->body,new_size);
-      // e->note->size = new_size;
+    // printf("LINE[%s]",line);
+    if(e->buffer.length > e->buffer.capacity - 1){
+      size_t new_capacity = e->buffer.capacity + 10;
+      e->buffer.lines = realloc(e->buffer.lines, sizeof(Line*) * new_capacity);
+      for(size_t i = e->buffer.capacity; i < new_capacity; i++){
+        e->buffer.lines[i] = new_line(DEFAULT_LINE_SIZE);
+      }
+      e->buffer.capacity = new_capacity;
     }
-    for(i=0; i < read;i++) {
-      // if(line[i] == '\n') e->note->linesNum++;
-      // e->note->body[index++] = line[i];
+    for(size_t i = 0; i < read - 1; i++) {
+      add_char_to_line(e, e->buffer.lines[line_index], line[i], true);
     }
-	// }
-  // free(line);
-  // e->note->length = index;
-  // printf("total size : %d\n",e->note->length);
+
+      line_index++;
+      e->buffer.length++;
+    }
+  free(line);
 }
 
+void try_saving_file(Editor* e){
+  if(e->buffer.file_path){
+    if(access(e->buffer.file_path, W_OK) == 0){
+      write_file(e);
+    } else {
     }
+  }
+  else {
+    char const * path = 
+    tinyfd_saveFileDialog(
+     "Save File",
+     e->buffer.file_path != NULL ? e->buffer.file_path : "Untitled"
+     , 0, NULL, NULL);
+    if (path != NULL) {
+      e->buffer.file_path = path;
+      try_saving_file(e);
+    }
+  }
+}
 
 void loadFontSDF(
 		char* path,

@@ -278,6 +278,7 @@ int main() {
       (Vector2){200, SCREEN_HEIGHT - 60},
       32, 0, BLACK);
 
+    if (ed.conf.is_menu_open) DrawMenu(&ed);
     EndDrawing();
   }
   CloseWindow();

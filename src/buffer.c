@@ -385,19 +385,18 @@ void handle_normal_mode_keys(Editor* e, int c){
       move_to_word_ending(e);
       break;
     case 'o':
-      if(e->conf.isMenuOpen){
-        e->conf.isOpeningFile = true;
-        e->conf.isMenuOpen = false;
+      if(e->conf.is_menu_open){
+        e->conf.is_opening_file = true;
+        char const * path = tinyfd_openFileDialog("Select File", "", 0, NULL, NULL, 0);
+        if(path != NULL){
+          e->conf.is_menu_open = false;
+          read_file(e, path);
+          update_scroll(e, true);
+        }
       }
-      else {
-        // todo
-        /* if(e->conf.isTakingNote){
-          if(e->note->linesNum < LINES_COUNT - 1){
-            move_to_new_line(e);
-            e->mode = INSERT;
-          }
-        } */
-      }
+      break;
+    case 's':
+      try_saving_file(e);
       break;
     case '/':
       // e->conf.isSearching = true;
@@ -562,6 +561,7 @@ Buffer *new_buffer(size_t capacity){
   }
   buff->capacity = capacity;
   buff->length = 1;
+  buff->d_start = 0;
   buff->d_length = 1;
   buff->num_chars = 0;
   buff->current_line_index = 0;
