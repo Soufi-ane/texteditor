@@ -308,12 +308,22 @@ void remove_current_char(Editor* e){
 }
 
 void handle_tab(Editor* e) {
-  // todo
-  /* if(e->mode == INSERT) {
-    if(e->conf.isTakingNote ){
-      for(int i = 0;i < TAB_SIZE; ++i) addChar(e,' ');
+  if(e->mode == INSERT) {
+    if(e->conf.is_spaces_for_tabs) {
+      for(int i = 0; i < TAB_SIZE; ++i)  {
+        add_char_to_line(
+          e, e->buffer.lines[e->buffer.current_line_index],
+          ' ', false
+        );
+      }
     }
-  } */
+    else {
+      add_char_to_line(
+        e, e->buffer.lines[e->buffer.current_line_index],
+        '\t', false
+      );
+    }
+  }
 }
 
 /* void handle_move_down_files(Editor* e){

@@ -26,6 +26,7 @@
 #define REPEAT_RATE           0.015f
 #define FILE_NAME_COLOR       0x828282FF
 #define STATUS_LINE_COLOR     0x000000FF
+#define IS_SPACES_FOR_TABS    false
 
 // memory
 #define DEFAULT_LINE_SIZE     128

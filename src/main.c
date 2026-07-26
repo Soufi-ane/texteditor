@@ -17,6 +17,8 @@ Editor ed = {
     .file_name_color = FILE_NAME_COLOR,
     .status_line_color = STATUS_LINE_COLOR,
     .is_menu_open = true,
+    .is_spaces_for_tabs = IS_SPACES_FOR_TABS,
+    .tab_size = TAB_SIZE,
     .is_showing_lines = DRAW_LINES,
     .ln_mode = ABSOLUTE,
     .ln_padding = 1,
@@ -122,17 +124,19 @@ int main() {
           );
         if(m < current_line->length) {
           int char_x = pad.left + ed.conf.letter_spacing * x_offset;
-          if(ed.conf.ln_mode != NONE) char_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
-          DrawTextCodepoint(ed.conf.font,
-            current_line->chars[m],
-            (Vector2){
-            char_x,
-            pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height},
-            32,
-            m == ed.cursor.index && i == ed.buffer.current_line_index ? 
-            GetColor(ed.conf.under_cursor_color) : GetColor(ed.conf.text_color)
-          );
+          int char_y = pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height;
 
+          if(ed.conf.ln_mode != NONE) char_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
+          char c = current_line->chars[m];
+          unsigned int char_color = m == ed.cursor.index &&
+            i == ed.buffer.current_line_index ? 
+            ed.conf.under_cursor_color : ed.conf.text_color;
+          if(c == '\t') {
+            for(int i = 0; i < ed.conf.tab_size; i++){
+              DrawChar(&ed, ' ',char_x + i * ed.conf.letter_spacing, char_y , char_color);
+              x_offset++;
+            }
+          } else DrawChar(&ed, c,char_x, char_y , char_color);
           x_offset++;
           if((m + 1) % get_max_line_length(&ed) == 0) {
             y_offset++;

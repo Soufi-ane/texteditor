@@ -69,6 +69,8 @@ typedef struct {
   bool is_debugging;
   bool is_menu_open;
   bool is_showing_lines ;
+  bool is_spaces_for_tabs;
+  size_t tab_size;
   LineNumbers ln_mode;
   size_t ln_padding;
   Padding padding;

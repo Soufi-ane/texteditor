@@ -11,4 +11,6 @@ void DrawCurrentMessage(Editor *e);
 
 void DrawStatusLine(Editor *e);
 
+void DrawChar(Editor *e, int c, int x_pos, int y_pos, unsigned int color);
+
 #endif

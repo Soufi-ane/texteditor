@@ -87,3 +87,12 @@ void DrawStatusLine(Editor *e){
   );
 }
 
+void DrawChar(Editor *e, int c, int x_pos, int y_pos, unsigned int color){
+  Padding pad = e->conf.padding;
+  DrawTextCodepoint(
+    e->conf.font, c,
+    (Vector2){x_pos, y_pos}, 32,
+    GetColor(color)
+  );
+}
+
