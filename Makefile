@@ -7,7 +7,7 @@ FontName = JetBrainsMonoNF.ttf
 
 CC = gcc
 SRC = src/*.c
-OUT = build/note
+OUT = build/texteditor
 
 all: $(OUT)
 
