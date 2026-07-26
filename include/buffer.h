@@ -57,6 +57,11 @@ typedef struct {
   char const * file_path;
 } Buffer ;
 
+typedef struct{
+  size_t row;
+  size_t col;
+} RowCol;
+
 typedef struct {
   size_t top;
   size_t right;
@@ -70,6 +75,8 @@ typedef struct {
   bool is_menu_open;
   bool is_showing_lines ;
   bool is_spaces_for_tabs;
+  bool is_selecting;
+  RowCol selection_start;
   size_t tab_size;
   LineNumbers ln_mode;
   size_t ln_padding;
@@ -154,5 +161,7 @@ void update_scroll(Editor *e, bool is_up);
 void new_message(Editor *e, const char *message, MessageType type);
 
 void handle_keys(Editor* e);
+
+bool is_selected(Editor *e, RowCol row_col);
 
 #endif

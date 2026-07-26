@@ -136,7 +136,14 @@ int main() {
               DrawChar(&ed, ' ',char_x + i * ed.conf.letter_spacing, char_y , char_color);
               x_offset++;
             }
-          } else DrawChar(&ed, c,char_x, char_y , char_color);
+          } else {
+            if(is_selected(&ed, (RowCol){i, m})) {
+              DrawCursor(&ed, char_x, char_y);
+              DrawChar(&ed, c,char_x, char_y , ed.conf.under_cursor_color);
+            } else {
+              DrawChar(&ed, c,char_x, char_y , char_color);
+            } 
+          } 
           x_offset++;
           if((m + 1) % get_max_line_length(&ed) == 0) {
             y_offset++;

@@ -17,6 +17,36 @@ size_t get_max_num_lines(Editor *e){
   return (e->s_height - y_padding) / e->conf.line_height + 2; 
 }
 
+bool is_selected(Editor *e, RowCol row_col){
+  if(!e->conf.is_selecting) return false;
+  bool is_at_start = row_col.row == e->conf.selection_start.row;
+  bool is_at_current = row_col.row == e->buffer.current_line_index;
+
+  if(is_at_start && is_at_current){
+    bool is_left = e->cursor.index <= e->conf.selection_start.col;
+    return is_left ? 
+      row_col.col <= e->conf.selection_start.col && row_col.col >= e->cursor.index
+      : row_col.col >= e->conf.selection_start.col && row_col.col <= e->cursor.index;
+  }
+  if(
+    row_col.row >= e->conf.selection_start.row &&
+    row_col.row <= e->buffer.current_line_index
+  ){
+    if(is_at_start) return row_col.col >= e->conf.selection_start.col;
+    if(is_at_current) return row_col.col <= e->cursor.index;
+    return true;
+  }
+  if(
+    row_col.row >= e->buffer.current_line_index &&
+    row_col.row <= e->conf.selection_start.row
+  ){
+    if(is_at_start) return row_col.col <= e->conf.selection_start.col;
+    if(is_at_current) return row_col.col >= e->cursor.index;
+    return true;
+  }
+  return false;
+}
+
 void update_scroll(Editor *e, bool is_up){
   size_t wraps = get_lines_wraps(e, e->buffer.d_start, e->buffer.d_start + e->buffer.d_length);
   size_t max = get_max_num_lines(e) - wraps;
@@ -180,6 +210,7 @@ void move_cursor_left(Editor* e) {
 void handle_caps_lock_and_escape(Editor* e){
   e->conf.is_menu_open = false;
   e->conf.is_opening_file = false;
+  e->conf.is_selecting = false;
   if(e->mode == INSERT){
     e->mode = NORMAL;
     if(e->cursor.index) move_cursor_left(e);
@@ -443,6 +474,11 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'f':
       toggle_full_screen(e);
+      break;
+    case 'v':
+      e->conf.is_selecting = !e->conf.is_selecting;
+      e->conf.selection_start.row = e->buffer.current_line_index;
+      e->conf.selection_start.col = e->cursor.index;
       break;
   }
 }
