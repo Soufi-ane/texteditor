@@ -29,6 +29,7 @@ typedef struct {
   size_t last_index;
   size_t width;
   size_t height;
+  unsigned int color;
 } Cursor;
 
 typedef struct {
@@ -64,19 +65,21 @@ typedef struct {
 } Padding;
 
 typedef struct {
-  // bool isChoosingDir;
   bool is_opening_file;
   bool is_debugging;
-  // bool isSearching;
-  // bool isNamingFile;
   bool is_menu_open;
+  bool is_showing_lines ;
   LineNumbers ln_mode;
   size_t ln_padding;
-  // size_t displayedFilesStart;
-  // int filesCount;
-  // size_t currentFileIndex;
   Padding padding;
   Font font;
+  unsigned int bg_color;
+  unsigned int text_color;
+  unsigned int under_cursor_color;
+  unsigned int lines_color;
+  unsigned int line_numbers_color;
+  unsigned int file_name_color;
+  unsigned int status_line_color;
   size_t line_height;
   size_t letter_spacing;
 } Config;

@@ -1,5 +1,6 @@
 #include "buffer.h"
 #include "files.h"
+#include <raylib.h>
 
 const char *get_mode_str(Mode mode){
   switch (mode) {
@@ -11,7 +12,7 @@ const char *get_mode_str(Mode mode){
 }
 
 void DrawCursor(Editor* e,int x,int y){
-  DrawRectangle(x,y, e->cursor.width, e->cursor.height, BLACK);
+  DrawRectangle(x,y, e->cursor.width, e->cursor.height, GetColor(e->cursor.color));
 }
 
 void DrawMenu(Editor * e){
@@ -65,7 +66,7 @@ void DrawCurrentMessage(Editor *e) {
 
 void DrawStatusLine(Editor *e){
   int sline_y = e->s_height - e->cursor.height;
-  DrawRectangle(0, sline_y, e->s_width, e->cursor.height, BLACK);
+  DrawRectangle(0, sline_y, e->s_width, e->cursor.height, GetColor(e->conf.status_line_color));
   if(e->buffer.current_msg_index > -1) return;
   DrawTextEx(
     e->conf.font, get_mode_str(e->mode),
@@ -82,7 +83,7 @@ void DrawStatusLine(Editor *e){
       e->conf.padding.left,
       e->s_height - e->cursor.height
     },
-    32, 0, GRAY
+    32, 0, GetColor(e->conf.file_name_color)
   );
 }
 

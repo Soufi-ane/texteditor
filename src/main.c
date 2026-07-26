@@ -1,3 +1,4 @@
+#include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "files.h"
@@ -8,7 +9,15 @@ Editor ed = {
   .s_width = SCREEN_WIDTH,
   .s_height = SCREEN_HEIGHT,
   .conf = {
+    .bg_color = BG_COLOR,
+    .text_color = TEXT_COLOR,
+    .under_cursor_color = UNDER_CURSOR_COLOR,
+    .lines_color = LINES_COLOR,
+    .line_numbers_color = LINE_NUMBERS_COLOR,
+    .file_name_color = FILE_NAME_COLOR,
+    .status_line_color = STATUS_LINE_COLOR,
     .is_menu_open = true,
+    .is_showing_lines = DRAW_LINES,
     .ln_mode = ABSOLUTE,
     .ln_padding = 1,
     .line_height = LINE_HEIGHT,
@@ -23,6 +32,7 @@ Editor ed = {
   .cursor = {
     .width = 15,
     .height = 35,
+    .color = CURSOR_COLOR
   },
 };
 
@@ -63,10 +73,16 @@ int main() {
     }
     handle_keys(&ed);
 
-    ClearBackground(WHITE);
-    for (int l = 0; l < get_max_num_lines(&ed); l++) {
-      int yPos = pad.top + l * ed.conf.line_height ;
-      DrawLineEx((Vector2){30, yPos}, (Vector2){ed.s_width - 30, yPos}, 3.0f, fg_color);
+    ClearBackground(GetColor(ed.conf.bg_color));
+    if(ed.conf.is_showing_lines) {
+      for (int l = 0; l < get_max_num_lines(&ed); l++) {
+        int yPos = pad.top + l * ed.conf.line_height ;
+        DrawLineEx(
+          (Vector2){30, yPos}, 
+          (Vector2){ed.s_width - 30, yPos}, 3.0f,
+          GetColor(ed.conf.lines_color)
+        );
+      }
     }
     // todo : render body
     size_t y_offset = 0;
@@ -90,7 +106,7 @@ int main() {
            pad.left,
            pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height
           },
-         32, 0, GRAY);
+         32, 0, GetColor(ed.conf.line_numbers_color));
       }
 
       Line *current_line = ed.buffer.lines[i];
@@ -113,7 +129,8 @@ int main() {
             char_x,
             pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height},
             32,
-            m == ed.cursor.index && i == ed.buffer.current_line_index ? GRAY : BLACK
+            m == ed.cursor.index && i == ed.buffer.current_line_index ? 
+            GetColor(ed.conf.under_cursor_color) : GetColor(ed.conf.text_color)
           );
 
           x_offset++;
