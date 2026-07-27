@@ -55,7 +55,8 @@ void read_file(Editor* e, char const * file_path){
     e->buffer.num_chars += read;
     line_index++;
     e->buffer.length++;
-    }
+  }
+  if(e->buffer.length > 1) e->buffer.length--;
   free(line);
 }
 
