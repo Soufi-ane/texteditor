@@ -141,6 +141,7 @@ void copy_selection_to_clipboard(Editor *e){
   add_char_to_line(e, selected, '\0', true);
   int success = copy_to_clipboard(selected->chars);
   if(success) new_message(e, "Copied!", GOOD);
+  else new_message(e, "Failed to copy!", ERROR);
 }
 
 int copy_to_clipboard(const char *text){
