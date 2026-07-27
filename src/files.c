@@ -122,4 +122,33 @@ bool str_includes(char* str,char* sub_str){
   return true;
 }
 
+void copy_selection_to_clipboard(Editor *e){
+  Line *selected = new_line(DEFAULT_LINE_SIZE * 10);
+  size_t current_index = e->buffer.current_line_index;
+  bool is_up = is_selecting_up(e);
+  for(
+    int i = (is_up ? current_index : e->conf.selection_start.row);
+    i <= (is_up ? e->conf.selection_start.row : current_index);
+    i++
+  ){
+    for(int j = 0; j < e->buffer.lines[i]->length; j++){
+      if(is_selected(e, (RowCol){i, j}))
+      add_char_to_line(e, selected, e->buffer.lines[i]->chars[j], true);
+    }
+    if(i < (is_up ? e->conf.selection_start.row : current_index))
+    add_char_to_line(e, selected, '\n', true);
+  }
+  add_char_to_line(e, selected, '\0', true);
+  int success = copy_to_clipboard(selected->chars);
+  if(success) new_message(e, "Copied!", GOOD);
+}
+
+int copy_to_clipboard(const char *text){
+  FILE *pipe = popen("xclip -selection clipboard 2>/dev/null || wl-copy 2>/dev/null", "w");
+  if(!pipe) return 0;
+  fputs(text, pipe);
+  int status = pclose(pipe);
+  return status == 0;
+}
+
 

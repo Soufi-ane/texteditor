@@ -164,4 +164,6 @@ void handle_keys(Editor* e);
 
 bool is_selected(Editor *e, RowCol row_col);
 
+bool is_selecting_up(Editor *e);
+
 #endif

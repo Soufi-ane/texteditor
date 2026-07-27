@@ -19,5 +19,9 @@ void try_saving_file(Editor* e);
 
 const char *get_file_name_from_path(const char *path);
 
+int copy_to_clipboard(const char *text);
+
+void copy_selection_to_clipboard(Editor *e);
+
 #endif
 

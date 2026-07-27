@@ -17,6 +17,10 @@ size_t get_max_num_lines(Editor *e){
   return (e->s_height - y_padding) / e->conf.line_height + 2; 
 }
 
+bool is_selecting_up(Editor *e){
+  return e->buffer.current_line_index <= e->conf.selection_start.row;
+}
+
 bool is_selected(Editor *e, RowCol row_col){
   if(!e->conf.is_selecting) return false;
   bool is_at_start = row_col.row == e->conf.selection_start.row;
@@ -479,6 +483,10 @@ void handle_normal_mode_keys(Editor* e, int c){
       e->conf.is_selecting = !e->conf.is_selecting;
       e->conf.selection_start.row = e->buffer.current_line_index;
       e->conf.selection_start.col = e->cursor.index;
+      break;
+    case 'y':
+      copy_selection_to_clipboard(e);
+      e->conf.is_selecting = false;
       break;
   }
 }
