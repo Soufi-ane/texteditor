@@ -52,15 +52,27 @@ void DrawMenu(Editor * e){
   ); */
 }
 
+unsigned int get_msg_color(Editor *e, MessageType type){
+  switch (type) {
+    case ERROR:
+      return e->conf.error_color;
+    case GOOD:
+      return e->conf.success_color;
+    case INFO:
+      return e->conf.file_name_color;
+  }
+}
+
 void DrawCurrentMessage(Editor *e) {
+  Message *msg = e->messages[e->buffer.current_msg_index];
+  Color color = GetColor(get_msg_color(e, msg->type));
   DrawTextEx(
-    e->conf.font,
-    e->messages[e->buffer.current_msg_index]->text,
+    e->conf.font, msg->text,
     (Vector2){
       e->conf.padding.left, 
       e->s_height - e->cursor.height 
     },
-    32, 0, GRAY
+    32, 0, color
   ); 
 }
 

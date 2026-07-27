@@ -28,6 +28,8 @@
 #define STATUS_LINE_COLOR     0x000000FF
 #define IS_SPACES_FOR_TABS    false
 #define MAX_PASTE_LENGTH      1024 * 1024
+#define ERROR_COLOR           0xFF4C24FF
+#define SUCCESS_COLOR         0x00B014FF
 
 // memory
 #define DEFAULT_LINE_SIZE     128

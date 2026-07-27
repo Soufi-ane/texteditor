@@ -89,6 +89,8 @@ typedef struct {
   unsigned int line_numbers_color;
   unsigned int file_name_color;
   unsigned int status_line_color;
+  unsigned int error_color;
+  unsigned int success_color;
   size_t line_height;
   size_t letter_spacing;
 } Config;
