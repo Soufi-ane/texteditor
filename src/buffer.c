@@ -488,6 +488,12 @@ void handle_normal_mode_keys(Editor* e, int c){
     case 'y':
       copy_selection_to_clipboard(e);
       e->conf.is_selecting = false;
+      e->conf.is_menu_open = false;
+      break;
+    case 'p':
+      paste_from_clipboard(e);
+      update_scroll(e, true);
+      e->conf.is_menu_open = false;
       break;
   }
 }

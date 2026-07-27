@@ -23,5 +23,9 @@ int copy_to_clipboard(const char *text);
 
 void copy_selection_to_clipboard(Editor *e);
 
+void read_from_clipboard(char *buff, size_t max);
+
+void paste_from_clipboard(Editor *e);
+
 #endif
 

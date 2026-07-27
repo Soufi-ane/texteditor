@@ -145,12 +145,39 @@ void copy_selection_to_clipboard(Editor *e){
   else new_message(e, "Failed to copy!", ERROR);
 }
 
+void paste_from_clipboard(Editor *e){
+  char buff[MAX_PASTE_LENGTH] = {0};
+  read_from_clipboard(buff, sizeof(buff));
+  for(int i = 0; buff[i] != '\0'; i++){
+    if(buff[i] == '\n') {
+      start_new_line(e);
+    } 
+    else {
+      add_char_to_line(e, e->buffer.lines[e->buffer.current_line_index], buff[i],false);
+    }
+  }
+}
+
 int copy_to_clipboard(const char *text){
   FILE *pipe = popen("xclip -selection clipboard 2>/dev/null || wl-copy 2>/dev/null", "w");
   if(!pipe) return 0;
   fputs(text, pipe);
   int status = pclose(pipe);
   return status == 0;
+}
+
+void read_from_clipboard(char *buff, size_t max){
+  FILE *pipe = popen("xclip -selection clipboard -o 2>/dev/null || wl-paste 2>/dev/null", "r");
+  if(!pipe) return;
+  buff[0] = '\0';
+  char line[1024];
+  while(fgets(line, sizeof(line), pipe) != NULL){
+    size_t len = strlen(buff);
+    size_t rest = max - len - 1;
+    if(rest == 0) break;
+    strncat(buff, line, rest);
+  }
+  pclose(pipe);
 }
 
 
