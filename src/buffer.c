@@ -478,6 +478,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'f':
       toggle_full_screen(e);
+      update_scroll(e, true);
       break;
     case 'v':
       e->conf.is_selecting = !e->conf.is_selecting;
