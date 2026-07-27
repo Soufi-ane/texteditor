@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "files.h"
+#include <errno.h>
 #include "tinyfiledialogs.h"
 
 const char *get_file_name_from_path(const char *path){
@@ -62,14 +63,15 @@ void read_file(Editor* e, char const * file_path){
 
 void try_saving_file(Editor* e){
   if(e->buffer.file_path){
-    if(access(e->buffer.file_path, W_OK) == 0){
+    if(access(e->buffer.file_path, W_OK) == 0 || errno == ENOENT) {
       write_file(e);
       new_message(e, "Saved!", GOOD);
-    } else {
+    } 
+    if (errno == EACCES) {
       new_message(e, "Readonly file!", ERROR);
     }
   }
-  else {
+  if(!e->buffer.file_path) {
     char const * path = 
     tinyfd_saveFileDialog(
      "Save File",
