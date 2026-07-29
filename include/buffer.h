@@ -168,4 +168,6 @@ bool is_selected(Editor *e, RowCol row_col);
 
 bool is_selecting_up(Editor *e);
 
+void to_lower_case(const char *text, char *dest);
+
 #endif

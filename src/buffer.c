@@ -504,6 +504,15 @@ void handle_insert_mode_keys(Editor* e,int c){
   }
 };
 
+void to_lower_case(const char *text, char *dest){
+  for(int i = 0; i < strlen(text); i++){
+    char c = text[i];
+    if(c >= 'A' && c <= 'Z'){
+      dest[i] =  c + 32;
+    } else dest[i] = c;
+  }
+}
+
 void handle_enter(Editor* e){
   /* if (e->conf.is_opening_file) {
     char path[100];

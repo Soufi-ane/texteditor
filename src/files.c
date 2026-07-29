@@ -106,13 +106,15 @@ void loadFontSDF(
 
 bool str_includes(const char* str, char* sub_str, size_t sub_str_length){
   size_t str_len = strlen(str);
+  char buff[str_len], query[sub_str_length]; 
+  to_lower_case(str, buff);
+  to_lower_case(sub_str, query);
   int i, j;
-  for(i = 0; i < str_len; i++) if(str[i] == sub_str[0]) break;
-  if(i > str_len - 1) return false; // no match for first char
+  for(i = 0; i < str_len; i++) if(buff[i] == query[0]) break;
+  if(i > str_len - 1) return false;
   i++;
   for(j = 1; (j < sub_str_length && i < str_len); j++, i++){
-    printf("cheking [%c]\n", str[i]);
-    if(sub_str[j] != str[i]) return false; // doesn't match the full string
+    if(query[j] != buff[i]) return false;
   }
   return j >= sub_str_length;
 }
