@@ -7,8 +7,8 @@
 double longPressTime = 0.0f;
 
 Cmd default_cmds[NUM_COMMANDS] = {
-  { OPEN_FILE , "Open file" },
   { NEW_FILE , "New file" },
+  { OPEN_FILE , "Open file" },
 };
 
 size_t get_max_line_length(Editor *e){ 
@@ -680,6 +680,7 @@ Buffer *new_buffer(size_t capacity){
   buff->num_chars = 0;
   buff->current_line_index = 0;
   buff->current_msg_index = -1;
+  buff->file_path = NULL;
   return buff;
 }
 
