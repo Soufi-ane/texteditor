@@ -562,6 +562,7 @@ void handle_open_file(Editor *e){
     read_file(e, path);
     update_scroll(e, true);
   }
+  e->mode = NORMAL;
 }
 
 void handle_command(Editor *e, Cmd cmd){
@@ -574,7 +575,6 @@ void handle_command(Editor *e, Cmd cmd){
       break;
   }
   e->conf.is_menu_open = false;
-  e->mode = NORMAL;
   e->selected_cmd = 0;
   e->cmd_prompt->length = 0;
   filter_cmds_by_prompt(e);
