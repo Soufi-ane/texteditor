@@ -104,23 +104,14 @@ void loadFontSDF(
 	SetTextureFilter(font->texture,TEXTURE_FILTER_BILINEAR);
 }
 
-void find(char* fileNames[], int numFiles, char* query, int result_ids[], int* numResult){
-  *numResult = 0;
-  for(int i = 0; i < numFiles; i++){
-    if(str_includes(fileNames[i],query)) result_ids[*numResult++] = i;
-  }
-}
-
-bool str_includes(char* str,char* sub_str){
-  size_t len1 = strlen(str);
-  size_t len2 = strlen(sub_str);
+bool str_includes(const char* str, char* sub_str, size_t sub_str_length){
+  size_t str_len = strlen(str);
   int i;
-  for(i = 0; i < len1; i++) if(str[i] == sub_str[0]) break;
-  if(i > len1 - 1) return false; // no match for first char
-  for(i = 1; i < len2; i++){
-    for(int j = 1; j < len2; j++){
-      if(sub_str[i] != str[j]) return false; // doesn't match the full string
-    }
+  for(i = 0; i < str_len; i++) if(str[i] == sub_str[0]) break;
+  if(i > str_len - 1) return false; // no match for first char
+  i++;
+  for(int j = 1; j < sub_str_length && i < str_len; j++, i++){
+    if(sub_str[j] != str[i]) return false; // doesn't match the full string
   }
   return true;
 }

@@ -11,9 +11,7 @@ void loadFontSDF(char* path, int* fileSize, int size, Font* font);
 
 void read_file(Editor* e, char const * file_path);
 
-void find(char* fileNames[], int numFiles, char* query, int result_ids[], int* numResult);
-
-bool str_includes(char* str,char* sub_str);
+bool str_includes(const char* str, char* sub_str, size_t sub_str_length);
 
 void try_saving_file(Editor* e);
 
