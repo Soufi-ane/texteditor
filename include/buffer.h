@@ -13,6 +13,11 @@ typedef enum {
   ERROR
 } MessageType;
 
+typedef enum{
+  OPEN_FILE,
+  NEW_FILE
+} CmdType;
+
 typedef enum {
   NORMAL,
   INSERT,
@@ -23,6 +28,13 @@ typedef enum {
   RELATIVE,
   ABSOLUTE
 } LineNumbers;
+
+typedef struct {
+  CmdType type;
+  const char *text;
+} Cmd;
+
+extern Cmd default_cmds[NUM_COMMANDS];
 
 typedef struct {
   size_t index;
@@ -98,6 +110,7 @@ typedef struct {
 typedef struct {
   Mode mode;
   Buffer buffer; // TODO: multiple buffers
+  Line *cmd_prompt;
   const char* HOME_DIR;
   Cursor cursor;
   Config conf;
@@ -110,6 +123,9 @@ typedef struct {
   int numResults;
   int s_width;
   int s_height;
+  size_t selected_cmd;
+  size_t displayed_cmds[NUM_COMMANDS];
+  size_t num_cmds_displayed;
 } Editor;
 
 int get_position(Editor* e);
@@ -167,6 +183,14 @@ void handle_keys(Editor* e);
 bool is_selected(Editor *e, RowCol row_col);
 
 bool is_selecting_up(Editor *e);
+
+void pop_char_from_line(Editor* e, Line *line);
+
+void pop_char_single_line(Line *line);
+
+void handle_tab(Editor* e, bool is_shift_down);
+
+void filter_cmds_by_prompt(Editor *e);
 
 void to_lower_case(const char *text, char *dest);
 

@@ -3,7 +3,9 @@
 #include <raylib.h>
 #include "buffer.h"
 
-void DrawCursor(Editor* e,int x,int y);
+void DrawCursor(Editor* e, int x, int y);
+
+void DrawCmdCursor(Editor* e, int cursor_x, int cursor_y);
 
 void DrawMenu(Editor * e);
 

@@ -1,10 +1,15 @@
 #include <ctype.h>
-#include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include "files.h"
 #include "tinyfiledialogs.h"
 
 double longPressTime = 0.0f;
+
+Cmd default_cmds[NUM_COMMANDS] = {
+  { OPEN_FILE , "Open file" },
+  { NEW_FILE , "New file" },
+};
 
 size_t get_max_line_length(Editor *e){ 
   size_t x_padding = e->conf.padding.left + e->conf.padding.right;
@@ -19,6 +24,22 @@ size_t get_max_num_lines(Editor *e){
 
 bool is_selecting_up(Editor *e){
   return e->buffer.current_line_index <= e->conf.selection_start.row;
+}
+
+void filter_cmds_by_prompt(Editor *e){
+  int index = 0;
+  e->selected_cmd = 0;
+  for(size_t i = 0; i < NUM_COMMANDS; i++){
+    if(!e->cmd_prompt->length){
+      e->displayed_cmds[index++] = i;
+      continue;
+    }
+    bool is_match = str_includes(default_cmds[i].text, e->cmd_prompt->chars, e->cmd_prompt->length);
+    if(is_match){
+      e->displayed_cmds[index++] = i;
+    }
+  }
+  e->num_cmds_displayed = index;
 }
 
 bool is_selected(Editor *e, RowCol row_col){
@@ -159,6 +180,12 @@ void add_char_to_line(Editor* e, Line* line, char c, bool append){
   line->chars[line->length] = '\0';
   update_scroll(e, false);
   update_line_number_padding(e);
+}
+
+void pop_char_single_line(Line *line){
+  if(!line->length) return;
+  line->chars[line->length - 1] = '\0';
+  line->length--;
 }
 
 void pop_char_from_line(Editor* e, Line *line){
@@ -342,8 +369,8 @@ void remove_current_char(Editor* e){
   current->length--;
 }
 
-void handle_tab(Editor* e) {
-  if(e->mode == INSERT) {
+void handle_tab(Editor* e, bool is_shift_down) {
+  if(e->mode == INSERT && !e->conf.is_menu_open) {
     if(e->conf.is_spaces_for_tabs) {
       for(int i = 0; i < TAB_SIZE; ++i)  {
         add_char_to_line(
@@ -357,6 +384,14 @@ void handle_tab(Editor* e) {
         e, e->buffer.lines[e->buffer.current_line_index],
         '\t', false
       );
+    }
+  }else {
+    if(is_shift_down){
+      if(e->selected_cmd > 0) e->selected_cmd--;
+      else e->selected_cmd = e->num_cmds_displayed - 1;
+    } else {
+      if(e->selected_cmd < e->num_cmds_displayed - 1) e->selected_cmd++;
+      else e->selected_cmd = 0;
     }
   }
 }
@@ -389,7 +424,11 @@ void handle_tab(Editor* e) {
 
 void handle_backspace(Editor* e) {
   if(e->mode == INSERT) {
-    pop_char_from_line(e, e->buffer.lines[e->buffer.current_line_index]);
+    if(e->conf.is_menu_open) {
+      pop_char_single_line(e->cmd_prompt);
+      filter_cmds_by_prompt(e);
+    } 
+    else pop_char_from_line(e, e->buffer.lines[e->buffer.current_line_index]);
   } else {
     move_cursor_left(e);
   } 
@@ -416,11 +455,9 @@ void handle_normal_mode_keys(Editor* e, int c){
       e->conf.is_menu_open = false;
       break;
     case 'm':
-      // load_menu_icons(e->media.menu_icons);
       e->conf.is_menu_open = true;
-      // e->conf.isChoosingDir = false;
-      // e->conf.isNamingFile = false;
       e->conf.is_opening_file = false;
+      e->mode = INSERT;
       break;
     case '$':
       move_to_end_of_line(e);
@@ -439,13 +476,6 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'o':
       if(e->conf.is_menu_open){
-        e->conf.is_opening_file = true;
-        char const * path = tinyfd_openFileDialog("Select File", "", 0, NULL, NULL, 0);
-        if(path != NULL){
-          e->conf.is_menu_open = false;
-          read_file(e, path);
-          update_scroll(e, true);
-        }
       }
       break;
     case 's':
@@ -500,9 +530,20 @@ void handle_normal_mode_keys(Editor* e, int c){
 
 void handle_insert_mode_keys(Editor* e,int c){
   if (c >= 32) {
-    add_char_to_line(e, e->buffer.lines[e->buffer.current_line_index], c, false);
+   add_char_to_line(e, 
+     e->conf.is_menu_open ? e->cmd_prompt:
+     e->buffer.lines[e->buffer.current_line_index],
+     c, e->conf.is_menu_open
+   );
+   if(e->conf.is_menu_open) filter_cmds_by_prompt(e);
   }
 };
+
+void start_new_file(Editor *e){
+  e->buffer = *new_buffer(10);
+  e->mode = INSERT;
+  e->cursor.index = 0;
+}
 
 void to_lower_case(const char *text, char *dest){
   for(int i = 0; i < strlen(text); i++){
@@ -513,28 +554,41 @@ void to_lower_case(const char *text, char *dest){
   }
 }
 
+
+void handle_open_file(Editor *e){
+  e->conf.is_opening_file = true;
+  char const * path = tinyfd_openFileDialog("Select File", "", 0, NULL, NULL, 0);
+  if(path != NULL){
+    read_file(e, path);
+    update_scroll(e, true);
+  }
+}
+
+void handle_command(Editor *e, Cmd cmd){
+  switch (cmd.type) {
+    case OPEN_FILE:
+      handle_open_file(e);
+      break;
+    case NEW_FILE:
+      start_new_file(e);
+      break;
+  }
+  e->conf.is_menu_open = false;
+  e->mode = NORMAL;
+  e->selected_cmd = 0;
+  e->cmd_prompt->length = 0;
+  filter_cmds_by_prompt(e);
+}
+
 void handle_enter(Editor* e){
-  /* if (e->conf.is_opening_file) {
-    char path[100];
-    sprintf(path,
-      "%s/.local/notes/%s",
-      e->HOME_DIR,
-      e->fileNames[e->conf.currentFileIndex]);
-    for(int i =0 ; i < e->conf.filesCount -1 ; i++){
-      printf("[%d] %s\n",i,e->fileNames[i]);
-    }
-    // todo
-    // if(e->conf.isNoteBookMode) readNote(e,path);
-    // else readFile(e, path);
-    e->currentFileName = e->fileNames[e->conf.currentFileIndex];
-    e->conf.is_opening_file = false;
-    // todo
-    // e->conf.isTakingNote = true;
-  }  */
   if(e->mode == INSERT){
-    start_new_line(e);
-    update_scroll(e, false);
-    update_line_number_padding(e);
+    if(!e->conf.is_menu_open){
+      start_new_line(e);
+      update_scroll(e, false);
+      update_line_number_padding(e);
+    }else {
+      handle_command(e, default_cmds[e->displayed_cmds[e->selected_cmd]]);
+    }
   }
 }
 
@@ -559,7 +613,10 @@ void handle_keys(Editor* e){
   }
   else if (IsKeyReleased(KEY_BACKSPACE)) longPressTime = 0;
 
-  else if(IsKeyPressed(KEY_TAB)) handle_tab(e);
+  else if(IsKeyPressed(KEY_TAB)) {
+    bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+     handle_tab(e, is_shift_down);
+  }
 
 // enter 
   else if (IsKeyPressed(KEY_ENTER)) handle_enter(e);
@@ -639,5 +696,4 @@ void new_message(Editor *e, const char *message, MessageType type){
   e->messages[e->num_msgs] = msg;
   e->buffer.current_msg_index = e->num_msgs++;
 }
-
 

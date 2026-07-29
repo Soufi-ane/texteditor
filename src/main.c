@@ -5,9 +5,10 @@
 #include "draw.h"
 
 Editor ed = {
-  .mode = NORMAL,
+  .mode = INSERT,
   .s_width = SCREEN_WIDTH,
   .s_height = SCREEN_HEIGHT,
+  .num_cmds_displayed = NUM_COMMANDS,
   .conf = {
     .bg_color = BG_COLOR,
     .text_color = TEXT_COLOR,
@@ -45,7 +46,9 @@ char dir[100];
 int main() {
   Buffer *main_buffer = new_buffer(1); 
   ed.buffer = *main_buffer;
+  ed.cmd_prompt = new_line(DEFAULT_LINE_SIZE);
   ed.message = malloc(sizeof(char) * 129);
+  filter_cmds_by_prompt(&ed);
   Color fg_color = GetColor(0xD9D9D955);
   ed.HOME_DIR  = getenv("HOME");
   if (ed.HOME_DIR == NULL)
@@ -120,8 +123,7 @@ int main() {
         if(i == ed.buffer.current_line_index && m == ed.cursor.index)
         //cursor
           DrawCursor(
-            &ed, 
-            cursor_x,
+            &ed, cursor_x,
             pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height
           );
         if(m < current_line->length) {
