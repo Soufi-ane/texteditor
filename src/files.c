@@ -106,14 +106,15 @@ void loadFontSDF(
 
 bool str_includes(const char* str, char* sub_str, size_t sub_str_length){
   size_t str_len = strlen(str);
-  int i;
+  int i, j;
   for(i = 0; i < str_len; i++) if(str[i] == sub_str[0]) break;
   if(i > str_len - 1) return false; // no match for first char
   i++;
-  for(int j = 1; j < sub_str_length && i < str_len; j++, i++){
+  for(j = 1; (j < sub_str_length && i < str_len); j++, i++){
+    printf("cheking [%c]\n", str[i]);
     if(sub_str[j] != str[i]) return false; // doesn't match the full string
   }
-  return true;
+  return j >= sub_str_length;
 }
 
 void copy_selection_to_clipboard(Editor *e){
