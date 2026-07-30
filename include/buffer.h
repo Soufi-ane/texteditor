@@ -24,7 +24,9 @@ typedef enum{
   OPEN_FILE,
   TOGGLE_VIM,
   SWITCH_LN_MODE,
-  NEW_FILE
+  NEW_FILE,
+  HELP,
+  OPEN_CONFIG
 } CmdType;
 
 typedef enum {

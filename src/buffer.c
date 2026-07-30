@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "files.h"
@@ -11,6 +12,8 @@ Cmd default_cmds[NUM_COMMANDS] = {
   { OPEN_FILE , "Open file" },
   { TOGGLE_VIM , "Toggle Vim mode" },
   { SWITCH_LN_MODE , "switch line numbers mode" },
+  { HELP , "Help!" },
+  { OPEN_CONFIG , "Open config" },
 };
 
 size_t get_max_line_length(Editor *e){ 
@@ -580,6 +583,13 @@ void handle_open_file(Editor *e){
   e->mode = NORMAL;
 }
 
+void open_confi_file(Editor *e){
+  char path[128];
+  sprintf(path, "%s/.config/texteditor/texteditor.conf", e->HOME_DIR);
+  read_file(e, path);
+  e->mode = NORMAL;
+}
+
 void handle_command(Editor *e, Cmd cmd){
   switch (cmd.type) {
     case OPEN_FILE:
@@ -595,6 +605,13 @@ void handle_command(Editor *e, Cmd cmd){
       if(e->conf.ln_mode == ABSOLUTE) e->conf.ln_mode = RELATIVE;
       else if(e->conf.ln_mode == RELATIVE) e->conf.ln_mode = NONE;
       else e->conf.ln_mode = ABSOLUTE;
+      break;
+    case HELP:
+      read_file(e, "assets/help.txt");
+      e->mode = NORMAL;
+      break;
+    case OPEN_CONFIG:
+      open_confi_file(e);
       break;
   }
   e->conf.is_menu_open = false;

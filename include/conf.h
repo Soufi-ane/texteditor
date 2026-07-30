@@ -13,7 +13,7 @@
 #define LINE_NUMBERS_COLOR    0x828282FF
 
 // screen
-#define SCREEN_HEIGHT         700
+#define SCREEN_HEIGHT         780
 #define SCREEN_WIDTH          1300
 #define BG_COLOR              0x141415FF
 #define DRAW_LINES            false
@@ -30,7 +30,7 @@
 #define MAX_PASTE_LENGTH      1024 * 1024
 #define ERROR_COLOR           0xFF4C24FF
 #define SUCCESS_COLOR         0x00B014FF
-#define NUM_COMMANDS          4
+#define NUM_COMMANDS          6
 #define VIM_MODE              false
 #define CAPS_LOCK_AS_ESCAPE   true
 
