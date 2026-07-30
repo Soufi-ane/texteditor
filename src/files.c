@@ -43,7 +43,7 @@ void read_file(Editor* e, char const * file_path){
   size_t size = 0, line_index = 0;
   size_t read;
   e->buffer = *new_buffer(128);
-  e->buffer.file_path = file_path;
+  e->buffer.file_path = strdup(file_path);
 	while((read = getline(&line,&size,f)) != -1){
     if(e->buffer.length > e->buffer.capacity - 1){
       size_t new_capacity = e->buffer.capacity + 10;
