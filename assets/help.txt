@@ -1,0 +1,31 @@
+
+Normal mode:
+  escape: show menu
+  Ctrl+f: toggle fullscreen
+  Ctrl+s: Save the file
+  Ctrl+x: Quit
+
+Vim mode:
+
+  'm' show menu
+  'q' Quit (I made that decision)
+   0.01% of vim stuff is available
+
+Configuration:
+
+  make sure you set the $HOME variable
+  open the menu and choose open config
+
+  or use another text editor (don't use vscode)
+  Config file: "$HOME/.config/texteditor/texteditor.conf"
+
+  You can only customize the properties that already exits
+  in the file!
+  Comments starting with '#' are ignored
+
+Bugs:
+
+  I will pay you $0.0000000000000000001 for every bug report
+  at jabersoufiane77@gmail.com
+
+

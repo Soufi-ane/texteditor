@@ -17,6 +17,7 @@ run : clean $(OUT)
 install: $(OUT) fonts 
 	mkdir -p $(InstallDir)
 	cp $(OUT) $(InstallDir)
+	cp $(AssetsDir)/help.txt $(InstallDir)
 
 $(OUT): $(SRC)
 	$(CC) -o $(OUT) $(SRC) $(Flags) 
