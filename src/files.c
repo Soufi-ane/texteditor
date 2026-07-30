@@ -110,13 +110,15 @@ bool str_includes(const char* str, char* sub_str, size_t sub_str_length){
   to_lower_case(str, buff);
   to_lower_case(sub_str, query);
   int i, j;
-  for(i = 0; i < str_len; i++) if(buff[i] == query[0]) break;
-  if(i > str_len - 1) return false;
-  i++;
-  for(j = 1; (j < sub_str_length && i < str_len); j++, i++){
-    if(query[j] != buff[i]) return false;
+  for(i = 0; i < str_len; i++) {
+    if(buff[i] == query[0]) {
+      for(j = 1; (j < sub_str_length && i < str_len - 1); j++, i++){
+        if(query[j] != buff[i + 1]) break;
+      }
+      if(j >= sub_str_length) return true;
+    }
   }
-  return j >= sub_str_length;
+  return false;
 }
 
 void copy_selection_to_clipboard(Editor *e){
