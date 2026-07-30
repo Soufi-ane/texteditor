@@ -47,9 +47,7 @@ int main() {
   Buffer *main_buffer = new_buffer(1); 
   ed.buffer = *main_buffer;
   ed.cmd_prompt = new_line(DEFAULT_LINE_SIZE);
-  ed.message = malloc(sizeof(char) * 129);
   filter_cmds_by_prompt(&ed);
-  Color fg_color = GetColor(0xD9D9D955);
   ed.HOME_DIR  = getenv("HOME");
   if (ed.HOME_DIR == NULL)
     printf("ERRR!\n");
@@ -75,9 +73,8 @@ int main() {
     Padding pad = ed.conf.padding;
     if (ed.mode != INSERT) {
       SetExitKey(KEY_Q);
-    } else if (ed.mode == INSERT) {
-      SetExitKey(KEY_NULL);
-    }
+    } else SetExitKey(KEY_NULL);
+
     handle_keys(&ed);
 
     ClearBackground(GetColor(ed.conf.bg_color));
@@ -105,8 +102,7 @@ int main() {
         size_t index = ed.buffer.current_line_index;
        DrawTextEx(ed.conf.font,
          TextFormat( "%zu", 
-           ed.conf.ln_mode == ABSOLUTE ?  i + 1 :
-           index == i ? i + 1 :
+           (ed.conf.ln_mode == ABSOLUTE || index == i) ?  i + 1 :
            (index < i ? i - index : index - i)
          ),
          (Vector2){
@@ -159,78 +155,13 @@ int main() {
         x_offset = 0;
       }
 
-
-    // debugging 
-    if(ed.conf.is_debugging) {
-      DrawRectangle(170,SCREEN_HEIGHT - 600, 400,600, BLACK);
-      /* DrawTextEx(ed.conf.font,
-        TextFormat("%-17s [%d]","isInsertingTitle",ed.conf.isInsertingTitle),
-        (Vector2){200, SCREEN_HEIGHT - 570},
-        32, 0, GREEN);
-      DrawTextEx(ed.conf.font,
-        TextFormat("%-17s [%d]", "isTakingNote",ed.conf.isTakingNote),
-        (Vector2){200, SCREEN_HEIGHT - 540},
-        32, 0, GREEN); */
-      DrawTextEx(ed.conf.font,
-        TextFormat("%-17s [%d]", "isMenuOpen",ed.conf.is_menu_open),
-        (Vector2){200, SCREEN_HEIGHT - 510},
-        32, 0, GREEN);
-      DrawTextEx(ed.conf.font,
-        TextFormat("%-17s [%d]", "isOpeningFile",ed.conf.is_opening_file),
-        (Vector2){200, SCREEN_HEIGHT - 480},
-        32, 0, GREEN);
-      /* DrawTextEx(ed.conf.font,
-        TextFormat("%-17s [%d]", "isSearching",ed.conf.isSearching),
-        (Vector2){200, SCREEN_HEIGHT - 450},
-        32, 0, GREEN); */
-      /* DrawTextEx(ed.conf.font,
-        TextFormat("%-17s [%d]", "isNamingFile",ed.conf.isNamingFile),
-        (Vector2){200, SCREEN_HEIGHT - 420},
-        32, 0, GREEN); */
-      DrawTextEx(ed.conf.font,
-        TextFormat("%-17s [%d]", "current_line_index",ed.buffer.current_line_index),
-        (Vector2){200, SCREEN_HEIGHT - 390},
-        32, 0, GREEN);
-      DrawTextEx(ed.conf.font,
-        TextFormat("%-16s [%s]", "query",ed.searchQuery),
-        (Vector2){200, SCREEN_HEIGHT - 300},
-        32, 0, GREEN);
-      DrawTextEx(ed.conf.font,
-        TextFormat("%-17s [%d]", "index",ed.cursor.index),
-        (Vector2){200, SCREEN_HEIGHT - 330},
-        32, 0, GREEN);
-      DrawTextEx(ed.conf.font,
-        TextFormat("%-16s [%03d]", "buff length", ed.buffer.length),
-        (Vector2){200, SCREEN_HEIGHT - 270},
-        32, 0, GREEN); 
-      DrawTextEx(ed.conf.font,
-        TextFormat("%s: [%03d]", "current length",ed.buffer.lines[ed.buffer.current_line_index]->length),
-        (Vector2){200, SCREEN_HEIGHT - 240},
-        32, 0, GREEN); 
-      if(ed.buffer.capacity > ed.buffer.current_line_index + 1)
-      DrawTextEx(ed.conf.font,
-        TextFormat("%s: [%3d]", "next length", ed.buffer.lines[ed.buffer.current_line_index + 1]->length),
-        (Vector2){200, SCREEN_HEIGHT - 210},
-        32, 0, GREEN);
-      /* DrawTextEx(ed.conf.font,
-        TextFormat("note length [%d]",ed.note->length),
-        (Vector2){200, SCREEN_HEIGHT - 180},
-        32, 0, GREEN); */
-    }
-    DrawTextEx(ed.conf.font,
-      TextFormat("%s",ed.message),
-      (Vector2){200, SCREEN_HEIGHT - 60},
-      32, 0, BLACK);
-
     DrawStatusLine(&ed);
     if(ed.buffer.current_msg_index > -1) DrawCurrentMessage(&ed);
-    if (ed.conf.is_menu_open) DrawMenu(&ed);
+    if(ed.conf.is_menu_open) DrawMenu(&ed);
 
     EndDrawing();
   }
   CloseWindow();
-  int i;
-  // writeFile(&ed);
   UnloadFontData(ed.conf.font.glyphs, ed.conf.font.glyphCount);
   return 0;
 }
