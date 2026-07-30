@@ -591,6 +591,7 @@ void open_confi_file(Editor *e){
 }
 
 void handle_command(Editor *e, Cmd cmd){
+  if(!e->num_cmds_displayed) return;
   switch (cmd.type) {
     case OPEN_FILE:
       handle_open_file(e);
