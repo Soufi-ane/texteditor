@@ -9,6 +9,8 @@ double longPressTime = 0.0f;
 Cmd default_cmds[NUM_COMMANDS] = {
   { NEW_FILE , "New file" },
   { OPEN_FILE , "Open file" },
+  { TOGGLE_VIM , "Toggle Vim mode" },
+  { SWITCH_LN_MODE , "switch line numbers mode" },
 };
 
 size_t get_max_line_length(Editor *e){ 
@@ -180,6 +182,7 @@ void add_char_to_line(Editor* e, Line* line, char c, bool append){
   line->chars[line->length] = '\0';
   update_scroll(e, false);
   update_line_number_padding(e);
+  e->buffer.current_msg_index = - 1;
 }
 
 void pop_char_single_line(Line *line){
@@ -239,18 +242,23 @@ void move_cursor_left(Editor* e) {
 }
 
 void handle_caps_lock_and_escape(Editor* e){
-  e->conf.is_menu_open = false;
-  e->conf.is_opening_file = false;
-  e->conf.is_selecting = false;
-  if(e->mode == INSERT){
+  if(e->mode == INSERT && e->conf.is_vim_mode){
     e->mode = NORMAL;
     if(e->cursor.index) move_cursor_left(e);
+    e->conf.is_menu_open = false;
+    e->conf.is_opening_file = false;
+    e->conf.is_selecting = false;
+  }
+  if(!e->conf.is_vim_mode) {
+    e->conf.is_menu_open = !e->conf.is_menu_open;
   }
 }
 
 void move_cursor_right(Editor* e) {
   Line *current_line = e->buffer.lines[e->buffer.current_line_index];
-  if(e->cursor.index < current_line->length + (e->mode == INSERT ? 1 : -1)){
+  if(
+    e->cursor.index < current_line->length +
+    ((e->mode == INSERT || !e->conf.is_vim_mode) ? 0 : -1)){
     e->cursor.index++;
     update_last_index(e);
   }
@@ -372,7 +380,7 @@ void remove_current_char(Editor* e){
 void handle_tab(Editor* e, bool is_shift_down) {
   if(e->mode == INSERT && !e->conf.is_menu_open) {
     if(e->conf.is_spaces_for_tabs) {
-      for(int i = 0; i < TAB_SIZE; ++i)  {
+      for(int i = 0; i < e->conf.tab_size; ++i)  {
         add_char_to_line(
           e, e->buffer.lines[e->buffer.current_line_index],
           ' ', false
@@ -423,7 +431,7 @@ void handle_tab(Editor* e, bool is_shift_down) {
 } */
 
 void handle_backspace(Editor* e) {
-  if(e->mode == INSERT) {
+  if(e->mode == INSERT || !e->conf.is_vim_mode) {
     if(e->conf.is_menu_open) {
       pop_char_single_line(e->cmd_prompt);
       filter_cmds_by_prompt(e);
@@ -438,9 +446,6 @@ void handle_normal_mode_keys(Editor* e, int c){
   switch(c){
     case 'G':
       move_cursor_to_last_line(e);
-      break;
-    case '?':
-      e->conf.is_debugging = !e->conf.is_debugging;
       break;
     /* case 'n':
       e->mode = INSERT; 
@@ -528,16 +533,26 @@ void handle_normal_mode_keys(Editor* e, int c){
   }
 }
 
+void handle_ctrl_plus_key(Editor *e){
+  if(IsKeyPressed(KEY_F)) {
+    toggle_full_screen(e);
+    update_scroll(e, true);
+  }
+  if(IsKeyPressed(KEY_S)) try_saving_file(e);
+
+  if(IsKeyPressed(KEY_X)) e->should_quit = true;
+}
+
 void handle_insert_mode_keys(Editor* e,int c){
   if (c >= 32) {
-   add_char_to_line(e, 
-     e->conf.is_menu_open ? e->cmd_prompt:
-     e->buffer.lines[e->buffer.current_line_index],
-     c, e->conf.is_menu_open
-   );
-   if(e->conf.is_menu_open) filter_cmds_by_prompt(e);
+    add_char_to_line(e, 
+      e->conf.is_menu_open ? e->cmd_prompt:
+      e->buffer.lines[e->buffer.current_line_index],
+      c, e->conf.is_menu_open
+    );
+    if(e->conf.is_menu_open) filter_cmds_by_prompt(e);
   }
-};
+}
 
 void start_new_file(Editor *e){
   e->buffer = *new_buffer(10);
@@ -573,6 +588,14 @@ void handle_command(Editor *e, Cmd cmd){
     case NEW_FILE:
       start_new_file(e);
       break;
+    case TOGGLE_VIM:
+      e->conf.is_vim_mode = !e->conf.is_vim_mode;
+      break;
+    case SWITCH_LN_MODE:
+      if(e->conf.ln_mode == ABSOLUTE) e->conf.ln_mode = RELATIVE;
+      else if(e->conf.ln_mode == RELATIVE) e->conf.ln_mode = NONE;
+      else e->conf.ln_mode = ABSOLUTE;
+      break;
   }
   e->conf.is_menu_open = false;
   e->selected_cmd = 0;
@@ -595,9 +618,12 @@ void handle_enter(Editor* e){
 void handle_keys(Editor* e){
   int c;
   if ((c = GetCharPressed()) >= 8) {
-    if (e->mode == NORMAL) handle_normal_mode_keys(e,c);
-    else handle_insert_mode_keys(e,c);
+    if (e->mode == NORMAL && e->conf.is_vim_mode) handle_normal_mode_keys(e,c);
+    else handle_insert_mode_keys(e, c);
   }
+  bool is_ctrl_down = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
+
+  if(is_ctrl_down && !e->conf.is_vim_mode) handle_ctrl_plus_key(e);
 
 //backspace
   if (IsKeyPressed(KEY_BACKSPACE)){
@@ -622,13 +648,54 @@ void handle_keys(Editor* e){
   else if (IsKeyPressed(KEY_ENTER)) handle_enter(e);
 
 //escape & capslock
-  else if (IsKeyPressed(KEY_ESCAPE) || IsKeyPressed(KEY_CAPS_LOCK)) {
+  else if (IsKeyPressed(KEY_ESCAPE) || (IsKeyPressed(KEY_CAPS_LOCK) && e->conf.caps_lock_as_escape)) {
     handle_caps_lock_and_escape(e);
   } 
-  else if (IsKeyPressed(KEY_UP)) move_cursor_up(e);
-  else if (IsKeyPressed(KEY_DOWN)) move_cursor_down(e);
-  else if (IsKeyPressed(KEY_LEFT)) move_cursor_left(e);
-  else if (IsKeyPressed(KEY_RIGHT)) move_cursor_right(e);
+  else if (IsKeyPressed(KEY_UP)) {
+    longPressTime = GetTime();
+    move_cursor_up(e);
+  }
+  else if (IsKeyPressed(KEY_DOWN)) {
+    longPressTime = GetTime();
+    move_cursor_down(e);
+  }
+  else if (IsKeyPressed(KEY_LEFT)) {
+    longPressTime = GetTime();
+    move_cursor_left(e);
+  }
+  else if (IsKeyPressed(KEY_RIGHT)) {
+    longPressTime = GetTime();
+    move_cursor_right(e);
+  }
+
+  if (IsKeyDown(KEY_LEFT)) {
+    double now = GetTime();
+    if(now - longPressTime > LONG_PRESS_DELAY){
+      move_cursor_left(e);
+      longPressTime = now - (LONG_PRESS_DELAY - REPEAT_RATE);
+    }
+  }
+  else if (IsKeyDown(KEY_RIGHT)) {
+    double now = GetTime();
+    if(now - longPressTime > LONG_PRESS_DELAY){
+      move_cursor_right(e);
+      longPressTime = now - (LONG_PRESS_DELAY - REPEAT_RATE);
+    }
+  }
+  else if (IsKeyDown(KEY_UP)) {
+    double now = GetTime();
+    if(now - longPressTime > LONG_PRESS_DELAY){
+      move_cursor_up(e);
+      longPressTime = now - (LONG_PRESS_DELAY - REPEAT_RATE);
+    }
+  }
+  else if (IsKeyDown(KEY_DOWN)) {
+    double now = GetTime();
+    if(now - longPressTime > LONG_PRESS_DELAY){
+      move_cursor_down(e);
+      longPressTime = now - (LONG_PRESS_DELAY - REPEAT_RATE);
+    }
+  }
 }
 
 // int get_first_diplayed_index(Editor* e,bool isUp){
@@ -693,7 +760,7 @@ void new_message(Editor *e, const char *message, MessageType type){
   }
   Message *msg = malloc(sizeof(Message));
   msg->type = type;
-  msg->text = message;
+  msg->text = strdup(message);
   e->messages[e->num_msgs] = msg;
   e->buffer.current_msg_index = e->num_msgs++;
 }

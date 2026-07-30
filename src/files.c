@@ -1,3 +1,6 @@
+#include <ctype.h>
+#include <raylib.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -178,4 +181,148 @@ void read_from_clipboard(char *buff, size_t max){
   pclose(pipe);
 }
 
+ConfigKey get_config_key(Editor *e, char *key){
+  if(!strcmp(key, "line_numbers_mode"))    return LN_MODE;
+  if(!strcmp(key, "spaces_for_tabs"))      return SPACE_FOR_TAB;
+  if(!strcmp(key, "vim_mode"))             return VIM_M;
+  if(!strcmp(key, "draw_lines"))           return D_LINES;
+  if(!strcmp(key, "background_color"))     return BG_COL;
+  if(!strcmp(key, "text_color"))           return TXT_COL;
+  if(!strcmp(key, "cursor_color"))         return CURSOR_COL;
+  if(!strcmp(key, "under_cursor_color"))   return UNDER_CURSOR_COL;
+  if(!strcmp(key, "line_numbers_color"))   return LN_COL;
+  if(!strcmp(key, "lines_color"))          return LINES_COL;
+  if(!strcmp(key, "tab_size"))             return TAB_S;
+  if(!strcmp(key, "caps_lock_as_escape"))  return CAPS_AS_ESCAPE;
+  return UNKOWN_KEY;
+}
+
+bool try_getting_color_from_hex(char *hex, unsigned int *dest){
+  if(strlen(hex) != 6 || hex == NULL) return false;
+  unsigned long hex_value = strtoul(hex, NULL, 16);
+  *dest = (unsigned int) (hex_value << 8 | 0xFF);
+  return true;
+}
+
+void try_setting_conf_color_value(Editor *e, ConfigKey key_type, char *hex, size_t line_number){
+  unsigned int color;
+  bool is_color_valid = try_getting_color_from_hex(++hex, &color);
+  if(!is_color_valid){
+    new_message(e, TextFormat("Error in value [%s] in config at %zu", hex, line_number), ERROR);
+    return;
+  }
+  switch (key_type) {
+    case BG_COL:
+      e->conf.bg_color = color;
+      break;
+    case TXT_COL:
+      e->conf.text_color = color;
+      break;
+    case CURSOR_COL:
+      e->cursor.color = color;
+      break;
+    case UNDER_CURSOR_COL:
+      e->conf.under_cursor_color = color;
+      break;
+    case LN_COL:
+      e->conf.line_numbers_color = color;
+      break;
+    case LINES_COL:
+      e->conf.lines_color = color;
+      break;
+  }
+}
+
+void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, size_t line_number){
+  char *endpoint;
+  int number = strtoul(value, &endpoint, 10);
+  if(endpoint == value || *endpoint != '\0') {
+    new_message(e, TextFormat("Invalid value [%s] at config : %zu", value, line_number), ERROR);
+  }
+  switch (key_type) {
+    case TAB_S:
+      e->conf.tab_size = number;
+      break;
+  }
+}
+
+void try_setting_conf_value(Editor *e, ConfigKey key_type, char *value){
+  switch (key_type) {
+    case LN_MODE :
+      if(!strcmp(value, "relative"))      e->conf.ln_mode = RELATIVE;
+      else if(!strcmp(value, "absolute")) e->conf.ln_mode = ABSOLUTE;
+      else if(!strcmp(value, "none"))     e->conf.ln_mode = NONE;
+      // else 
+      break;
+    case SPACE_FOR_TAB :
+      if(!strcmp(value, "true"))       e->conf.is_spaces_for_tabs = true;
+      else if(!strcmp(value, "false")) e->conf.is_spaces_for_tabs = false;
+      // else
+      break;
+    case VIM_M :
+      if(!strcmp(value, "true"))       e->conf.is_vim_mode = true;
+      else if(!strcmp(value, "false")) e->conf.is_vim_mode = false;
+      // else
+      break;
+    case D_LINES:
+      if(!strcmp(value, "true"))       e->conf.is_showing_lines = true;
+      else if(!strcmp(value, "false")) e->conf.is_showing_lines = false;
+      // else
+      break;
+    case CAPS_AS_ESCAPE:
+      if(!strcmp(value, "true"))       e->conf.caps_lock_as_escape = true;
+      else if(!strcmp(value, "false")) e->conf.caps_lock_as_escape = false;
+      // else
+      break;
+  }
+}
+
+void read_config_line(Editor *e, char *line, size_t len, size_t line_number){
+  char key[128], value[128];
+  size_t i = 0 , j = 0;
+  while(isspace(line[i])) i++;
+  while(i < len && line[i] != '=' && !isspace(line[i])) key[j++] = line[i++];
+  key[j] = '\0'; 
+  while(i < len && (line[i] == '=' || isspace(line[i]) )) i++;
+  j = 0;
+  while(i < len && !isspace(line[i])) value[j++] = line[i++];
+  value[j] = '\0'; 
+  ConfigKey key_type = get_config_key(e, key);
+  if(key_type == UNKOWN_KEY){
+    new_message(e, TextFormat("Unknown key [%s] at config: %d", key, line_number), ERROR);
+  }
+  if(
+    key_type == BG_COL || key_type == TXT_COL || key_type == CURSOR_COL ||
+    key_type == UNDER_CURSOR_COL || key_type == LN_COL || key_type == LINES_COL
+    ){
+    try_setting_conf_color_value(e, key_type, value, line_number);
+  }else if(key_type == TAB_S){
+    try_setting_conf_number_value(e, key_type, value, line_number);
+  }
+  else try_setting_conf_value(e, key_type, value);
+}
+
+int try_loading_config(Editor *e){
+  if (e->HOME_DIR == NULL)  {
+    new_message(e, "$HOME environment variable is not set", ERROR);
+    return 0;
+  }
+  char conf_path[1024];
+  sprintf(conf_path, "%s/.config/texteditor/texteditor.conf", e->HOME_DIR);
+  FILE *conf_file = fopen(conf_path, "r");
+  if(conf_file == NULL)  {
+    new_message(e, "Error loading config file", ERROR);
+    return 0;
+  }
+
+  size_t size, read, line_index = 0;
+  char* line = NULL;
+	while((read = getline(&line, &size, conf_file)) != -1){
+    if(read > 1 && line[0] != '#') {
+      read_config_line(e, line, read, line_index + 1);
+    }
+    line_index++;
+  }
+  return 1;
+}
 

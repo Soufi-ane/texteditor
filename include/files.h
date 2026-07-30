@@ -25,5 +25,7 @@ void read_from_clipboard(char *buff, size_t max);
 
 void paste_from_clipboard(Editor *e);
 
+int try_loading_config(Editor *e);
+
 #endif
 

@@ -1,4 +1,5 @@
 #include "files.h"
+#include <string.h>
 #include "draw.h"
 
 const char *get_mode_str(Mode mode){
@@ -95,17 +96,32 @@ void DrawMenu(Editor * e){
     if(i == e->selected_cmd)
       DrawRectangleRec(cmd_box, GetColor(0x333738FF));
 
+    Color txt_color = i == e->selected_cmd ? WHITE : GRAY;
+    float txt_y_pos = search_underline.y + 15 + i * (e->conf.line_height + 10);
+
+
     DrawTextEx(
-       e->conf.font, current_cmd.text,
-      (Vector2){
-        menu_rec.x + 2 * e->cursor.width,
-        search_underline.y + 15 + i * (e->conf.line_height + 10)
-      },
-      32, 0, i == e->selected_cmd ? WHITE : GRAY
+      e->conf.font, current_cmd.text,
+      (Vector2){ menu_rec.x + 2 * e->cursor.width, txt_y_pos }, 
+      32, 0, txt_color 
     );
+
+    if(current_cmd.type == TOGGLE_VIM)
+    DrawTextEx(
+      e->conf.font, e->conf.is_vim_mode ? "ON" : "OFF",
+      (Vector2){ menu_rec.x + menu_rec.width - 5 * e->cursor.width, txt_y_pos},
+      32, 0, txt_color
+    );
+    else if(current_cmd.type == SWITCH_LN_MODE)
+    DrawTextEx(
+      e->conf.font, e->conf.ln_mode == ABSOLUTE ? "ABSOLUTE" :
+      e->conf.ln_mode == RELATIVE ? "RELATIVE" : "NONE",
+      (Vector2){ menu_rec.x + menu_rec.width -
+      (e->conf.ln_mode == NONE ? 6 : 10) * e->cursor.width, txt_y_pos},
+      32, 0, txt_color
+    );
+
   }
-
-
 }
 
 unsigned int get_msg_color(Editor *e, MessageType type){
@@ -121,6 +137,7 @@ unsigned int get_msg_color(Editor *e, MessageType type){
 
 void DrawCurrentMessage(Editor *e) {
   Message *msg = e->messages[e->buffer.current_msg_index];
+  if(!strlen(msg->text)) return;
   Color color = GetColor(get_msg_color(e, msg->type));
   DrawTextEx(
     e->conf.font, msg->text,
@@ -136,14 +153,18 @@ void DrawStatusLine(Editor *e){
   int sline_y = e->s_height - e->cursor.height;
   DrawRectangle(0, sline_y, e->s_width, e->cursor.height, GetColor(e->conf.status_line_color));
   if(e->buffer.current_msg_index > -1) return;
-  DrawTextEx(
-    e->conf.font, get_mode_str(e->mode),
-    (Vector2){
-      e->s_width - e->conf.letter_spacing * 7,
-      e->s_height - e->cursor.height
-    },
-    32, 0, GRAY
-  );
+
+  if(e->conf.is_vim_mode){
+    DrawTextEx(
+      e->conf.font, get_mode_str(e->mode),
+      (Vector2){
+        e->s_width - e->conf.letter_spacing * 7,
+        e->s_height - e->cursor.height
+      },
+      32, 0, GRAY
+    );
+  }
+
   DrawTextEx(
     e->conf.font, e->buffer.file_path ? 
     get_file_name_from_path(e->buffer.file_path) : "Untitled",

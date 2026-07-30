@@ -13,8 +13,17 @@ typedef enum {
   ERROR
 } MessageType;
 
+typedef enum {
+  UNKOWN_KEY = 0,
+  BG_COL, TXT_COL, CURSOR_COL, SPACE_FOR_TAB,
+  UNDER_CURSOR_COL, LN_COL, TAB_S, CAPS_AS_ESCAPE,
+  D_LINES, LINES_COL, LN_MODE, VIM_M
+} ConfigKey;
+
 typedef enum{
   OPEN_FILE,
+  TOGGLE_VIM,
+  SWITCH_LN_MODE,
   NEW_FILE
 } CmdType;
 
@@ -51,7 +60,7 @@ typedef struct {
 } Line;
 
 typedef struct {
-  const char *text;
+  char *text;
   MessageType type;
 } Message;
 
@@ -83,11 +92,12 @@ typedef struct {
 
 typedef struct {
   bool is_opening_file;
-  bool is_debugging;
   bool is_menu_open;
   bool is_showing_lines ;
   bool is_spaces_for_tabs;
   bool is_selecting;
+  bool is_vim_mode;
+  bool caps_lock_as_escape;
   RowCol selection_start;
   size_t tab_size;
   LineNumbers ln_mode;
@@ -116,8 +126,8 @@ typedef struct {
   Config conf;
   Message *messages[MAX_MESSAGES];
   bool is_full_screen;
+  bool should_quit;
   size_t num_msgs;
-  char* message;
   char* currentFileName;
   char* searchQuery;
   int numResults;
@@ -193,5 +203,7 @@ void handle_tab(Editor* e, bool is_shift_down);
 void filter_cmds_by_prompt(Editor *e);
 
 void to_lower_case(const char *text, char *dest);
+
+void handle_insert_mode_keys(Editor* e,int c);
 
 #endif

@@ -20,7 +20,9 @@ Editor ed = {
     .error_color = ERROR_COLOR,
     .success_color = SUCCESS_COLOR,
     .is_menu_open = true,
+    .is_vim_mode = VIM_MODE,
     .is_spaces_for_tabs = IS_SPACES_FOR_TABS,
+    .caps_lock_as_escape = CAPS_LOCK_AS_ESCAPE,
     .tab_size = TAB_SIZE,
     .is_showing_lines = DRAW_LINES,
     .ln_mode = ABSOLUTE,
@@ -53,6 +55,8 @@ int main() {
     printf("ERRR!\n");
   sprintf(dir, "%s/.local/notes", ed.HOME_DIR);
 
+  try_loading_config(&ed);
+
   InitWindow(ed.s_width, ed.s_height, "Note");
   SetExitKey(KEY_NULL);
   int file_size = 0;
@@ -68,6 +72,7 @@ int main() {
   SetConfigFlags(FLAG_MSAA_4X_HINT);
 
   while (!WindowShouldClose()) {
+    if(ed.should_quit) break;
     ed.s_width = GetScreenWidth();
     ed.s_height = GetScreenHeight();
     Padding pad = ed.conf.padding;
