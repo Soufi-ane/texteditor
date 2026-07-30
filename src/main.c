@@ -43,29 +43,25 @@ Editor ed = {
   },
 };
 
-char dir[100];
-
 int main() {
   Buffer *main_buffer = new_buffer(1); 
   ed.buffer = *main_buffer;
   ed.cmd_prompt = new_line(DEFAULT_LINE_SIZE);
   filter_cmds_by_prompt(&ed);
   ed.HOME_DIR  = getenv("HOME");
-  if (ed.HOME_DIR == NULL)
-    printf("ERRR!\n");
-  sprintf(dir, "%s/.local/notes", ed.HOME_DIR);
 
   try_loading_config(&ed);
 
-  InitWindow(ed.s_width, ed.s_height, "Note");
+  InitWindow(ed.s_width, ed.s_height, "Text Editor");
   SetExitKey(KEY_NULL);
   int file_size = 0;
   Font font_SDF = {0};
-  loadFontSDF(
-      "/usr/local/share/fonts/JetBrainsMonoNF.ttf",
-      &file_size,
-      128,
-      &font_SDF);
+#ifdef PROD
+  char *font_path = "/usr/local/share/fonts/JetBrainsMonoNF.ttf";
+#else 
+  char *font_path = "assets/fonts/JetBrainsMonoNF.ttf";
+#endif
+  load_font_sdf(font_path, &file_size, 128, &font_SDF);
   ed.conf.font = font_SDF;
 
   SetTargetFPS(120);

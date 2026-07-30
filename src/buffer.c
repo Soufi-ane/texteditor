@@ -608,7 +608,11 @@ void handle_command(Editor *e, Cmd cmd){
       else e->conf.ln_mode = ABSOLUTE;
       break;
     case HELP:
+#ifdef PROD
+      read_file(e, "/usr/local/share/texteditor/help.txt");
+#else
       read_file(e, "assets/help.txt");
+#endif
       e->mode = NORMAL;
       break;
     case OPEN_CONFIG:

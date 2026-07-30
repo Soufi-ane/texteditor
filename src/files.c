@@ -87,16 +87,14 @@ void try_saving_file(Editor* e){
   }
 }
 
-void loadFontSDF(
-		char* path,
-		int* fileSize,
-		int size,
-		Font* font
+void load_font_sdf(
+	char* path,
+	int* fileSize,
+	int size,
+	Font* font
 ){
-	unsigned char* fontFile = LoadFileData(path,fileSize);
-	if(fontFile == NULL || fontFile == 0){
-		fontFile = LoadFileData("assets/fonts/JetBrainsMonoNF.ttf",fileSize);
-	}
+	unsigned char* fontFile = LoadFileData(path, fileSize);
+	if(fontFile == NULL || fontFile == 0) return;
 	font->baseSize = size;
 	font->glyphCount = 95;
 	font->glyphs = LoadFontData(fontFile,*fileSize,size,0,0,FONT_SDF);
