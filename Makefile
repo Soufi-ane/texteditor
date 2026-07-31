@@ -1,6 +1,6 @@
 FLAGS = -Iinclude -lraylib -lm -lpthread -ldl -lrt -lGL
 DEBUG_FLAGS = -Wall -g 
-PROD_FLAGS = -DPROD
+PROD_FLAGS = -DPROD -O3
 INSTALL_DIR = /usr/local/bin
 FONTS_DIR = /usr/local/share/fonts
 DATA_DIR = /usr/local/share/texteditor
