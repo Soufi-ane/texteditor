@@ -125,6 +125,7 @@ typedef struct {
   Line *cmd_prompt;
   const char* HOME_DIR;
   Cursor cursor;
+  Vector2 mouse;
   Config conf;
   Message *messages[MAX_MESSAGES];
   bool is_full_screen;

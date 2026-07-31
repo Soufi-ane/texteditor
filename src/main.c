@@ -71,6 +71,7 @@ int main() {
     if(ed.should_quit) break;
     ed.s_width = GetScreenWidth();
     ed.s_height = GetScreenHeight();
+    ed.mouse = GetMousePosition();
     Padding pad = ed.conf.padding;
     if (ed.mode != INSERT) {
       SetExitKey(KEY_Q);
