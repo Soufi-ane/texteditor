@@ -129,7 +129,23 @@ int main() {
           int char_y = pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height;
 
           if(ed.conf.ln_mode != NONE) char_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
+
           char c = current_line->chars[m];
+
+          if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+            Vector2 pos = GetMousePosition();
+            if(pos.y >= char_y && pos.y <= char_y + ed.conf.line_height){
+              ed.buffer.current_line_index = i;
+              if (pos.x >= char_x && pos.x <= char_x + ed.conf.letter_spacing){
+                ed.cursor.index = m;
+              }else if(pos.x > pad.left + ed.conf.letter_spacing * current_line->length){
+                ed.cursor.index = current_line->length;
+              }else {
+                ed.cursor.index = 0;
+              }
+            }
+          }
+
           unsigned int char_color = m == ed.cursor.index &&
             i == ed.buffer.current_line_index ? 
             ed.conf.under_cursor_color : ed.conf.text_color;
