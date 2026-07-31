@@ -251,11 +251,15 @@ void handle_caps_lock_and_escape(Editor* e){
       e->mode = NORMAL;
       if(e->cursor.index) move_cursor_left(e);
       e->conf.is_menu_open = false;
+      e->cmd_prompt->length = 0;
+      filter_cmds_by_prompt(e);
       e->conf.is_opening_file = false;
       e->conf.is_selecting = false;
     }
   }else {
     e->conf.is_menu_open = !e->conf.is_menu_open;
+    e->cmd_prompt->length = 0;
+    filter_cmds_by_prompt(e);
   }
 }
 
