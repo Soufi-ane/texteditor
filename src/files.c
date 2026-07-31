@@ -309,7 +309,7 @@ int try_loading_config(Editor *e){
   sprintf(conf_path, "%s/.config/texteditor/texteditor.conf", e->HOME_DIR);
   FILE *conf_file = fopen(conf_path, "r");
   if(conf_file == NULL)  {
-    new_message(e, "Error loading config file", ERROR);
+    new_message(e, TextFormat("Error loading config file [%s]", conf_path), ERROR);
     return 0;
   }
 
