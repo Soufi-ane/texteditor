@@ -544,6 +544,19 @@ void handle_ctrl_plus_key(Editor *e){
   if(IsKeyPressed(KEY_S)) try_saving_file(e);
 
   if(IsKeyPressed(KEY_X)) e->should_quit = true;
+
+  if(IsKeyPressed(KEY_C)) {
+    copy_selection_to_clipboard(e);
+    e->conf.is_selecting = false;
+    e->conf.is_menu_open = false;
+  }
+
+  if(IsKeyPressed(KEY_V)) {
+    paste_from_clipboard(e);
+    update_scroll(e, true);
+    e->conf.is_menu_open = false;
+  }
+
 }
 
 void handle_insert_mode_keys(Editor* e,int c){
