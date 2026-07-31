@@ -245,14 +245,16 @@ void move_cursor_left(Editor* e) {
 }
 
 void handle_caps_lock_and_escape(Editor* e){
-  if(e->mode == INSERT && e->conf.is_vim_mode){
-    e->mode = NORMAL;
-    if(e->cursor.index) move_cursor_left(e);
-    e->conf.is_menu_open = false;
-    e->conf.is_opening_file = false;
-    e->conf.is_selecting = false;
-  }
-  if(!e->conf.is_vim_mode) {
+  if(e->conf.is_vim_mode){
+    if(e->conf.is_selecting) e->conf.is_selecting = false;
+    else if(e->mode == INSERT){
+      e->mode = NORMAL;
+      if(e->cursor.index) move_cursor_left(e);
+      e->conf.is_menu_open = false;
+      e->conf.is_opening_file = false;
+      e->conf.is_selecting = false;
+    }
+  }else {
     e->conf.is_menu_open = !e->conf.is_menu_open;
   }
 }
