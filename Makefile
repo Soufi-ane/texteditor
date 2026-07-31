@@ -1,11 +1,13 @@
 FLAGS = -Iinclude -lraylib -lm -lpthread -ldl -lrt -lGL
-DEBUG_FLAGS = -Wall -g 
-PROD_FLAGS = -DPROD -O3
-INSTALL_DIR = /usr/local/bin
-FONTS_DIR = /usr/local/share/fonts
-DATA_DIR = /usr/local/share/texteditor
-ASSETS_DIR = ./assets
-FONT_NAME = JetBrainsMonoNF.ttf
+DEBUG_FLAGS  = -Wall -g 
+PROD_FLAGS   = -DPROD -O3
+INSTALL_DIR  = /usr/local/bin
+FONTS_DIR    = /usr/local/share/fonts
+DATA_DIR     = /usr/local/share/texteditor
+HOME_DIR     = $(shell getent passwd $(SUDO_USER) | cut -d: -f6)
+CONFIG_DIR   = $(HOME_DIR)/.config/texteditor
+ASSETS_DIR   = ./assets
+FONT_NAME    = JetBrainsMonoNF.ttf
 
 CC = gcc
 SRC = src/*.c
@@ -18,9 +20,10 @@ run : clean $(OUT)
 	./$(OUT)
 
 install: $(OUT_PROD) fonts 
-	mkdir -p $(INSTALL_DIR) $(DATA_DIR)
+	mkdir -p $(INSTALL_DIR) $(DATA_DIR) $(CONFIG_DIR)
 	cp $(OUT_PROD) $(INSTALL_DIR)
 	cp $(ASSETS_DIR)/help.txt $(DATA_DIR)
+	cp $(ASSETS_DIR)/texteditor.conf $(CONFIG_DIR)
 
 $(OUT_PROD) : $(SRC)
 	$(CC) -o $(OUT_PROD) $(SRC) $(FLAGS) $(PROD_FLAGS)
