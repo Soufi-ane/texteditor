@@ -169,7 +169,7 @@ size_t get_max_num_lines(Editor *e);
 
 void free_line(Line *line);
 
-size_t get_lines_wraps(Editor *e, size_t from, size_t to);
+size_t get_lines_wraps(Editor *e, int from, int to, bool include_last);
 
 void move_cursor_right(Editor* e);
 

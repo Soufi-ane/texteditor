@@ -78,7 +78,7 @@ bool is_selected(Editor *e, RowCol row_col){
 }
 
 void update_scroll(Editor *e, bool is_up){
-  size_t wraps = get_lines_wraps(e, e->buffer.d_start, e->buffer.d_start + e->buffer.d_length);
+  size_t wraps = get_lines_wraps(e, e->buffer.d_start, e->buffer.d_start + e->buffer.d_length, true);
   size_t max = get_max_num_lines(e) - wraps;
   size_t current_index = e->buffer.current_line_index;
   e->buffer.d_length = e->buffer.length < max ? e->buffer.length : max;
@@ -223,12 +223,13 @@ void pop_char_from_line(Editor* e, Line *line){
   update_line_number_padding(e);
 }
 
-size_t get_lines_wraps(Editor *e, size_t from, size_t to){
+size_t get_lines_wraps(Editor *e, int from, int to, bool include_last){
   if(from > to) return 0;
-  if(to >= e->buffer.capacity) to = e->buffer.capacity - 1;
+  if(from < 0) from = 0;
+  if(to >= e->buffer.length) to = e->buffer.length - 1;
   size_t wraps = 0;
   size_t max = get_max_line_length(e);
-  for(size_t i = from; i <= to; i++){
+  for(size_t i = from; (include_last ? (i <= to) : (i < to)); i++){
     wraps += e->buffer.lines[i]->length / max; 
   }
   return wraps;
