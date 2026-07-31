@@ -583,9 +583,13 @@ void handle_open_file(Editor *e){
   e->mode = NORMAL;
 }
 
-void open_confi_file(Editor *e){
+void open_config_file(Editor *e){
   char path[128];
+#ifdef PROD
   sprintf(path, "%s/.config/texteditor/texteditor.conf", e->HOME_DIR);
+#else
+  sprintf(path, "assets/texteditor.conf");
+#endif
   read_file(e, path);
   e->mode = NORMAL;
 }
@@ -616,7 +620,7 @@ void handle_command(Editor *e, Cmd cmd){
       e->mode = NORMAL;
       break;
     case OPEN_CONFIG:
-      open_confi_file(e);
+      open_config_file(e);
       break;
   }
   e->conf.is_menu_open = false;
