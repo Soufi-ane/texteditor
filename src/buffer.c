@@ -4,7 +4,7 @@
 #include "files.h"
 #include "tinyfiledialogs.h"
 
-double longPressTime = 0.0f;
+double long_press_time = 0.0f;
 
 Cmd default_cmds[NUM_COMMANDS] = {
   { NEW_FILE , "New file" },
@@ -704,17 +704,17 @@ void handle_keys(Editor* e){
 
 //backspace
   if (IsKeyPressed(KEY_BACKSPACE)){
-    longPressTime = GetTime();
+    long_press_time = GetTime();
     handle_backspace(e);
   } 
   else if (IsKeyDown(KEY_BACKSPACE)) {
     double now = GetTime();
-    if(now - longPressTime > LONG_PRESS_DELAY){
+    if(now - long_press_time > LONG_PRESS_DELAY){
       handle_backspace(e);
-      longPressTime = now - (LONG_PRESS_DELAY - REPEAT_RATE);
+      long_press_time = now - (LONG_PRESS_DELAY - REPEAT_RATE);
     }
   }
-  else if (IsKeyReleased(KEY_BACKSPACE)) longPressTime = 0;
+  else if (IsKeyReleased(KEY_BACKSPACE)) long_press_time = 0;
 
   else if(IsKeyPressed(KEY_TAB)) {
     bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
@@ -729,48 +729,48 @@ void handle_keys(Editor* e){
     handle_caps_lock_and_escape(e);
   } 
   else if (IsKeyPressed(KEY_UP)) {
-    longPressTime = GetTime();
+    long_press_time = GetTime();
     move_cursor_up(e);
   }
   else if (IsKeyPressed(KEY_DOWN)) {
-    longPressTime = GetTime();
+    long_press_time = GetTime();
     move_cursor_down(e);
   }
   else if (IsKeyPressed(KEY_LEFT)) {
-    longPressTime = GetTime();
+    long_press_time = GetTime();
     move_cursor_left(e);
   }
   else if (IsKeyPressed(KEY_RIGHT)) {
-    longPressTime = GetTime();
+    long_press_time = GetTime();
     move_cursor_right(e);
   }
 
   if (IsKeyDown(KEY_LEFT)) {
     double now = GetTime();
-    if(now - longPressTime > LONG_PRESS_DELAY){
+    if(now - long_press_time > LONG_PRESS_DELAY){
       move_cursor_left(e);
-      longPressTime = now - (LONG_PRESS_DELAY - REPEAT_RATE);
+      long_press_time = now - (LONG_PRESS_DELAY - REPEAT_RATE);
     }
   }
   else if (IsKeyDown(KEY_RIGHT)) {
     double now = GetTime();
-    if(now - longPressTime > LONG_PRESS_DELAY){
+    if(now - long_press_time > LONG_PRESS_DELAY){
       move_cursor_right(e);
-      longPressTime = now - (LONG_PRESS_DELAY - REPEAT_RATE);
+      long_press_time = now - (LONG_PRESS_DELAY - REPEAT_RATE);
     }
   }
   else if (IsKeyDown(KEY_UP)) {
     double now = GetTime();
-    if(now - longPressTime > LONG_PRESS_DELAY){
+    if(now - long_press_time > LONG_PRESS_DELAY){
       move_cursor_up(e);
-      longPressTime = now - (LONG_PRESS_DELAY - REPEAT_RATE);
+      long_press_time = now - (LONG_PRESS_DELAY - REPEAT_RATE);
     }
   }
   else if (IsKeyDown(KEY_DOWN)) {
     double now = GetTime();
-    if(now - longPressTime > LONG_PRESS_DELAY){
+    if(now - long_press_time > LONG_PRESS_DELAY){
       move_cursor_down(e);
-      longPressTime = now - (LONG_PRESS_DELAY - REPEAT_RATE);
+      long_press_time = now - (LONG_PRESS_DELAY - REPEAT_RATE);
     }
   }
 }
