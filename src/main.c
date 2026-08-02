@@ -11,28 +11,30 @@ Editor ed = {
   .s_height = SCREEN_HEIGHT,
   .num_cmds_displayed = NUM_COMMANDS,
   .conf = {
-    .bg_color = BG_COLOR,
-    .text_color = TEXT_COLOR,
-    .under_cursor_color = UNDER_CURSOR_COLOR,
-    .lines_color = LINES_COLOR,
-    .line_numbers_color = LINE_NUMBERS_COLOR,
-    .file_name_color = FILE_NAME_COLOR,
-    .status_line_color = STATUS_LINE_COLOR,
-    .error_color = ERROR_COLOR,
-    .success_color = SUCCESS_COLOR,
+    .bg_color = 0x141415FF,
+    .text_color = 0xFFFFFFFF,
+    .under_cursor_color = 0X000000FF,
+    .selected_char_color = 0XC3C3D5FF,
+    .lines_color = 0x545454FF,
+    .line_numbers_color = 0x828282FF,
+    .file_name_color = 0x828282FF,
+    .status_line_color = 0x000000FF,
+    .error_color = 0xFF4C24FF,
+    .success_color = 0x00B014FF,
+    .selection_color = 0x333738FF,
     .is_menu_open = true,
-    .is_vim_mode = VIM_MODE,
-    .is_spaces_for_tabs = IS_SPACES_FOR_TABS,
-    .caps_lock_as_escape = CAPS_LOCK_AS_ESCAPE,
-    .tab_size = TAB_SIZE,
-    .is_showing_lines = DRAW_LINES,
+    .is_vim_mode = true,
+    .is_spaces_for_tabs = true,
+    .caps_lock_as_escape = true,
+    .tab_size = 2,
+    .is_showing_lines = false,
     .ln_mode = NONE,
     .ln_padding = 1,
     .line_height = LINE_HEIGHT,
     .letter_spacing = LETTER_SPACING,
     .padding = {
-      .top = LINE_HEIGHT,
-      .bottom = LINE_HEIGHT,
+      .top = 45,
+      .bottom = 45,
       .right = 70,
       .left = 10
     }
@@ -40,7 +42,7 @@ Editor ed = {
   .cursor = {
     .width = 15,
     .height = 35,
-    .color = CURSOR_COLOR
+    .color = 0xD1D1CFFF
   },
 };
 
@@ -126,7 +128,8 @@ int main() {
         //cursor
           DrawCursor(
             &ed, cursor_x,
-            pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height
+            pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height,
+            ed.cursor.color
           );
         if(m < current_line->length) {
           char_x = pad.left + ed.conf.letter_spacing * x_offset;
@@ -144,9 +147,9 @@ int main() {
               x_offset++;
             }
           } else {
-            if(is_selected(&ed, (RowCol){i, m})) {
-              DrawCursor(&ed, char_x, char_y);
-              DrawChar(&ed, c,char_x, char_y , ed.conf.under_cursor_color);
+            if(is_selected(&ed, (RowCol){i, m}) && !(i == ed.buffer.current_line_index && m == ed.cursor.index)) {
+              DrawCursor(&ed, char_x, char_y, ed.conf.selection_color);
+              DrawChar(&ed, c,char_x, char_y , ed.conf.selected_char_color);
             } else {
               DrawChar(&ed, c,char_x, char_y , char_color);
             } 
