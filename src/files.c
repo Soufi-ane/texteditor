@@ -62,9 +62,20 @@ void read_file(Editor* e, char const * file_path){
 }
 
 void try_saving_file(Editor* e){
+  char config_path[1024];
+  #ifdef PROD
+  sprintf(config_path, "%s/.config/texteditor/texteditor.conf", e->HOME_DIR);
+  #else
+  sprintf(config_path, "assets/texteditor.conf");
+  #endif
+
   if(e->buffer.file_path){
     if(access(e->buffer.file_path, W_OK) == 0 || errno == ENOENT) {
       write_file(e);
+
+      if(!strcmp(config_path, e->buffer.file_path)){
+        try_loading_config(e);
+      }
       new_message(e, "Saved!", GOOD);
     } 
     if (errno == EACCES) {
