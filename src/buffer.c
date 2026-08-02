@@ -4,7 +4,10 @@
 #include "files.h"
 #include "tinyfiledialogs.h"
 
+#define HOLD_PRESS_DELAY 0.02f
+
 double long_press_time = 0.0f;
+double last_press_time = 0.0f;
 
 Cmd default_cmds[NUM_COMMANDS] = {
   { NEW_FILE , "New file" },
@@ -668,9 +671,25 @@ void handle_mouse_click(Editor *e, int char_x, int char_y, ssize_t char_index,
     handle_click_on_line(e, char_x, char_index, is_holding);
   }else if(line_index == e->buffer.d_start && e->mouse.y < char_y){
     e->buffer.current_line_index = e->buffer.d_start;
+    if(e->buffer.d_start > 0 && is_holding){
+      double now = GetTime();
+      if(now - last_press_time > HOLD_PRESS_DELAY) {
+        e->buffer.d_start--;
+        update_scroll(e, true);
+        last_press_time = now;
+      }
+    }
     handle_click_on_line(e, char_x, char_index, is_holding);
   } else if(line_index == e->buffer.d_start + e->buffer.d_length - 1 && e->mouse.y > char_y){
-    e->buffer.current_line_index = e->buffer.d_start + e->buffer.d_length - 1;
+      e->buffer.current_line_index = e->buffer.d_start + e->buffer.d_length - 1;
+      if(e->buffer.d_start + e->buffer.d_length < e->buffer.length && is_holding){
+        double now = GetTime();
+        if(now - last_press_time > HOLD_PRESS_DELAY) {
+          e->buffer.current_line_index++;
+          update_scroll(e, false);
+          last_press_time = now;
+        }
+      }
     handle_click_on_line(e, char_x, char_index, is_holding);
   }
 }
