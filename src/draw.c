@@ -18,10 +18,10 @@ void DrawCmdCursor(Editor* e, int cursor_x, int cursor_y){
   );
 }
 
-void DrawCursor(Editor* e, int x, int y){
+void DrawCursor(Editor* e, int x, int y, unsigned int color){
   DrawRectangle(
     x, y, e->cursor.width,
-    e->cursor.height, GetColor(e->cursor.color)
+    e->cursor.height, GetColor(color)
   );
 }
 
