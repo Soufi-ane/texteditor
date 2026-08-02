@@ -681,7 +681,7 @@ void handle_keys(Editor* e){
   }
   bool is_ctrl_down = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
 
-  if(is_ctrl_down && !e->conf.is_vim_mode) handle_ctrl_plus_key(e);
+  if(is_ctrl_down) handle_ctrl_plus_key(e);
 
 //backspace
   if (IsKeyPressed(KEY_BACKSPACE)){
