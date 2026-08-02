@@ -18,7 +18,8 @@ typedef enum {
   UNKOWN_KEY = 0,
   BG_COL, TXT_COL, CURSOR_COL, SPACE_FOR_TAB,
   UNDER_CURSOR_COL, LN_COL, TAB_S, CAPS_AS_ESCAPE,
-  D_LINES, LINES_COL, LN_MODE, VIM_M
+  D_LINES, LINES_COL, LN_MODE, VIM_M,
+  P_TOP, P_BOTTOM, P_LEFT, P_RIGHT
 } ConfigKey;
 
 typedef enum{
@@ -115,6 +116,8 @@ typedef struct {
   unsigned int status_line_color;
   unsigned int error_color;
   unsigned int success_color;
+  unsigned int selection_color;
+  unsigned int selected_char_color;
   ssize_t line_height;
   ssize_t letter_spacing;
 } Config;

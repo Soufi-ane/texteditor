@@ -1,7 +1,4 @@
 #include <ctype.h>
-#include <raylib.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -192,6 +189,10 @@ ConfigKey get_config_key(Editor *e, char *key){
   if(!strcmp(key, "lines_color"))          return LINES_COL;
   if(!strcmp(key, "tab_size"))             return TAB_S;
   if(!strcmp(key, "caps_lock_as_escape"))  return CAPS_AS_ESCAPE;
+  if(!strcmp(key, "padding_top"))          return P_TOP;
+  if(!strcmp(key, "padding_bottom"))       return P_BOTTOM;
+  if(!strcmp(key, "padding_left"))         return P_LEFT;
+  if(!strcmp(key, "padding_right"))        return P_RIGHT;
   return UNKOWN_KEY;
 }
 
@@ -240,6 +241,19 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
   switch (key_type) {
     case TAB_S:
       e->conf.tab_size = number;
+      break;
+
+    case P_TOP:
+      e->conf.padding.top = number;
+      break;
+    case P_BOTTOM:
+      e->conf.padding.bottom = number;
+      break;
+    case P_LEFT:
+      e->conf.padding.left = number;
+      break;
+    case P_RIGHT:
+      e->conf.padding.right = number;
       break;
   }
 }
@@ -294,7 +308,10 @@ void read_config_line(Editor *e, char *line, size_t len, size_t line_number){
     key_type == UNDER_CURSOR_COL || key_type == LN_COL || key_type == LINES_COL
     ){
     try_setting_conf_color_value(e, key_type, value, line_number);
-  }else if(key_type == TAB_S){
+  }else if(
+    key_type == TAB_S || key_type == P_RIGHT || key_type == P_LEFT ||
+    key_type == P_BOTTOM || key_type == P_TOP
+    ){
     try_setting_conf_number_value(e, key_type, value, line_number);
   }
   else try_setting_conf_value(e, key_type, value);
