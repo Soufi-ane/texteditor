@@ -16,6 +16,24 @@ const char *get_file_name_from_path(const char *path){
   return file_name;
 }
 
+void write_new_message(Editor *e, Message *msg){
+  #ifdef PROD
+  char *file_path = "/usr/local/share/texteditor/messages.log";
+  #else
+  char *file_path = "assets/messages.log";
+  #endif
+	FILE* file = fopen(file_path, "a+");
+  if(file == NULL) return;
+
+  char* line = NULL;
+  size_t size = 0, line_index = 0;
+  size_t read;
+
+  fwrite(msg->text, sizeof(char), sizeof(char) * strlen(msg->text), file);
+  fputc('\n', file);
+	fclose(file);
+}
+
 void write_file(Editor* e){
 	FILE* file = fopen(e->buffer.file_path, "w");
   if(file == NULL){
@@ -39,7 +57,7 @@ void read_file(Editor* e, char const * file_path){
   char* line = NULL;
   size_t size = 0, line_index = 0;
   size_t read;
-  e->buffer = *new_buffer(128);
+  e->buffer = *new_buffer(128); 
   e->buffer.file_path = strdup(file_path);
 	while((read = getline(&line,&size,f)) != -1){
     if(e->buffer.length > e->buffer.capacity - 1){
@@ -64,25 +82,32 @@ void read_file(Editor* e, char const * file_path){
 void try_saving_file(Editor* e){
   char config_path[1024];
   #ifdef PROD
+  char *messages_path = "/usr/local/share/texteditor/messages.log";
   sprintf(config_path, "%s/.config/texteditor/texteditor.conf", e->HOME_DIR);
   #else
+  char *messages_path = "assets/messages.log";
   sprintf(config_path, "assets/texteditor.conf");
   #endif
 
   if(e->buffer.file_path){
+    bool is_done = false;
     if(access(e->buffer.file_path, W_OK) == 0 || errno == ENOENT) {
       write_file(e);
-
-      if(!strcmp(config_path, e->buffer.file_path)){
-        try_loading_config(e);
-      }
+      is_done = true;
       new_message(e, "Saved!", GOOD);
     } 
     if (errno == EACCES) {
       new_message(e, "Readonly file!", ERROR);
     }
+    if(is_done){
+      if(!strcmp(config_path, e->buffer.file_path)){
+        try_loading_config(e);
+      } else if(!strcmp(messages_path, e->buffer.file_path)){
+        read_file(e, messages_path);
+      }
+    }
   }
-  if(!e->buffer.file_path) {
+  else {
     char const * path = 
     tinyfd_saveFileDialog(
      "Save File",

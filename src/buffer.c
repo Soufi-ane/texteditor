@@ -16,6 +16,7 @@ Cmd default_cmds[NUM_COMMANDS] = {
   { SWITCH_LN_MODE , "switch line numbers mode" },
   { HELP , "Help!" },
   { OPEN_CONFIG , "Open config" },
+  { OPEN_MESSAGES , "Open log messages" },
 };
 
 ssize_t get_max_line_length(Editor *e){ 
@@ -607,12 +608,22 @@ void handle_open_file(Editor *e){
 
 void open_config_file(Editor *e){
   char path[128];
-#ifdef PROD
+  #ifdef PROD
   sprintf(path, "%s/.config/texteditor/texteditor.conf", e->HOME_DIR);
-#else
+  #else
   sprintf(path, "assets/texteditor.conf");
-#endif
+  #endif
   read_file(e, path);
+  e->mode = NORMAL;
+}
+
+void open_messages_file(Editor *e){
+  #ifdef PROD
+  char *file_path = "/usr/local/share/texteditor/messages.log";
+  #else
+  char *file_path = "assets/messages.log";
+  #endif
+  read_file(e, file_path);
   e->mode = NORMAL;
 }
 
@@ -634,15 +645,18 @@ void handle_command(Editor *e, Cmd cmd){
       else e->conf.ln_mode = ABSOLUTE;
       break;
     case HELP:
-#ifdef PROD
+      #ifdef PROD
       read_file(e, "/usr/local/share/texteditor/help.txt");
-#else
+      #else
       read_file(e, "assets/help.txt");
-#endif
+      #endif
       e->mode = NORMAL;
       break;
     case OPEN_CONFIG:
       open_config_file(e);
+      break;
+    case OPEN_MESSAGES:
+      open_messages_file(e);
       break;
   }
   e->conf.is_menu_open = false;
@@ -857,6 +871,7 @@ void new_message(Editor *e, const char *message, MessageType type){
   Message *msg = malloc(sizeof(Message));
   msg->type = type;
   msg->text = strdup(message);
+  write_new_message(e, msg);
   e->messages[e->num_msgs] = msg;
   e->buffer.current_msg_index = e->num_msgs++;
 }

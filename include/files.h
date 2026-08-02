@@ -27,5 +27,7 @@ void paste_from_clipboard(Editor *e);
 
 int try_loading_config(Editor *e);
 
+void write_new_message(Editor *e, Message *msg);
+
 #endif
 

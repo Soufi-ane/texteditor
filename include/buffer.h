@@ -28,7 +28,8 @@ typedef enum{
   SWITCH_LN_MODE,
   NEW_FILE,
   HELP,
-  OPEN_CONFIG
+  OPEN_CONFIG,
+  OPEN_MESSAGES
 } CmdType;
 
 typedef enum {
