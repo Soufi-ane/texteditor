@@ -236,7 +236,7 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
   char *endpoint;
   int number = strtoul(value, &endpoint, 10);
   if(endpoint == value || *endpoint != '\0') {
-    new_message(e, TextFormat("Invalid value [%s] at config : %zu", value, line_number), ERROR);
+    new_message(e, TextFormat("Invalid value [%s] at config: %zu", value, line_number), ERROR);
   }
   switch (key_type) {
     case TAB_S:
@@ -258,34 +258,38 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
   }
 }
 
-void try_setting_conf_value(Editor *e, ConfigKey key_type, char *value){
+void try_setting_conf_value(Editor *e, ConfigKey key_type, char *value, ssize_t n_line){
+  bool is_invalid = false;
   switch (key_type) {
     case LN_MODE :
       if(!strcmp(value, "relative"))      e->conf.ln_mode = RELATIVE;
       else if(!strcmp(value, "absolute")) e->conf.ln_mode = ABSOLUTE;
       else if(!strcmp(value, "none"))     e->conf.ln_mode = NONE;
-      // else 
+      else is_invalid = true;
       break;
     case SPACE_FOR_TAB :
       if(!strcmp(value, "true"))       e->conf.is_spaces_for_tabs = true;
       else if(!strcmp(value, "false")) e->conf.is_spaces_for_tabs = false;
-      // else
+      else is_invalid = true;
       break;
     case VIM_M :
       if(!strcmp(value, "true"))       e->conf.is_vim_mode = true;
       else if(!strcmp(value, "false")) e->conf.is_vim_mode = false;
-      // else
+      else is_invalid = true;
       break;
     case D_LINES:
       if(!strcmp(value, "true"))       e->conf.is_showing_lines = true;
       else if(!strcmp(value, "false")) e->conf.is_showing_lines = false;
-      // else
+      else is_invalid = true;
       break;
     case CAPS_AS_ESCAPE:
       if(!strcmp(value, "true"))       e->conf.caps_lock_as_escape = true;
       else if(!strcmp(value, "false")) e->conf.caps_lock_as_escape = false;
-      // else
+      else is_invalid = true;
       break;
+  }
+  if(is_invalid){
+    new_message(e, TextFormat("Invalid value [%s] at config: %zu", value, n_line), ERROR);
   }
 }
 
@@ -314,7 +318,7 @@ void read_config_line(Editor *e, char *line, size_t len, size_t line_number){
     ){
     try_setting_conf_number_value(e, key_type, value, line_number);
   }
-  else try_setting_conf_value(e, key_type, value);
+  else try_setting_conf_value(e, key_type, value, line_number);
 }
 
 int try_loading_config(Editor *e){
