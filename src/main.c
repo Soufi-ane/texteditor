@@ -1,4 +1,5 @@
 #include <raylib.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "files.h"
@@ -25,12 +26,12 @@ Editor ed = {
     .caps_lock_as_escape = CAPS_LOCK_AS_ESCAPE,
     .tab_size = TAB_SIZE,
     .is_showing_lines = DRAW_LINES,
-    .ln_mode = ABSOLUTE,
+    .ln_mode = NONE,
     .ln_padding = 1,
     .line_height = LINE_HEIGHT,
     .letter_spacing = LETTER_SPACING,
     .padding = {
-      .top = LINE_HEIGHT,
+      .top = LINE_HEIGHT * 3,
       .bottom = LINE_HEIGHT,
       .right = 70,
       .left = 10
@@ -77,9 +78,9 @@ int main() {
       SetExitKey(KEY_Q);
     } else SetExitKey(KEY_NULL);
 
-    handle_keys(&ed);
 
     ClearBackground(GetColor(ed.conf.bg_color));
+    ssize_t max_line_len = get_max_line_length(&ed);
     if(ed.conf.is_showing_lines) {
       for (int l = 0; l < get_max_num_lines(&ed); l++) {
         int yPos = pad.top + l * ed.conf.line_height ;
@@ -91,8 +92,8 @@ int main() {
       }
     }
     // todo : render body
-    size_t y_offset = 0;
-    size_t i, x_offset = 0;
+    ssize_t y_offset = 0;
+    ssize_t i, x_offset = 0;
 
     for (
       i = ed.buffer.d_start;
@@ -101,7 +102,7 @@ int main() {
     ) {
       // line numbers
       if(ed.conf.ln_mode != NONE) {
-        size_t index = ed.buffer.current_line_index;
+        ssize_t index = ed.buffer.current_line_index;
        DrawTextEx(ed.conf.font,
          TextFormat( "%zu", 
            (ed.conf.ln_mode == ABSOLUTE || index == i) ?  i + 1 :
@@ -113,9 +114,10 @@ int main() {
           },
          32, 0, GetColor(ed.conf.line_numbers_color));
       }
-
+      int char_x;
+      int char_y;
       Line *current_line = ed.buffer.lines[i];
-      for(size_t m = 0; m <= current_line->length; m++){
+      for(ssize_t m = 0; m <= current_line->length; m++){
         int cursor_x = pad.left + ed.conf.letter_spacing * x_offset;
         if(ed.conf.ln_mode != NONE) cursor_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
         if(i == ed.buffer.current_line_index && m == ed.cursor.index)
@@ -125,27 +127,12 @@ int main() {
             pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height
           );
         if(m < current_line->length) {
-          int char_x = pad.left + ed.conf.letter_spacing * x_offset;
-          int char_y = pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height;
+          char_x = pad.left + ed.conf.letter_spacing * x_offset;
+          char_y = pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height;
 
           if(ed.conf.ln_mode != NONE) char_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
 
           char c = current_line->chars[m];
-
-          if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-            Vector2 pos = GetMousePosition();
-            if(pos.y >= char_y && pos.y <= char_y + ed.conf.line_height){
-              ed.buffer.current_line_index = i;
-              if (pos.x >= char_x && pos.x <= char_x + ed.conf.letter_spacing){
-                ed.cursor.index = m;
-              }else if(pos.x > pad.left + ed.conf.letter_spacing * current_line->length){
-                ed.cursor.index = current_line->length;
-              }else {
-                ed.cursor.index = 0;
-              }
-            }
-          }
-
           unsigned int char_color = m == ed.cursor.index &&
             i == ed.buffer.current_line_index ? 
             ed.conf.under_cursor_color : ed.conf.text_color;
@@ -162,16 +149,33 @@ int main() {
               DrawChar(&ed, c,char_x, char_y , char_color);
             } 
           } 
+
+          if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+            if(ed.mouse.y >= char_y && ed.mouse.y <= char_y + ed.conf.line_height){
+              ed.buffer.current_line_index = i;
+              handle_click_on_line(&ed, char_x, m);
+            }else if(i == ed.buffer.d_start && ed.mouse.y < char_y){
+              ed.buffer.current_line_index = ed.buffer.d_start;
+              handle_click_on_line(&ed, char_x, m);
+            } else if(i == ed.buffer.d_start + ed.buffer.d_length - 1 && ed.mouse.y > char_y){
+              ed.buffer.current_line_index = ed.buffer.d_start + ed.buffer.d_length - 1;
+              handle_click_on_line(&ed, char_x, m);
+            }
+          }
           x_offset++;
-          if((m + 1) % get_max_line_length(&ed) == 0) {
+          if((m + 1) % max_line_len == 0) {
             y_offset++;
             x_offset = 0;
           }
         }
+
       }
         y_offset++;
         x_offset = 0;
-      }
+
+    }
+
+    handle_keys(&ed);
 
     DrawStatusLine(&ed);
     if(ed.buffer.current_msg_index > -1) DrawCurrentMessage(&ed);

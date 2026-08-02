@@ -3,6 +3,7 @@
 
 #include <raylib.h>
 #include <stddef.h>
+#include <stdio.h>
 #include "conf.h"
 
 extern double longPressDelay ;
@@ -48,16 +49,16 @@ typedef struct {
 extern Cmd default_cmds[NUM_COMMANDS];
 
 typedef struct {
-  size_t index;
-  size_t last_index;
-  size_t width;
-  size_t height;
+  ssize_t index;
+  ssize_t last_index;
+  ssize_t width;
+  ssize_t height;
   unsigned int color;
 } Cursor;
 
 typedef struct {
-  size_t length;
-  size_t capacity;
+  ssize_t length;
+  ssize_t capacity;
   char *chars;
 } Line;
 
@@ -67,29 +68,28 @@ typedef struct {
 } Message;
 
 typedef struct {
-  size_t num_chars;
-  size_t current_line_index;
+  ssize_t num_chars;
+  ssize_t current_line_index;
   int current_msg_index;
   // TODO : maybe
-  // size_t curren_col;
-  size_t length; 
-  size_t capacity; 
-  size_t d_start;
-  size_t d_length;
+  ssize_t length; 
+  ssize_t capacity; 
+  ssize_t d_start;
+  ssize_t d_length;
   Line **lines;
   char const * file_path;
 } Buffer ;
 
 typedef struct{
-  size_t row;
-  size_t col;
+  ssize_t row;
+  ssize_t col;
 } RowCol;
 
 typedef struct {
-  size_t top;
-  size_t right;
-  size_t bottom;
-  size_t left;
+  ssize_t top;
+  ssize_t right;
+  ssize_t bottom;
+  ssize_t left;
 } Padding;
 
 typedef struct {
@@ -101,9 +101,9 @@ typedef struct {
   bool is_vim_mode;
   bool caps_lock_as_escape;
   RowCol selection_start;
-  size_t tab_size;
+  ssize_t tab_size;
   LineNumbers ln_mode;
-  size_t ln_padding;
+  ssize_t ln_padding;
   Padding padding;
   Font font;
   unsigned int bg_color;
@@ -115,8 +115,8 @@ typedef struct {
   unsigned int status_line_color;
   unsigned int error_color;
   unsigned int success_color;
-  size_t line_height;
-  size_t letter_spacing;
+  ssize_t line_height;
+  ssize_t letter_spacing;
 } Config;
 
 typedef struct {
@@ -130,15 +130,15 @@ typedef struct {
   Message *messages[MAX_MESSAGES];
   bool is_full_screen;
   bool should_quit;
-  size_t num_msgs;
+  ssize_t num_msgs;
   char* currentFileName;
   char* searchQuery;
   int numResults;
   int s_width;
   int s_height;
-  size_t selected_cmd;
-  size_t displayed_cmds[NUM_COMMANDS];
-  size_t num_cmds_displayed;
+  ssize_t selected_cmd;
+  ssize_t displayed_cmds[NUM_COMMANDS];
+  ssize_t num_cmds_displayed;
 } Editor;
 
 int get_position(Editor* e);
@@ -159,17 +159,17 @@ void add_char_to_note_body(Editor* e,char c);
 
 int get_first_diplayed_index(Editor* e,bool isUp);
 
-Line *new_line(size_t capacity);
+Line *new_line(ssize_t capacity);
 
-Buffer *new_buffer(size_t capacity);
+Buffer *new_buffer(ssize_t capacity);
 
-size_t get_max_line_length(Editor *e);
+ssize_t get_max_line_length(Editor *e);
 
-size_t get_max_num_lines(Editor *e);
+ssize_t get_max_num_lines(Editor *e);
 
 void free_line(Line *line);
 
-size_t get_lines_wraps(Editor *e, int from, int to, bool include_last);
+ssize_t get_lines_wraps(Editor *e, int from, int to, bool include_last);
 
 void move_cursor_right(Editor* e);
 
@@ -208,5 +208,7 @@ void filter_cmds_by_prompt(Editor *e);
 void to_lower_case(const char *text, char *dest);
 
 void handle_insert_mode_keys(Editor* e,int c);
+
+void handle_click_on_line(Editor *e, int char_x, ssize_t char_index);
 
 #endif

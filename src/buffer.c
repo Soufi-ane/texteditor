@@ -1,5 +1,4 @@
 #include <ctype.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "files.h"
@@ -16,15 +15,15 @@ Cmd default_cmds[NUM_COMMANDS] = {
   { OPEN_CONFIG , "Open config" },
 };
 
-size_t get_max_line_length(Editor *e){ 
-  size_t x_padding = e->conf.padding.left + e->conf.padding.right;
+ssize_t get_max_line_length(Editor *e){ 
+  ssize_t x_padding = e->conf.padding.left + e->conf.padding.right;
   if(e->conf.ln_mode != NONE) x_padding += e->conf.ln_mode;
   return (e->s_width - x_padding) / e->conf.letter_spacing; 
 }
 
-size_t get_max_num_lines(Editor *e){ 
-  size_t y_padding = e->conf.padding.top + e->conf.padding.bottom + e->cursor.height;
-  return (e->s_height - y_padding) / e->conf.line_height + 2; 
+ssize_t get_max_num_lines(Editor *e){ 
+  ssize_t y_padding = e->conf.padding.top + e->conf.padding.bottom + e->cursor.height;
+  return (e->s_height - y_padding) / e->conf.line_height + 1; 
 }
 
 bool is_selecting_up(Editor *e){
@@ -34,7 +33,7 @@ bool is_selecting_up(Editor *e){
 void filter_cmds_by_prompt(Editor *e){
   int index = 0;
   e->selected_cmd = 0;
-  for(size_t i = 0; i < NUM_COMMANDS; i++){
+  for(ssize_t i = 0; i < NUM_COMMANDS; i++){
     if(!e->cmd_prompt->length){
       e->displayed_cmds[index++] = i;
       continue;
@@ -78,9 +77,9 @@ bool is_selected(Editor *e, RowCol row_col){
 }
 
 void update_scroll(Editor *e, bool is_up){
-  size_t wraps = get_lines_wraps(e, e->buffer.d_start, e->buffer.d_start + e->buffer.d_length, true);
-  size_t max = get_max_num_lines(e) - wraps;
-  size_t current_index = e->buffer.current_line_index;
+  ssize_t wraps = get_lines_wraps(e, e->buffer.d_start, e->buffer.d_start + e->buffer.d_length, true);
+  ssize_t max = get_max_num_lines(e) - wraps;
+  ssize_t current_index = e->buffer.current_line_index;
   e->buffer.d_length = e->buffer.length < max ? e->buffer.length : max;
 
   if(is_up){
@@ -128,22 +127,22 @@ void toggle_full_screen(Editor *e){
 void start_new_line(Editor *e){
   Line *current = e->buffer.lines[e->buffer.current_line_index];
   if(e->buffer.length > e->buffer.capacity - 1){
-    size_t new_capacity = e->buffer.capacity + 10;
+    ssize_t new_capacity = e->buffer.capacity + 10;
     e->buffer.lines = realloc(e->buffer.lines, sizeof(Line*) * new_capacity);
-    for(size_t i = e->buffer.capacity; i < new_capacity; i++){
+    for(ssize_t i = e->buffer.capacity; i < new_capacity; i++){
       e->buffer.lines[i] = new_line(DEFAULT_LINE_SIZE);
     }
     e->buffer.capacity = new_capacity;
   } 
   if(e->buffer.current_line_index < e->buffer.length - 1){
-    for(size_t index = e->buffer.length; index > e->buffer.current_line_index; index--){
+    for(ssize_t index = e->buffer.length; index > e->buffer.current_line_index; index--){
       e->buffer.lines[index] = e->buffer.lines[index - 1];
     }
     e->buffer.lines[e->buffer.current_line_index + 1] = new_line(DEFAULT_LINE_SIZE);
   }
-  size_t prev = e->buffer.current_line_index;
+  ssize_t prev = e->buffer.current_line_index;
   if(e->buffer.lines[prev]->length) {
-    for(size_t i = e->cursor.index; i < e->buffer.lines[prev]->length; i++){
+    for(ssize_t i = e->cursor.index; i < e->buffer.lines[prev]->length; i++){
       add_char_to_line(e, e->buffer.lines[prev + 1], e->buffer.lines[prev]->chars[i], true);
     }
     e->buffer.lines[prev]->length = e->cursor.index;
@@ -170,7 +169,7 @@ void add_char_to_line(Editor* e, Line* line, char c, bool append){
     line->chars = realloc(line->chars, sizeof(char) * line->capacity);
   } 
   if(e->cursor.index < line->length && !append){
-    for(size_t i = line->length; i > e->cursor.index; i--) {
+    for(ssize_t i = line->length; i > e->cursor.index; i--) {
       line->chars[i] = line->chars[i - 1];
     }
     line->chars[e->cursor.index] = c;
@@ -199,10 +198,10 @@ void pop_char_from_line(Editor* e, Line *line){
   if(e->buffer.current_line_index && e->cursor.index == 0) {
     Line *prev_line = e->buffer.lines[e->buffer.current_line_index - 1];
     e->cursor.index = prev_line->length;
-    for(size_t i = 0; i < line->length; i++){
+    for(ssize_t i = 0; i < line->length; i++){
       add_char_to_line(e, prev_line, line->chars[i], true);
     }
-    for(size_t i = e->buffer.current_line_index; i < e->buffer.capacity - 1; i++)
+    for(ssize_t i = e->buffer.current_line_index; i < e->buffer.capacity - 1; i++)
     {
       e->buffer.lines[i] = e->buffer.lines[i + 1];
     }
@@ -212,7 +211,7 @@ void pop_char_from_line(Editor* e, Line *line){
     e->buffer.capacity--;
     e->buffer.current_line_index--;
   } else if(e->cursor.index != 0){
-    for(size_t i = e->cursor.index; i < line->length; i++){
+    for(ssize_t i = e->cursor.index; i < line->length; i++){
       line->chars[i - 1] = line->chars[i];
     }
     line->chars[--line->length] = '\0';
@@ -223,13 +222,13 @@ void pop_char_from_line(Editor* e, Line *line){
   update_line_number_padding(e);
 }
 
-size_t get_lines_wraps(Editor *e, int from, int to, bool include_last){
+ssize_t get_lines_wraps(Editor *e, int from, int to, bool include_last){
   if(from > to) return 0;
   if(from < 0) from = 0;
   if(to >= e->buffer.length) to = e->buffer.length - 1;
-  size_t wraps = 0;
-  size_t max = get_max_line_length(e);
-  for(size_t i = from; (include_last ? (i <= to) : (i < to)); i++){
+  ssize_t wraps = 0;
+  ssize_t max = get_max_line_length(e);
+  for(ssize_t i = from; (include_last ? (i <= to) : (i < to)); i++){
     wraps += e->buffer.lines[i]->length / max; 
   }
   return wraps;
@@ -335,7 +334,7 @@ void move_to_word_ending(Editor* e){
     e->cursor.index = 0;
     if(!current->length) return move_to_word_ending(e);
   }
-  size_t i = e->cursor.index; 
+  ssize_t i = e->cursor.index; 
   while(isspace(current->chars[i + 1])){
     move_cursor_right(e);
     i++;
@@ -359,7 +358,7 @@ void move_to_word_beginning(Editor* e){
     current = e->buffer.lines[e->buffer.current_line_index];
     e->cursor.index = current->length ? current->length - 1 : 0;
   } 
-  size_t i = e->cursor.index; 
+  ssize_t i = e->cursor.index; 
   while(isspace(current->chars[i - 1])){
     move_cursor_left(e);
     i--;
@@ -661,6 +660,19 @@ void handle_enter(Editor* e){
   }
 }
 
+void handle_click_on_line(Editor *e, int char_x, ssize_t char_index){
+  Line *current_line = e->buffer.lines[e->buffer.current_line_index];
+
+  if(e->mouse.x >= char_x && e->mouse.x <= char_x + e->conf.letter_spacing){
+    e->cursor.index = char_index;
+  } else if(char_index== 0 && e->mouse.x < char_x){
+    e->cursor.index = 0;
+  } else if(char_index == current_line->length - 1 && e->mouse.x > char_x){
+    e->cursor.index = current_line->length;
+  }
+
+}
+
 void handle_keys(Editor* e){
   int c;
   if ((c = GetCharPressed()) >= 8) {
@@ -766,7 +778,7 @@ void handle_keys(Editor* e){
   // return i;
 // }
 
-Line *new_line(size_t capacity){
+Line *new_line(ssize_t capacity){
   Line *line = malloc(sizeof(Line));
   line->chars = malloc(sizeof(char) * capacity);
   line->capacity = capacity;
@@ -780,10 +792,10 @@ void free_line(Line *line){
   line = NULL;
 }
 
-Buffer *new_buffer(size_t capacity){
+Buffer *new_buffer(ssize_t capacity){
   Buffer *buff = malloc(sizeof(Buffer));
   buff->lines = malloc(sizeof(Line*) * capacity);
-  for(size_t i = 0; i < capacity; i++){
+  for(ssize_t i = 0; i < capacity; i++){
     buff->lines[i] = new_line(DEFAULT_LINE_SIZE);
   }
   buff->capacity = capacity;
