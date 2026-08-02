@@ -24,6 +24,7 @@ install: $(OUT_PROD) fonts
 	cp $(OUT_PROD) $(INSTALL_DIR)
 	cp $(ASSETS_DIR)/help.txt $(DATA_DIR)
 	cp $(ASSETS_DIR)/texteditor.conf $(CONFIG_DIR)
+	chown -R $(SUDO_USER):$(SUDO_USER) $(CONFIG_DIR)
 
 $(OUT_PROD) : $(SRC)
 	$(CC) -o $(OUT_PROD) $(SRC) $(FLAGS) $(PROD_FLAGS)
