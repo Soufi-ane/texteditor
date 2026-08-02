@@ -660,7 +660,22 @@ void handle_enter(Editor* e){
   }
 }
 
-void handle_click_on_line(Editor *e, int char_x, ssize_t char_index){
+void handle_mouse_click(Editor *e, int char_x, int char_y, ssize_t char_index,
+  ssize_t line_index, bool is_holding){
+
+  if(e->mouse.y >= char_y && e->mouse.y <= char_y + e->conf.line_height){
+    e->buffer.current_line_index = line_index;
+    handle_click_on_line(e, char_x, char_index, is_holding);
+  }else if(line_index == e->buffer.d_start && e->mouse.y < char_y){
+    e->buffer.current_line_index = e->buffer.d_start;
+    handle_click_on_line(e, char_x, char_index, is_holding);
+  } else if(line_index == e->buffer.d_start + e->buffer.d_length - 1 && e->mouse.y > char_y){
+    e->buffer.current_line_index = e->buffer.d_start + e->buffer.d_length - 1;
+    handle_click_on_line(e, char_x, char_index, is_holding);
+  }
+}
+
+void handle_click_on_line(Editor *e, int char_x, ssize_t char_index, bool is_holding){
   Line *current_line = e->buffer.lines[e->buffer.current_line_index];
 
   if(e->mouse.x >= char_x && e->mouse.x <= char_x + e->conf.letter_spacing){
@@ -668,9 +683,13 @@ void handle_click_on_line(Editor *e, int char_x, ssize_t char_index){
   } else if(char_index== 0 && e->mouse.x < char_x){
     e->cursor.index = 0;
   } else if(char_index == current_line->length - 1 && e->mouse.x > char_x){
-    e->cursor.index = current_line->length;
+    e->cursor.index = current_line->length - is_holding;
   }
 
+  if(!is_holding) {
+    e->conf.selection_start.row = e->buffer.current_line_index;
+    e->conf.selection_start.col = e->cursor.index;
+  }
 }
 
 void handle_keys(Editor* e){

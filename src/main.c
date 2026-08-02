@@ -68,6 +68,8 @@ int main() {
   SetTargetFPS(120);
   SetConfigFlags(FLAG_MSAA_4X_HINT);
 
+  Vector2 press_start_pos = {0};
+
   while (!WindowShouldClose()) {
     if(ed.should_quit) break;
     ed.s_width = GetScreenWidth();
@@ -151,17 +153,20 @@ int main() {
           } 
 
           if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-            if(ed.mouse.y >= char_y && ed.mouse.y <= char_y + ed.conf.line_height){
-              ed.buffer.current_line_index = i;
-              handle_click_on_line(&ed, char_x, m);
-            }else if(i == ed.buffer.d_start && ed.mouse.y < char_y){
-              ed.buffer.current_line_index = ed.buffer.d_start;
-              handle_click_on_line(&ed, char_x, m);
-            } else if(i == ed.buffer.d_start + ed.buffer.d_length - 1 && ed.mouse.y > char_y){
-              ed.buffer.current_line_index = ed.buffer.d_start + ed.buffer.d_length - 1;
-              handle_click_on_line(&ed, char_x, m);
+            ed.conf.is_selecting = false;
+            press_start_pos = ed.mouse;
+            handle_mouse_click(&ed, char_x, char_y, m, i, false);
+          }
+          if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+            float delta_x = ed.mouse.x - press_start_pos.x;
+            float delta_y = ed.mouse.y - press_start_pos.y;
+            float distance_squared = delta_x * delta_x + delta_y * delta_y;
+            if(distance_squared > 25.0f) {
+              ed.conf.is_selecting = true;
+              handle_mouse_click(&ed, char_x, char_y, m, i, true);
             }
           }
+
           x_offset++;
           if((m + 1) % max_line_len == 0) {
             y_offset++;

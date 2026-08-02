@@ -209,6 +209,9 @@ void to_lower_case(const char *text, char *dest);
 
 void handle_insert_mode_keys(Editor* e,int c);
 
-void handle_click_on_line(Editor *e, int char_x, ssize_t char_index);
+void handle_mouse_click(Editor *e, int char_x, int char_y, ssize_t char_index,
+  ssize_t line_index, bool is_holding);
+
+void handle_click_on_line(Editor *e, int char_x, ssize_t char_index, bool is_holding);
 
 #endif
