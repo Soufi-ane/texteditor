@@ -2,9 +2,10 @@
 #include <string.h>
 #include "draw.h"
 
-const char *get_mode_str(Mode mode){
+const char *get_mode_str(Mode mode, bool is_selecting){
   switch (mode) {
     case NORMAL :
+      if(is_selecting) return "VISUAL" ;
       return "NORMAL";
     case INSERT :
       return "INSERT";
@@ -156,7 +157,7 @@ void DrawStatusLine(Editor *e){
 
   if(e->conf.is_vim_mode){
     DrawTextEx(
-      e->conf.font, get_mode_str(e->mode),
+      e->conf.font, get_mode_str(e->mode, e->conf.is_selecting),
       (Vector2){
         e->s_width - e->conf.letter_spacing * 7,
         e->s_height - e->cursor.height
