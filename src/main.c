@@ -121,18 +121,18 @@ int main() {
       for(ssize_t m = 0; m <= current_line->length; m++){
         int cursor_x = pad.left + ed.conf.letter_spacing * x_offset;
         if(ed.conf.ln_mode != NONE) cursor_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
-        if(i == ed.buffer.current_line_index && m == ed.cursor.index)
-        //cursor
+        if(i == ed.buffer.current_line_index && m == ed.cursor.index){
           DrawCursor(
             &ed, cursor_x,
             pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height,
             ed.cursor.color
           );
-        if(m < current_line->length) {
-          char_x = pad.left + ed.conf.letter_spacing * x_offset;
-          char_y = pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height;
+        }
 
-          if(ed.conf.ln_mode != NONE) char_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
+        char_x = pad.left + ed.conf.letter_spacing * x_offset;
+        char_y = pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height;
+        if(ed.conf.ln_mode != NONE) char_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
+        if(m < current_line->length) {
 
           char c = current_line->chars[m];
           unsigned int char_color = m == ed.cursor.index &&
@@ -173,12 +173,14 @@ int main() {
             y_offset++;
             x_offset = 0;
           }
+        }else if(!current_line->length) {
+          if(is_selected(&ed, (RowCol){i, m}) && !(i == ed.buffer.current_line_index && m == ed.cursor.index)) {
+            DrawCursor(&ed, char_x, char_y, ed.conf.selection_color);
+          }
         }
-
       }
         y_offset++;
         x_offset = 0;
-
     }
 
     handle_keys(&ed);
