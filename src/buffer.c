@@ -418,31 +418,11 @@ void handle_tab(Editor* e, bool is_shift_down) {
   }
 }
 
-/* void handle_move_down_files(Editor* e){
-  if(e->conf.currentFileIndex < e->conf.filesCount - 1){
-    e->conf.currentFileIndex++;
-    if(e->conf.currentFileIndex + e->conf.displayedFilesStart > MAX_DISPLAYED_FILES -1){ 
-      e->conf.displayedFilesStart++;
-    }
   }
-  else {
-    e->conf.currentFileIndex = 0;
-    e->conf.displayedFilesStart = 0;
-  }
-} */
 
-/* void handle_move_up_files(Editor* e){
-  if(e->conf.currentFileIndex > 0){
-    e->conf.currentFileIndex--;
-    if(e->conf.currentFileIndex - e->conf.displayedFilesStart < 0) {
-      e->conf.displayedFilesStart--;
     }
   }
-  else {
-    e->conf.currentFileIndex = e->conf.filesCount - 1;
-    e->conf.displayedFilesStart = e->conf.filesCount - MAX_DISPLAYED_FILES ;
   }
-} */
 
 void handle_backspace(Editor* e) {
   if(e->mode == INSERT || !e->conf.is_vim_mode) {
@@ -461,11 +441,6 @@ void handle_normal_mode_keys(Editor* e, int c){
     case 'G':
       move_cursor_to_last_line(e);
       break;
-    /* case 'n':
-      e->mode = INSERT; 
-      e->conf.isNamingFile = true;
-      e->conf.is_menu_open = false;
-      break; */
     case 'a':
       handle_append(e);
       break;
