@@ -104,6 +104,7 @@ void update_line_number_padding(Editor *e){
 
 void handle_append(Editor *e){
   e->mode = INSERT;
+  e->conf.is_selecting = false;
   if(e->cursor.index > 0) move_cursor_right(e);
 }
 
@@ -470,6 +471,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'i':
       e->mode = INSERT;
+      e->conf.is_selecting = false;
       e->conf.is_menu_open = false;
       break;
     case 'm':
