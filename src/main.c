@@ -1,6 +1,3 @@
-#include <raylib.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include "files.h"
 #include "draw.h"
@@ -166,6 +163,7 @@ int main() {
             float distance_squared = delta_x * delta_x + delta_y * delta_y;
             if(distance_squared > 25.0f) {
               ed.conf.is_selecting = true;
+              ed.mode = NORMAL;
               handle_mouse_click(&ed, char_x, char_y, m, i, true);
             }
           }
