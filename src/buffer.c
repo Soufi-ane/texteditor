@@ -129,15 +129,19 @@ void toggle_full_screen(Editor *e){
   e->is_full_screen = !e->is_full_screen;
 }
 
+void realloc_buffer(Buffer *buff, ssize_t new_capacity){
+  buff->lines = realloc(buff->lines, sizeof(Line*) * new_capacity);
+  for(ssize_t i = buff->capacity; i < new_capacity; i++){
+    buff->lines[i] = new_line(DEFAULT_LINE_SIZE);
+  }
+  buff->capacity = new_capacity;
+}
+
 void start_new_line(Editor *e){
   Line *current = e->buffer.lines[e->buffer.current_line_index];
-  if(e->buffer.length > e->buffer.capacity - 1){
+  if(e->buffer.length > e->buffer.capacity - 2){
     ssize_t new_capacity = e->buffer.capacity + 10;
-    e->buffer.lines = realloc(e->buffer.lines, sizeof(Line*) * new_capacity);
-    for(ssize_t i = e->buffer.capacity; i < new_capacity; i++){
-      e->buffer.lines[i] = new_line(DEFAULT_LINE_SIZE);
-    }
-    e->buffer.capacity = new_capacity;
+    realloc_buffer(&e->buffer, new_capacity);
   } 
   if(e->buffer.current_line_index < e->buffer.length - 1){
     for(ssize_t index = e->buffer.length; index > e->buffer.current_line_index; index--){
@@ -204,6 +208,7 @@ void pop_char_from_line(Editor* e, Line *line){
     Line *prev_line = e->buffer.lines[e->buffer.current_line_index - 1];
     e->cursor.index = prev_line->length;
     for(ssize_t i = 0; i < line->length; i++){
+      // todo : use memcpy or something
       add_char_to_line(e, prev_line, line->chars[i], true);
     }
     for(ssize_t i = e->buffer.current_line_index; i < e->buffer.capacity - 1; i++)
@@ -418,11 +423,92 @@ void handle_tab(Editor* e, bool is_shift_down) {
   }
 }
 
+void delete_chars(Line *line, ssize_t from, ssize_t count){
+  if(from + count > line->capacity || from < 0 || count < 1) return;
+  for(int i = from; i < line->capacity - count; i++){
+    line->chars[i] = line->chars[i + count];
   }
+  line->length -= count;
+}
 
+void delete_lines(Buffer *buff, ssize_t from, ssize_t count){
+  if(from + count > buff->capacity || from < 0 || count < 1) return;
+  for(int i = from; i < buff->capacity - count; i++){
+    if(i < from + count - 1){
+      free_line(buff->lines[i]);
     }
+    buff->lines[i] = buff->lines[i + count];
   }
+  buff->length -= count;
+  buff->capacity -= count;
+  if(buff->length < 1){
+    if(!buff->capacity) {
+      ssize_t new_capacity = buff->capacity + 10;
+      realloc_buffer(buff, new_capacity);
+    }
+    buff->length = 1;
+    buff->current_line_index = 0;
   }
+}
+
+void handle_d_press(Editor *e){
+  if(e->conf.is_selecting && e->conf.is_vim_mode){
+    bool is_up = is_selecting_up(e); 
+    ssize_t start = (is_up ? e->buffer.current_line_index : e->conf.selection_start.row); 
+    ssize_t finish = (is_up ? e->conf.selection_start.row : e->buffer.current_line_index);
+
+    Line *start_line = e->buffer.lines[start];
+    Line *end_line = e->buffer.lines[finish];
+
+    if(start != finish){
+      if(is_up){
+       start_line->length = e->cursor.index;
+       if(end_line->length) end_line->length -= e->conf.selection_start.col + 1;
+       memmove(
+         &end_line->chars[0],
+         &end_line->chars[e->conf.selection_start.col + 1],
+         end_line->length
+       );
+      }
+      else {
+       start_line->length = e->conf.selection_start.col;
+       if(end_line->length) end_line->length -= e->cursor.index + 1;
+       memmove(
+         &end_line->chars[0],
+         &end_line->chars[e->cursor.index + 1],
+         (size_t) end_line->length
+       );
+      } 
+      memcpy(
+        &start_line->chars[start_line->length],
+        &end_line->chars[0],
+        (size_t) end_line->length
+      );
+      start_line->length += end_line->length;
+      ssize_t from = start + (start_line->length ? 1 : 0);
+      ssize_t count = finish - start + (ssize_t) (start_line->length ? 0 : 1);
+      delete_lines(&e->buffer, from , count);
+      e->buffer.current_line_index = finish - count;
+      if(e->buffer.current_line_index < 0) e->buffer.current_line_index = 0;
+      if(!e->conf.selection_start.col) e->cursor.index = 0;
+    }else {
+      bool is_left = e->cursor.index <= e->conf.selection_start.col;
+      ssize_t num_chars = is_left ? e->conf.selection_start.col - e->cursor.index + 1
+        : e->cursor.index - e->conf.selection_start.col + 1;
+      if(start_line->length < num_chars) {
+        e->buffer.current_line_index--;
+        delete_lines(&e->buffer, start, 1);
+        e->cursor.index = 0;
+      } else {
+        ssize_t start_index = is_left ? e->cursor.index : e->conf.selection_start.col;
+        delete_chars(start_line, start_index , num_chars);
+        if(!is_left) e->cursor.index -= num_chars - 1;
+      }
+    }
+    e->conf.is_selecting = false;
+  }
+  update_line_number_padding(e);
+}
 
 void handle_backspace(Editor* e) {
   if(e->mode == INSERT || !e->conf.is_vim_mode) {
@@ -519,6 +605,9 @@ void handle_normal_mode_keys(Editor* e, int c){
       paste_from_clipboard(e);
       update_scroll(e, true);
       e->conf.is_menu_open = false;
+      break;
+    case 'd':
+      handle_d_press(e);
       break;
   }
 }
