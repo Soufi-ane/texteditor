@@ -100,6 +100,7 @@ void try_saving_file(Editor* e){
     } 
     if (errno == EACCES) {
       new_message(e, "Readonly file!", ERROR);
+      e->buffer.is_saved = true;
     }
     if(is_done){
       if(!strcmp(config_path, e->buffer.file_path)){
