@@ -633,6 +633,14 @@ void handle_ctrl_plus_key(Editor *e){
     e->conf.is_menu_open = false;
   }
 
+  if(IsKeyPressed(KEY_U)){
+    if(e->mode == INSERT || !e->conf.is_vim_mode){
+      e->buffer.lines[e->buffer.current_line_index]->length = 0;
+      e->cursor.index = 0;
+      update_last_index(e);
+    }
+  }
+
 }
 
 void handle_insert_mode_keys(Editor* e,int c){
