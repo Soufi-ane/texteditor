@@ -8,6 +8,8 @@ Editor ed = {
   .s_height = SCREEN_HEIGHT,
   .num_cmds_displayed = NUM_COMMANDS,
   .conf = {
+    .font_size = 42,
+    .secondary_font_size = 36,
     .bg_color = 0x141415FF,
     .text_color = 0xFFFFFFFF,
     .under_cursor_color = 0X000000FF,
@@ -27,8 +29,8 @@ Editor ed = {
     .is_showing_lines = false,
     .ln_mode = NONE,
     .ln_padding = 1,
-    .line_height = LINE_HEIGHT,
-    .letter_spacing = LETTER_SPACING,
+    .line_height = 5,
+    .letter_spacing = 0,
     .padding = {
       .top = 45,
       .bottom = 45,
@@ -37,8 +39,6 @@ Editor ed = {
     }
   },
   .cursor = {
-    .width = 15,
-    .height = 35,
     .color = 0xD1D1CFFF
   },
 };
@@ -54,19 +54,15 @@ int main() {
 
   InitWindow(ed.s_width, ed.s_height, "Text Editor");
   SetExitKey(KEY_NULL);
-  int file_size = 0;
-  Font font_SDF = {0};
-#ifdef PROD
-  char *font_path = "/usr/local/share/fonts/JetBrainsMonoNF.ttf";
-#else 
-  char *font_path = "assets/fonts/JetBrainsMonoNF.ttf";
-#endif
-  load_font_sdf(font_path, &file_size, 128, &font_SDF);
-  ed.conf.font = font_SDF;
+
+  load_font_default(&ed, ed.conf.font_size, true);
+
+  load_font_default(&ed, ed.conf.secondary_font_size, false);
 
   SetTargetFPS(120);
   SetConfigFlags(FLAG_MSAA_4X_HINT);
 
+  RowCol char_size = {0};
   Vector2 press_start_pos = {0};
 
   while (!WindowShouldClose()) {
@@ -74,16 +70,21 @@ int main() {
     ed.s_width = GetScreenWidth();
     ed.s_height = GetScreenHeight();
     ed.mouse = GetMousePosition();
+    char_size = get_char_size(ed.conf.font_size);
+    ed.cursor.height = char_size.row;
+    ed.cursor.width = char_size.col;
     Padding pad = ed.conf.padding;
 
     ClearBackground(GetColor(ed.conf.bg_color));
     ssize_t max_line_len = get_max_line_length(&ed);
     if(ed.conf.is_showing_lines) {
       for (int l = 0; l < get_max_num_lines(&ed); l++) {
-        int yPos = pad.top + l * ed.conf.line_height ;
+        int y_pos = pad.top + ed.cursor.height + l * (ed.conf.line_height + ed.cursor.height);
+        int x_pos = ed.conf.padding.left + (ed.conf.ln_padding + 1)
+          * (char_size.col + ed.conf.letter_spacing);
         DrawLineEx(
-          (Vector2){30, yPos}, 
-          (Vector2){ed.s_width - 30, yPos}, 3.0f,
+          (Vector2){x_pos, y_pos}, 
+          (Vector2){ed.s_width - (ed.conf.padding.right), y_pos}, 3.0f,
           GetColor(ed.conf.lines_color)
         );
       }
@@ -107,27 +108,27 @@ int main() {
          ),
          (Vector2){
            pad.left,
-           pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height
+           pad.top + (ed.conf.line_height + char_size.row) * y_offset
           },
-         32, 0, GetColor(ed.conf.line_numbers_color));
+         ed.conf.font_size, 0, GetColor(ed.conf.line_numbers_color));
       }
-      int char_x;
-      int char_y;
+      float char_x;
+      float char_y;
       Line *current_line = ed.buffer.lines[i];
       for(ssize_t m = 0; m <= current_line->length; m++){
-        int cursor_x = pad.left + ed.conf.letter_spacing * x_offset;
-        if(ed.conf.ln_mode != NONE) cursor_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
+        float cursor_x = pad.left + (ed.conf.letter_spacing + char_size.col) * x_offset;
+        if(ed.conf.ln_mode != NONE) cursor_x += (ed.conf.letter_spacing + char_size.col) * (ed.conf.ln_padding + 1);
         if(i == ed.buffer.current_line_index && m == ed.cursor.index){
           DrawCursor(
             &ed, cursor_x,
-            pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height,
+            pad.top + ((ed.conf.line_height + char_size.row) * y_offset),
             ed.cursor.color
           );
         }
 
-        char_x = pad.left + ed.conf.letter_spacing * x_offset;
-        char_y = pad.top + (ed.conf.line_height * y_offset) - ed.cursor.height;
-        if(ed.conf.ln_mode != NONE) char_x += ed.conf.letter_spacing * (ed.conf.ln_padding + 1);
+        char_x = pad.left + (ed.conf.letter_spacing + char_size.col) * x_offset;
+        char_y = pad.top + ((ed.conf.line_height + char_size.row) * y_offset);
+        if(ed.conf.ln_mode != NONE) char_x += (ed.conf.letter_spacing + char_size.col) * (ed.conf.ln_padding + 1);
         if(m < current_line->length) {
 
           char c = current_line->chars[m];
@@ -136,15 +137,18 @@ int main() {
             ed.conf.under_cursor_color : ed.conf.text_color;
           if(c == '\t') {
             for(int i = 0; i < ed.conf.tab_size; i++){
-              DrawChar(&ed, ' ',char_x + i * ed.conf.letter_spacing, char_y , char_color);
+              DrawChar(
+                &ed, ' ',char_x + i * (ed.conf.letter_spacing + char_size.col),
+                char_y , char_color, ed.conf.font_size
+              );
               x_offset++;
             }
           } else {
             if(is_selected(&ed, (RowCol){i, m}) && !(i == ed.buffer.current_line_index && m == ed.cursor.index)) {
               DrawCursor(&ed, char_x, char_y, ed.conf.selection_color);
-              DrawChar(&ed, c,char_x, char_y , ed.conf.selected_char_color);
+              DrawChar(&ed, c,char_x, char_y , ed.conf.selected_char_color, ed.conf.font_size);
             } else {
-              DrawChar(&ed, c,char_x, char_y , char_color);
+              DrawChar(&ed, c,char_x, char_y , char_color, ed.conf.font_size);
             } 
           } 
 

@@ -13,9 +13,10 @@ const char *get_mode_str(Mode mode, bool is_selecting){
 }
 
 void DrawCmdCursor(Editor* e, int cursor_x, int cursor_y){
+  RowCol char_size = get_char_size(e->conf.secondary_font_size);
   DrawRectangle(
-    cursor_x, cursor_y, e->cursor.width,
-    e->cursor.height, GetColor(e->cursor.color)
+    cursor_x, cursor_y, char_size.col,
+    char_size.row, GetColor(e->cursor.color)
   );
 }
 
@@ -27,6 +28,7 @@ void DrawCursor(Editor* e, int x, int y, unsigned int color){
 }
 
 void DrawMenu(Editor * e){
+  RowCol char_size = get_char_size(e->conf.secondary_font_size);
   Padding pad = e->conf.padding;
     
   float menu_w = (float) e->s_width / 2;
@@ -37,7 +39,7 @@ void DrawMenu(Editor * e){
     menu_w, menu_h
   };
   Rectangle search_underline = {
-    menu_rec.x, menu_rec.y + 2 * e->cursor.height,
+    menu_rec.x, menu_rec.y + 2 * char_size.row,
     menu_rec.width, 2
   };
 
@@ -47,24 +49,26 @@ void DrawMenu(Editor * e){
 
   DrawRectangleRec(search_underline, GRAY);
 
-  float char_w = MeasureTextEx(e->conf.font, "c", 32, 0).x;
-  int text_end_x = (float) e->s_width / 4 + 2 * e->conf.letter_spacing
-  + (e->conf.letter_spacing * e->cmd_prompt->length);
-  int cursor_x = (float) e->s_width / 4 + (2 + e->cmd_prompt->length) * e->conf.letter_spacing;
-  if(cursor_x > menu_rec.x + menu_rec.width - 2 * e->conf.letter_spacing){
-    cursor_x = menu_rec.x + menu_rec.width - 2 * e->conf.letter_spacing;
+
+  float char_w = MeasureTextEx(e->conf.font, "c", e->conf.secondary_font_size, 0).x;
+  int text_end_x = (float) e->s_width / 4 + 2 * (e->conf.letter_spacing + char_size.col)
+  + ((e->conf.letter_spacing + char_size.col) * e->cmd_prompt->length);
+  int cursor_x = (float) e->s_width / 4 + (2 + e->cmd_prompt->length) * (e->conf.letter_spacing + char_size.col);
+  if(cursor_x > menu_rec.x + menu_rec.width - 2 * (e->conf.letter_spacing + char_size.col)){
+    cursor_x = menu_rec.x + menu_rec.width - 2 * (e->conf.letter_spacing + char_size.col);
   }
-  int cursor_y = (float) (e->s_height + 2 * e->cursor.height) / 4;
-  int max_displayed = (menu_rec.width - 4 * e->conf.letter_spacing) / e->conf.letter_spacing;
+  int cursor_y = (float) (e->s_height + 2 * char_size.row) / 4;
+  int max_displayed = (menu_rec.width - 4 * (e->conf.letter_spacing + char_size.col))
+    / (e->conf.letter_spacing + char_size.col);
 
   if(!e->cmd_prompt->length) {
     DrawTextEx(
-      e->conf.font, "...",
+      e->conf.font_secondary, "...",
       (Vector2){
-        (float) e->s_width / 4 + 3 * e->cursor.width,
+        (float) e->s_width / 4 + 3 * char_size.col,
         cursor_y
       },
-      32, 0, GRAY
+      e->conf.secondary_font_size, 0, GRAY
     );
   }
   DrawCmdCursor(e, cursor_x, cursor_y);
@@ -74,52 +78,57 @@ void DrawMenu(Editor * e){
     i < e->cmd_prompt->length;
     i++
   ){
-    DrawChar(
-      e, e->cmd_prompt->chars[i],
-      e->s_width / 4 + 2 * e->conf.letter_spacing + (e->cmd_prompt->length > max_displayed ?
-        i - e->cmd_prompt->length + max_displayed : i) * e->conf.letter_spacing,
-      cursor_y, e->conf.text_color
+    DrawTextCodepoint(
+      e->conf.font_secondary, e->cmd_prompt->chars[i],
+      (Vector2){
+        e->s_width / 4 + 2 * (e->conf.letter_spacing + char_size.col) +
+        (e->cmd_prompt->length > max_displayed ? i - e->cmd_prompt->length + max_displayed : i)
+        * (e->conf.letter_spacing + char_size.col),
+        cursor_y,
+      },
+      e->conf.secondary_font_size,
+      GetColor(e->conf.text_color)
     );
   }
 
   for(int i = 0; i < e->num_cmds_displayed; i++){
     Cmd current_cmd = default_cmds[e->displayed_cmds[i]];
-    float text_width = MeasureTextEx(e->conf.font, current_cmd.text, 32, 0).x;
+    float text_width = MeasureTextEx(e->conf.font, current_cmd.text, e->conf.secondary_font_size, 0).x;
 
     Rectangle cmd_box = {
-      menu_rec.x + 2, search_underline.y + i * (e->conf.line_height + 10) + 2,
-      menu_rec.width - 4, e->conf.line_height * 1.3
+      menu_rec.x + 2, search_underline.y + i * (char_size.row * 1.7) + 2,
+      menu_rec.width - 4, char_size.row * 1.7
     };
     if(cmd_box.y + cmd_box.height < menu_rec.y + menu_rec.height){
-      size_t max = (menu_rec.height - (search_underline.y - menu_rec.y)) / (e->conf.line_height * 1.3);
+      size_t max = (menu_rec.height - (search_underline.y - menu_rec.y)) / (char_size.row * 1.7);
       if(max < e->num_cmds_displayed) e->num_cmds_displayed = max;
     }
     if(i == e->selected_cmd)
       DrawRectangleRec(cmd_box, GetColor(0x333738FF));
 
     Color txt_color = i == e->selected_cmd ? WHITE : GRAY;
-    float txt_y_pos = search_underline.y + 15 + i * (e->conf.line_height + 10);
+    float txt_y_pos = search_underline.y + 15 + i * (char_size.row * 1.7);
 
 
     DrawTextEx(
-      e->conf.font, current_cmd.text,
-      (Vector2){ menu_rec.x + 2 * e->cursor.width, txt_y_pos }, 
-      32, 0, txt_color 
+      e->conf.font_secondary, current_cmd.text,
+      (Vector2){ menu_rec.x + 2 * char_size.col, txt_y_pos }, 
+      e->conf.secondary_font_size, 0, txt_color 
     );
 
     if(current_cmd.type == TOGGLE_VIM)
     DrawTextEx(
-      e->conf.font, e->conf.is_vim_mode ? "ON" : "OFF",
-      (Vector2){ menu_rec.x + menu_rec.width - 5 * e->cursor.width, txt_y_pos},
-      32, 0, txt_color
+      e->conf.font_secondary, e->conf.is_vim_mode ? "ON" : "OFF",
+      (Vector2){ menu_rec.x + menu_rec.width - 5 * char_size.col, txt_y_pos},
+      e->conf.secondary_font_size, 0, txt_color
     );
     else if(current_cmd.type == SWITCH_LN_MODE)
     DrawTextEx(
-      e->conf.font, e->conf.ln_mode == ABSOLUTE ? "ABSOLUTE" :
+      e->conf.font_secondary, e->conf.ln_mode == ABSOLUTE ? "ABSOLUTE" :
       e->conf.ln_mode == RELATIVE ? "RELATIVE" : "NONE",
       (Vector2){ menu_rec.x + menu_rec.width -
-      (e->conf.ln_mode == NONE ? 6 : 10) * e->cursor.width, txt_y_pos},
-      32, 0, txt_color
+      (e->conf.ln_mode == NONE ? 6 : 10) * char_size.col, txt_y_pos},
+      e->conf.secondary_font_size, 0, txt_color
     );
 
   }
@@ -137,32 +146,34 @@ unsigned int get_msg_color(Editor *e, MessageType type){
 }
 
 void DrawCurrentMessage(Editor *e) {
+  RowCol char_size = get_char_size(e->conf.secondary_font_size);
   Message *msg = e->messages[e->buffer.current_msg_index];
   if(!strlen(msg->text)) return;
   Color color = GetColor(get_msg_color(e, msg->type));
   DrawTextEx(
-    e->conf.font, msg->text,
+    e->conf.font_secondary, msg->text,
     (Vector2){
       e->conf.padding.left, 
-      e->s_height - e->cursor.height 
+      e->s_height - (char_size.row + 4)
     },
-    32, 0, color
+    e->conf.secondary_font_size, 0, color
   ); 
 }
 
 void DrawStatusLine(Editor *e){
-  int sline_y = e->s_height - e->cursor.height;
-  DrawRectangle(0, sline_y, e->s_width, e->cursor.height, GetColor(e->conf.status_line_color));
+  int sline_y = e->s_height - 45;
+  DrawRectangle(0, sline_y, e->s_width, 45, GetColor(e->conf.status_line_color));
   if(e->buffer.current_msg_index > -1) return;
 
+  RowCol char_size = get_char_size(e->conf.secondary_font_size);
   if(e->conf.is_vim_mode){
     DrawTextEx(
       e->conf.font, get_mode_str(e->mode, e->conf.is_selecting),
       (Vector2){
-        e->s_width - e->conf.letter_spacing * 7,
-        e->s_height - e->cursor.height
+        e->s_width - (e->conf.letter_spacing + char_size.col) * 7,
+        e->s_height - 45
       },
-      32, 0, GRAY
+      e->conf.secondary_font_size, 0, GRAY
     );
   }
 
@@ -171,18 +182,21 @@ void DrawStatusLine(Editor *e){
     get_file_name_from_path(e->buffer.file_path) : "Untitled",
     (Vector2){
       e->conf.padding.left,
-      e->s_height - e->cursor.height
+      e->s_height - 45
     },
-    32, 0, GetColor(e->conf.file_name_color)
+    e->conf.secondary_font_size, 0, GetColor(e->conf.file_name_color)
   );
 }
 
-void DrawChar(Editor *e, int c, int x_pos, int y_pos, unsigned int color){
-  Padding pad = e->conf.padding;
-  DrawTextCodepoint(
-    e->conf.font, c,
-    (Vector2){x_pos, y_pos}, 32,
-    GetColor(color)
-  );
+RowCol get_char_size(float font_size){
+  float char_base_widh = 0.453125;
+  return (RowCol) {
+    .col = char_base_widh * font_size,
+    .row = font_size
+  };
+}
+
+void DrawChar(Editor *e, int c, int x_pos, int y_pos, unsigned int color, float font_size){
+  DrawTextCodepoint(e->conf.font, c, (Vector2){x_pos, y_pos}, font_size, GetColor(color));
 }
 

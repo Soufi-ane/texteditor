@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "files.h"
+#include "draw.h"
 #include "tinyfiledialogs.h"
 
 #define HOLD_PRESS_DELAY 0.02f
@@ -21,14 +22,16 @@ Cmd default_cmds[NUM_COMMANDS] = {
 };
 
 ssize_t get_max_line_length(Editor *e){ 
+  ssize_t char_width = get_char_size(e->conf.font_size).col;
   ssize_t x_padding = e->conf.padding.left + e->conf.padding.right;
-  if(e->conf.ln_mode != NONE) x_padding += e->conf.ln_mode;
-  return (e->s_width - x_padding) / e->conf.letter_spacing; 
+  if(e->conf.ln_mode != NONE) x_padding += e->conf.ln_padding * (e->conf.letter_spacing + char_width);
+  return (e->s_width - x_padding) / (e->conf.letter_spacing + char_width); 
 }
 
 ssize_t get_max_num_lines(Editor *e){ 
-  ssize_t y_padding = e->conf.padding.top + e->conf.padding.bottom + e->cursor.height;
-  return (e->s_height - y_padding) / e->conf.line_height + 1; 
+  ssize_t char_height = get_char_size(e->conf.font_size).row;
+  ssize_t y_padding = e->conf.padding.top + e->conf.padding.bottom;
+  return (e->s_height - y_padding) / (e->conf.line_height + char_height); 
 }
 
 bool is_selecting_up(Editor *e){
@@ -428,9 +431,9 @@ void try_quitting(Editor *e){
     e->should_quit = true;
   }else {
     if(e->conf.is_vim_mode){
-      new_message(e, "File not saved, ctrl+s to save / ctrl+X to force quit", ERROR);
-    }else {
       new_message(e, "File not saved, 's' to save / 'Q' to force quit", ERROR);
+    }else {
+      new_message(e, "File not saved, ctrl+s to save / ctrl+X to force quit", ERROR);
     }
   }
 }
@@ -608,10 +611,19 @@ void handle_normal_mode_keys(Editor* e, int c){
       move_cursor_up(e);
       break;
     case '+':
-      SetWindowSize(e->s_width, e->s_height + 1);
+      if(e->conf.font_size < 500){
+        int new_size = e->conf.font_size + 10;
+        load_font_default(e, new_size, true);
+        e->conf.font_size = new_size;
+      }
       break;
     case '-':
-      SetWindowSize(e->s_width, e->s_height - 1);
+      if(e->conf.font_size > 10){
+        int new_size = e->conf.font_size - 10;
+        load_font_default(e, new_size, true);
+        e->conf.font_size = new_size;
+      }
+      break;
       break;
     case 'f':
       toggle_full_screen(e);

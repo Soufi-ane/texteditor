@@ -13,6 +13,8 @@ void DrawCurrentMessage(Editor *e);
 
 void DrawStatusLine(Editor *e);
 
-void DrawChar(Editor *e, int c, int x_pos, int y_pos, unsigned int color);
+void DrawChar(Editor *e, int c, int x_pos, int y_pos, unsigned int color, float font_size);
+
+RowCol get_char_size(float font_size);
 
 #endif

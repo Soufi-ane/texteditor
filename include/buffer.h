@@ -53,8 +53,8 @@ extern Cmd default_cmds[NUM_COMMANDS];
 typedef struct {
   ssize_t index;
   ssize_t last_index;
-  ssize_t width;
-  ssize_t height;
+  float width;
+  float height;
   unsigned int color;
 } Cursor;
 
@@ -110,6 +110,9 @@ typedef struct {
   ssize_t ln_padding;
   Padding padding;
   Font font;
+  Font font_secondary;
+  float font_size;
+  float secondary_font_size;
   unsigned int bg_color;
   unsigned int text_color;
   unsigned int under_cursor_color;

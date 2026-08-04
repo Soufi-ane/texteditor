@@ -22,5 +22,12 @@
 // memory
 #define DEFAULT_LINE_SIZE     128
 
+// paths
+  
+#ifdef PROD
+#define FONT_PATH "/usr/local/share/fonts/JetBrainsMonoNF.ttf"
+#else 
+#define FONT_PATH "assets/fonts/JetBrainsMonoNF.ttf"
+#endif
 
 #endif
