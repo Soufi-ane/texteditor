@@ -81,6 +81,7 @@ typedef struct {
   Line **lines;
   char const * file_path;
   bool is_saved;
+  bool is_readonly;
 } Buffer ;
 
 typedef struct{

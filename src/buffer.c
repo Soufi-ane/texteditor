@@ -424,7 +424,7 @@ void force_quit(Editor *e){
 }
 
 void try_quitting(Editor *e){
-  if(e->buffer.is_saved){
+  if(e->buffer.is_saved || e->buffer.is_readonly){
     e->should_quit = true;
   }else {
     if(e->conf.is_vim_mode){
@@ -985,6 +985,7 @@ Buffer *new_buffer(ssize_t capacity){
   buff->current_msg_index = -1;
   buff->file_path = NULL;
   buff->is_saved = true;
+  buff->is_readonly = false;
   return buff;
 }
 

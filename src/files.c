@@ -58,6 +58,7 @@ void read_file(Editor* e, char const * file_path){
   size_t size = 0, line_index = 0;
   size_t read;
   e->buffer = *new_buffer(128); 
+  if(access(file_path, W_OK) != 0) e->buffer.is_readonly = true;
   e->buffer.file_path = strdup(file_path);
 	while((read = getline(&line,&size,f)) != -1){
     if(e->buffer.length > e->buffer.capacity - 1){
@@ -100,7 +101,6 @@ void try_saving_file(Editor* e){
     } 
     if (errno == EACCES) {
       new_message(e, "Readonly file!", ERROR);
-      e->buffer.is_saved = true;
     }
     if(is_done){
       if(!strcmp(config_path, e->buffer.file_path)){
