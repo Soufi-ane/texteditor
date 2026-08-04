@@ -75,10 +75,6 @@ int main() {
     ed.s_height = GetScreenHeight();
     ed.mouse = GetMousePosition();
     Padding pad = ed.conf.padding;
-    if (ed.mode != INSERT) {
-      SetExitKey(KEY_Q);
-    } else SetExitKey(KEY_NULL);
-
 
     ClearBackground(GetColor(ed.conf.bg_color));
     ssize_t max_line_len = get_max_line_length(&ed);

@@ -160,6 +160,7 @@ void start_new_line(Editor *e){
   e->buffer.length++;
   e->buffer.current_line_index++;
   e->buffer.num_chars++;
+  e->buffer.is_saved = false;
 }
 
 void move_cursor_to_last_line(Editor* e){
@@ -194,6 +195,7 @@ void add_char_to_line(Editor* e, Line* line, char c, bool append){
   update_scroll(e, false);
   update_line_number_padding(e);
   e->buffer.current_msg_index = - 1;
+  e->buffer.is_saved = false;
 }
 
 void pop_char_single_line(Line *line){
@@ -423,6 +425,22 @@ void handle_tab(Editor* e, bool is_shift_down) {
   }
 }
 
+void force_quit(Editor *e){
+  e->should_quit = true;
+}
+
+void try_quitting(Editor *e){
+  if(e->buffer.is_saved){
+    e->should_quit = true;
+  }else {
+    if(e->conf.is_vim_mode){
+      new_message(e, "File not saved, ctrl+s to save / ctrl+X to force quit", ERROR);
+    }else {
+      new_message(e, "File not saved, 's' to save / 'Q' to force quit", ERROR);
+    }
+  }
+}
+
 void delete_chars(Line *line, ssize_t from, ssize_t count){
   if(from + count > line->capacity || from < 0 || count < 1) return;
   for(int i = from; i < line->capacity - count; i++){
@@ -609,6 +627,12 @@ void handle_normal_mode_keys(Editor* e, int c){
     case 'd':
       handle_d_press(e);
       break;
+    case 'q':
+      try_quitting(e);
+      break;
+    case 'Q':
+      force_quit(e);
+      break;
   }
 }
 
@@ -619,7 +643,13 @@ void handle_ctrl_plus_key(Editor *e){
   }
   if(IsKeyPressed(KEY_S)) try_saving_file(e);
 
-  if(IsKeyPressed(KEY_X)) e->should_quit = true;
+  if(IsKeyPressed(KEY_X)) {
+    if(IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)){
+      force_quit(e);
+    }else {
+      try_quitting(e);
+    }
+  }
 
   if(IsKeyPressed(KEY_C)) {
     copy_selection_to_clipboard(e);
@@ -640,7 +670,6 @@ void handle_ctrl_plus_key(Editor *e){
       update_last_index(e);
     }
   }
-
 }
 
 void handle_insert_mode_keys(Editor* e,int c){
@@ -932,6 +961,7 @@ Buffer *new_buffer(ssize_t capacity){
   buff->current_line_index = 0;
   buff->current_msg_index = -1;
   buff->file_path = NULL;
+  buff->is_saved = true;
   return buff;
 }
 

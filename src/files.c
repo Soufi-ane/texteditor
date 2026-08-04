@@ -76,6 +76,7 @@ void read_file(Editor* e, char const * file_path){
     e->buffer.length++;
   }
   if(e->buffer.length > 1) e->buffer.length--;
+  e->buffer.is_saved = true;
   free(line);
 }
 
@@ -95,6 +96,7 @@ void try_saving_file(Editor* e){
       write_file(e);
       is_done = true;
       new_message(e, "Saved!", GOOD);
+      e->buffer.is_saved = true;
     } 
     if (errno == EACCES) {
       new_message(e, "Readonly file!", ERROR);

@@ -80,6 +80,7 @@ typedef struct {
   ssize_t d_length;
   Line **lines;
   char const * file_path;
+  bool is_saved;
 } Buffer ;
 
 typedef struct{
