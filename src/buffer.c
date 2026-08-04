@@ -687,6 +687,12 @@ void handle_ctrl_plus_key(Editor *e){
       update_last_index(e);
     }
   }
+  if(IsKeyPressed(KEY_HOME)){
+    move_to_first_line(e);
+  }
+  if(IsKeyPressed(KEY_END)){
+    move_cursor_to_last_line(e);
+  }
 }
 
 void handle_insert_mode_keys(Editor* e,int c){
