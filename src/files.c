@@ -271,7 +271,7 @@ void try_setting_conf_color_value(Editor *e, ConfigKey key_type, char *hex, size
 void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, size_t line_number){
   char *endpoint;
   int number = strtoul(value, &endpoint, 10);
-  if(endpoint == value || *endpoint != '\0') {
+  if(endpoint == value || *endpoint != '\0' || number < 0) {
     new_message(e, TextFormat("Invalid value [%s] at config: %zu", value, line_number), ERROR);
   }
   switch (key_type) {
