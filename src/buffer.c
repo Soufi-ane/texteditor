@@ -8,6 +8,7 @@
 
 double long_press_time = 0.0f;
 double last_press_time = 0.0f;
+int is_g_clicked_before = false;
 
 Cmd default_cmds[NUM_COMMANDS] = {
   { NEW_FILE , "New file" },
@@ -163,16 +164,6 @@ void start_new_line(Editor *e){
   e->buffer.is_saved = false;
 }
 
-void move_cursor_to_last_line(Editor* e){
-  // todo
-  int i,j;
-  for(j=0, i=e->buffer.length -1; i>0 && j < 1;i--){
-    // if(e->note->body[i] == '\n') j++;
-  }
-  // e->cursor.index = i+2;
-  // e->note->displayStart = get_first_diplayed_index(e,false);
-}
-
 void add_char_to_line(Editor* e, Line* line, char c, bool append){
   if(line->length >= line->capacity - 1) {
     line->capacity *= 2;
@@ -302,16 +293,19 @@ void move_cursor_down(Editor* e){
   e->buffer.current_msg_index = -1;
 }
 
-void move_cursor_up(Editor* e){
-  if(!e->buffer.current_line_index) return;
-  e->buffer.current_line_index--;
+void adapte_index_to_current_line(Editor *e){
   Line *current = e->buffer.lines[e->buffer.current_line_index];
   if(!current->length) e->cursor.index = 0;
 
   else if(current->length - 1 < e->cursor.last_index){
     e->cursor.index = current->length ? current->length - 1 : 0;
   } else e->cursor.index = e->cursor.last_index;
+}
 
+void move_cursor_up(Editor* e){
+  if(!e->buffer.current_line_index) return;
+  e->buffer.current_line_index--;
+  adapte_index_to_current_line(e);
   update_scroll(e, true);
   update_line_number_padding(e);
   e->buffer.current_msg_index = -1;
@@ -467,6 +461,20 @@ void delete_lines(Buffer *buff, ssize_t from, ssize_t count){
     buff->length = 1;
     buff->current_line_index = 0;
   }
+}
+
+void move_cursor_to_last_line(Editor* e){
+  e->buffer.current_line_index = e->buffer.length - 1;
+  e->buffer.d_start = e->buffer.current_line_index - get_max_num_lines(e);
+  update_scroll(e, false);
+  adapte_index_to_current_line(e);
+}
+
+void move_to_first_line(Editor *e){
+  e->buffer.current_line_index = 0;
+  e->buffer.d_start = 0;
+  update_scroll(e, true);
+  adapte_index_to_current_line(e);
 }
 
 void handle_d_press(Editor *e){
@@ -633,6 +641,15 @@ void handle_normal_mode_keys(Editor* e, int c){
     case 'Q':
       force_quit(e);
       break;
+  }
+  if(c == 'g'){
+    if(is_g_clicked_before) {
+      move_to_first_line(e);
+      is_g_clicked_before = false;
+    }else {
+      is_g_clicked_before = true;
+      //todo : move to line number
+    } 
   }
 }
 
