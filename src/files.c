@@ -1,5 +1,4 @@
 #include <ctype.h>
-#include <raylib.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -36,13 +35,13 @@ void write_new_message(Editor *e, Message *msg){
 }
 
 void write_file(Editor* e){
-	FILE* file = fopen(e->buffer.file_path, "w");
+	FILE* file = fopen(e->buffers[e->current_buff]->file_path, "w");
   if(file == NULL){
     // TODO : show error
     return;
   }
-  for(size_t i = 0; i < e->buffer.length; i++){
-    Line *line = e->buffer.lines[i];
+  for(size_t i = 0; i < e->buffers[e->current_buff]->length; i++){
+    Line *line = e->buffers[e->current_buff]->lines[i];
     fwrite(line->chars, sizeof(char), sizeof(char) * line->length, file);
     fputc('\n', file);
   }
@@ -58,27 +57,33 @@ void read_file(Editor* e, char const * file_path){
   char* line = NULL;
   size_t size = 0, line_index = 0;
   size_t read;
-  e->buffer = *new_buffer(128); 
-  if(access(file_path, W_OK) != 0) e->buffer.is_readonly = true;
-  e->buffer.file_path = strdup(file_path);
+  e->buffers[e->num_buffers++] = new_buffer(128); 
+  e->current_buff = e->num_buffers - 1;
+  if(access(file_path, W_OK) != 0) e->buffers[e->current_buff]->is_readonly = true;
+  e->buffers[e->current_buff]->file_path = strdup(file_path);
 	while((read = getline(&line,&size,f)) != -1){
-    if(e->buffer.length > e->buffer.capacity - 1){
-      size_t new_capacity = e->buffer.capacity + 10;
-      e->buffer.lines = realloc(e->buffer.lines, sizeof(Line*) * new_capacity);
-      for(size_t i = e->buffer.capacity; i < new_capacity; i++){
-        e->buffer.lines[i] = new_line(DEFAULT_LINE_SIZE);
+
+    if(e->buffers[e->current_buff]->length > e->buffers[e->current_buff]->capacity - 1){
+
+      size_t new_capacity = e->buffers[e->current_buff]->capacity + 10;
+      e->buffers[e->current_buff]->lines = 
+        realloc(e->buffers[e->current_buff]->lines, sizeof(Line*) * new_capacity);
+
+      for(size_t i = e->buffers[e->current_buff]->capacity; i < new_capacity; i++){
+        e->buffers[e->current_buff]->lines[i] = new_line(DEFAULT_LINE_SIZE);
       }
-      e->buffer.capacity = new_capacity;
+
+      e->buffers[e->current_buff]->capacity = new_capacity;
     }
     for(size_t i = 0; i < read - 1; i++) {
-      add_char_to_line(e, e->buffer.lines[line_index], line[i], true);
+      add_char_to_line(e, e->buffers[e->current_buff]->lines[line_index], line[i], true);
     }
-    e->buffer.num_chars += read;
+    e->buffers[e->current_buff]->num_chars += read;
     line_index++;
-    e->buffer.length++;
+    e->buffers[e->current_buff]->length++;
   }
-  if(e->buffer.length > 1) e->buffer.length--;
-  e->buffer.is_saved = true;
+  if(e->buffers[e->current_buff]->length > 1) e->buffers[e->current_buff]->length--;
+  e->buffers[e->current_buff]->is_saved = true;
   free(line);
 }
 
@@ -92,21 +97,21 @@ void try_saving_file(Editor* e){
   sprintf(config_path, "assets/texteditor.conf");
   #endif
 
-  if(e->buffer.file_path){
+  if(e->buffers[e->current_buff]->file_path){
     bool is_done = false;
-    if(access(e->buffer.file_path, W_OK) == 0 || errno == ENOENT) {
+    if(access(e->buffers[e->current_buff]->file_path, W_OK) == 0 || errno == ENOENT) {
       write_file(e);
       is_done = true;
       new_message(e, "Saved!", GOOD);
-      e->buffer.is_saved = true;
+      e->buffers[e->current_buff]->is_saved = true;
     } 
     if (errno == EACCES) {
       new_message(e, "Readonly file!", ERROR);
     }
     if(is_done){
-      if(!strcmp(config_path, e->buffer.file_path)){
+      if(!strcmp(config_path, e->buffers[e->current_buff]->file_path)){
         try_loading_config(e);
-      } else if(!strcmp(messages_path, e->buffer.file_path)){
+      } else if(!strcmp(messages_path, e->buffers[e->current_buff]->file_path)){
         read_file(e, messages_path);
       }
     }
@@ -115,10 +120,10 @@ void try_saving_file(Editor* e){
     char const * path = 
     tinyfd_saveFileDialog(
      "Save File",
-     e->buffer.file_path != NULL ? e->buffer.file_path : "Untitled"
+     e->buffers[e->current_buff]->file_path != NULL ? e->buffers[e->current_buff]->file_path : "Untitled"
      , 0, NULL, NULL);
     if (path != NULL) {
-      e->buffer.file_path = path;
+      e->buffers[e->current_buff]->file_path = path;
       try_saving_file(e);
     }
   }
@@ -165,16 +170,16 @@ bool str_includes(const char* str, char* sub_str, size_t sub_str_length){
 
 void copy_selection_to_clipboard(Editor *e){
   Line *selected = new_line(DEFAULT_LINE_SIZE * 10);
-  size_t current_index = e->buffer.current_line_index;
+  size_t current_index = e->buffers[e->current_buff]->current_line_index;
   bool is_up = is_selecting_up(e);
   for(
     int i = (is_up ? current_index : e->conf.selection_start.row);
     i <= (is_up ? e->conf.selection_start.row : current_index);
     i++
   ){
-    for(int j = 0; j < e->buffer.lines[i]->length; j++){
+    for(int j = 0; j < e->buffers[e->current_buff]->lines[i]->length; j++){
       if(is_selected(e, (RowCol){i, j}))
-      add_char_to_line(e, selected, e->buffer.lines[i]->chars[j], true);
+      add_char_to_line(e, selected, e->buffers[e->current_buff]->lines[i]->chars[j], true);
     }
     if(i < (is_up ? e->conf.selection_start.row : current_index))
     add_char_to_line(e, selected, '\n', true);
@@ -193,7 +198,7 @@ void paste_from_clipboard(Editor *e){
       start_new_line(e);
     } 
     else {
-      add_char_to_line(e, e->buffer.lines[e->buffer.current_line_index], buff[i],false);
+      add_char_to_line(e, e->buffers[e->current_buff]->lines[e->buffers[e->current_buff]->current_line_index], buff[i],false);
     }
   }
 }
@@ -264,7 +269,7 @@ void try_setting_conf_color_value(Editor *e, ConfigKey key_type, char *hex, size
       e->conf.text_color = color;
       break;
     case CURSOR_COL:
-      e->cursor.color = color;
+      e->buffers[e->current_buff]->cursor.color = color;
       break;
     case UNDER_CURSOR_COL:
       e->conf.under_cursor_color = color;

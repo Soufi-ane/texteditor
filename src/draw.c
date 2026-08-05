@@ -16,14 +16,14 @@ void DrawCmdCursor(Editor* e, int cursor_x, int cursor_y){
   RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   DrawRectangle(
     cursor_x, cursor_y, char_size.col,
-    char_size.row, GetColor(e->cursor.color)
+    char_size.row, GetColor(e->buffers[e->current_buff]->cursor.color)
   );
 }
 
 void DrawCursor(Editor* e, int x, int y, unsigned int color){
   DrawRectangle(
-    x, y, e->cursor.width,
-    e->cursor.height, GetColor(color)
+    x, y, e->buffers[e->current_buff]->cursor.width,
+    e->buffers[e->current_buff]->cursor.height, GetColor(color)
   );
 }
 
@@ -131,7 +131,7 @@ unsigned int get_msg_color(Editor *e, MessageType type){
 
 void DrawCurrentMessage(Editor *e) {
   RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
-  Message *msg = e->messages[e->buffer.current_msg_index];
+  Message *msg = e->messages[e->buffers[e->current_buff]->current_msg_index];
   if(!strlen(msg->text)) return;
   Color color = GetColor(get_msg_color(e, msg->type));
   DrawTextEx(
@@ -147,7 +147,7 @@ void DrawCurrentMessage(Editor *e) {
 void DrawStatusLine(Editor *e){
   int sline_y = e->s_height - 45;
   DrawRectangle(0, sline_y, e->s_width, 45, GetColor(e->conf.status_line_color));
-  if(e->buffer.current_msg_index > -1) return;
+  if(e->buffers[e->current_buff]->current_msg_index > -1) return;
 
   RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   if(e->conf.is_vim_mode){
@@ -162,8 +162,8 @@ void DrawStatusLine(Editor *e){
   }
 
   DrawTextEx(
-    e->conf.font_secondary_data.font, e->buffer.file_path ? 
-    get_file_name_from_path(e->buffer.file_path) : "Untitled",
+    e->conf.font_secondary_data.font, e->buffers[e->current_buff]->file_path ? 
+    get_file_name_from_path(e->buffers[e->current_buff]->file_path) : "Untitled",
     (Vector2){
       e->conf.padding.left,
       e->s_height - 45

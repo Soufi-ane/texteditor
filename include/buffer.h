@@ -2,7 +2,6 @@
 #define NOTE_H
 
 #include <raylib.h>
-#include <stddef.h>
 #include <stdio.h>
 #include "conf.h"
 
@@ -72,12 +71,12 @@ typedef struct {
   ssize_t num_chars;
   ssize_t current_line_index;
   int current_msg_index;
-  // TODO : maybe
   ssize_t length; 
   ssize_t capacity; 
   ssize_t d_start;
   ssize_t d_length;
   Line **lines;
+  Cursor cursor;
   char const * file_path;
   bool is_saved;
   bool is_readonly;
@@ -135,10 +134,11 @@ typedef struct {
 
 typedef struct {
   Mode mode;
-  Buffer buffer; // TODO: multiple buffers
+  Buffer **buffers;
+  ssize_t num_buffers;
+  ssize_t current_buff;
   Line *cmd_prompt;
   const char* HOME_DIR;
-  Cursor cursor;
   Vector2 mouse;
   Config conf;
   Message *messages[MAX_MESSAGES];
@@ -227,5 +227,9 @@ void handle_mouse_click(Editor *e, int char_x, int char_y, ssize_t char_index,
   ssize_t line_index, bool is_holding);
 
 void handle_click_on_line(Editor *e, int char_x, ssize_t char_index, bool is_holding);
+
+Editor *init_editor();
+
+void free_buffer(Buffer *buff);
 
 #endif
