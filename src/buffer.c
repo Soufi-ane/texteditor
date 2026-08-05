@@ -22,14 +22,14 @@ Cmd default_cmds[NUM_COMMANDS] = {
 };
 
 ssize_t get_max_line_length(Editor *e){ 
-  ssize_t char_width = get_char_size(e->conf.font_size).col;
+  ssize_t char_width = get_char_size(e->conf.font_data.size).col;
   ssize_t x_padding = e->conf.padding.left + e->conf.padding.right;
   if(e->conf.ln_mode != NONE) x_padding += e->conf.ln_padding * (e->conf.letter_spacing + char_width);
   return (e->s_width - x_padding) / (e->conf.letter_spacing + char_width); 
 }
 
 ssize_t get_max_num_lines(Editor *e){ 
-  ssize_t char_height = get_char_size(e->conf.font_size).row;
+  ssize_t char_height = get_char_size(e->conf.font_data.size).row;
   ssize_t y_padding = e->conf.padding.top + e->conf.padding.bottom;
   return (e->s_height - y_padding) / (e->conf.line_height + char_height); 
 }
@@ -611,17 +611,17 @@ void handle_normal_mode_keys(Editor* e, int c){
       move_cursor_up(e);
       break;
     case '+':
-      if(e->conf.font_size < 500){
-        int new_size = e->conf.font_size + 10;
-        load_font_default(e, new_size, true);
-        e->conf.font_size = new_size;
+      if(e->conf.font_data.size + 10 < 500){
+        int new_size = e->conf.font_data.size + 10;
+        e->conf.font_data.size = new_size;
+        load_font_default(e,  &e->conf.font_data);
       }
       break;
     case '-':
-      if(e->conf.font_size > 10){
-        int new_size = e->conf.font_size - 10;
-        load_font_default(e, new_size, true);
-        e->conf.font_size = new_size;
+      if(e->conf.font_data.size - 10 > 10){
+        int new_size = e->conf.font_data.size - 10;
+        e->conf.font_data.size = new_size;
+        load_font_default(e, &e->conf.font_data);
       }
       break;
       break;

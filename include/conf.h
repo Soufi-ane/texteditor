@@ -28,6 +28,7 @@
 #define FONT_PATH "/usr/local/share/fonts/JetBrainsMonoNF.ttf"
 #else 
 #define FONT_PATH "assets/fonts/JetBrainsMonoNF.ttf"
+#define SECONDARY_FONT_PATH "assets/fonts/JetBrainsMonoNF.ttf"
 #endif
 
 #endif

@@ -8,8 +8,14 @@ Editor ed = {
   .s_height = SCREEN_HEIGHT,
   .num_cmds_displayed = NUM_COMMANDS,
   .conf = {
-    .font_size = 42,
-    .secondary_font_size = 36,
+    .font_data = {
+      .size = 42,
+      .path = FONT_PATH
+    },
+    .font_secondary_data= {
+      .size = 36,
+      .path = SECONDARY_FONT_PATH
+    },
     .bg_color = 0x141415FF,
     .text_color = 0xFFFFFFFF,
     .under_cursor_color = 0X000000FF,
@@ -55,9 +61,8 @@ int main() {
   InitWindow(ed.s_width, ed.s_height, "Text Editor");
   SetExitKey(KEY_NULL);
 
-  load_font_default(&ed, ed.conf.font_size, true);
-
-  load_font_default(&ed, ed.conf.secondary_font_size, false);
+  load_font_default(&ed, &ed.conf.font_data);
+  load_font_default(&ed, &ed.conf.font_secondary_data);
 
   SetTargetFPS(120);
   SetConfigFlags(FLAG_MSAA_4X_HINT);
@@ -70,7 +75,7 @@ int main() {
     ed.s_width = GetScreenWidth();
     ed.s_height = GetScreenHeight();
     ed.mouse = GetMousePosition();
-    char_size = get_char_size(ed.conf.font_size);
+    char_size = get_char_size(ed.conf.font_data.size);
     ed.cursor.height = char_size.row;
     ed.cursor.width = char_size.col;
     Padding pad = ed.conf.padding;
@@ -101,7 +106,7 @@ int main() {
       // line numbers
       if(ed.conf.ln_mode != NONE) {
         ssize_t index = ed.buffer.current_line_index;
-       DrawTextEx(ed.conf.font,
+       DrawTextEx(ed.conf.font_data.font,
          TextFormat( "%zu", 
            (ed.conf.ln_mode == ABSOLUTE || index == i) ?  i + 1 :
            (index < i ? i - index : index - i)
@@ -110,7 +115,7 @@ int main() {
            pad.left,
            pad.top + (ed.conf.line_height + char_size.row) * y_offset
           },
-         ed.conf.font_size, 0, GetColor(ed.conf.line_numbers_color));
+         ed.conf.font_data.size, 0, GetColor(ed.conf.line_numbers_color));
       }
       float char_x;
       float char_y;
@@ -139,16 +144,16 @@ int main() {
             for(int i = 0; i < ed.conf.tab_size; i++){
               DrawChar(
                 &ed, ' ',char_x + i * (ed.conf.letter_spacing + char_size.col),
-                char_y , char_color, ed.conf.font_size
+                char_y , char_color, ed.conf.font_data.size
               );
               x_offset++;
             }
           } else {
             if(is_selected(&ed, (RowCol){i, m}) && !(i == ed.buffer.current_line_index && m == ed.cursor.index)) {
               DrawCursor(&ed, char_x, char_y, ed.conf.selection_color);
-              DrawChar(&ed, c,char_x, char_y , ed.conf.selected_char_color, ed.conf.font_size);
+              DrawChar(&ed, c,char_x, char_y , ed.conf.selected_char_color, ed.conf.font_data.size);
             } else {
-              DrawChar(&ed, c,char_x, char_y , char_color, ed.conf.font_size);
+              DrawChar(&ed, c,char_x, char_y , char_color, ed.conf.font_data.size);
             } 
           } 
 
@@ -192,6 +197,9 @@ int main() {
     EndDrawing();
   }
   CloseWindow();
-  UnloadFontData(ed.conf.font.glyphs, ed.conf.font.glyphCount);
+  UnloadFontData(ed.conf.font_data.font.glyphs, ed.conf.font_data.font.glyphCount);
+  UnloadFontData(ed.conf.font_secondary_data.font.glyphs, ed.conf.font_secondary_data.font.glyphCount);
+  UnloadFileData(ed.conf.font_data.font_file);
+  UnloadFileData(ed.conf.font_secondary_data.font_file);
   return 0;
 }

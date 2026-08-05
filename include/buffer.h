@@ -97,6 +97,14 @@ typedef struct {
 } Padding;
 
 typedef struct {
+  Font font;
+  const char *path;
+  float size;
+  bool is_file_loaded;
+  unsigned char* font_file;
+} FontData ;
+
+typedef struct {
   bool is_opening_file;
   bool is_menu_open;
   bool is_showing_lines ;
@@ -109,10 +117,8 @@ typedef struct {
   LineNumbers ln_mode;
   ssize_t ln_padding;
   Padding padding;
-  Font font;
-  Font font_secondary;
-  float font_size;
-  float secondary_font_size;
+  FontData font_data;
+  FontData font_secondary_data;
   unsigned int bg_color;
   unsigned int text_color;
   unsigned int under_cursor_color;

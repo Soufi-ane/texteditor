@@ -123,26 +123,23 @@ void try_saving_file(Editor* e){
   }
 }
 
-void load_font_default(Editor *e, int size, bool is_main){
+void load_font_default(Editor *e, FontData *font_data){
   int file_size = 0;
-	unsigned char* font_file = LoadFileData(FONT_PATH, &file_size);
-	if(font_file == NULL || font_file == 0) return;
+  if(!font_data->is_file_loaded){
+    font_data->font_file = LoadFileData(font_data->path, &file_size);
+    font_data->is_file_loaded = true;
+  }
+  if(font_data->font_file == NULL || font_data->font_file == 0) return;
   Font font = {0};
-	font.baseSize = (int) size;
+	font.baseSize = (int) font_data->size;
 	font.glyphCount = 95;
-	font.glyphs = LoadFontData(font_file, file_size, size, 0, 95, FONT_DEFAULT);
-	Image atlas = GenImageFontAtlas(font.glyphs, &font.recs, 95, size, 0, 1);
+	font.glyphs = LoadFontData(font_data->font_file, file_size, font_data->size, 0, 95, FONT_DEFAULT);
+	Image atlas = GenImageFontAtlas(font.glyphs, &font.recs, 95, font_data->size, 0, 1);
 	font.texture = LoadTextureFromImage(atlas);
 	UnloadImage(atlas);
-	UnloadFileData(font_file) ;
 	SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
-  Font old_font = e->conf.font;
-  if(!is_main){
-    old_font = e->conf.font_secondary;
-    e->conf.font_secondary = font;
-  }else {
-    e->conf.font = font;
-  }
+  Font old_font = font_data->font;
+  font_data->font = font;
   if(old_font.texture.id != 0){
     UnloadFont(old_font);
   }
