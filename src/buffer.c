@@ -794,7 +794,7 @@ void handle_command(Editor *e, Cmd cmd){
 }
 
 void handle_enter(Editor* e){
-  if(e->mode == INSERT){
+  if(e->mode == INSERT || !e->conf.is_vim_mode){
     if(!e->conf.is_menu_open){
       start_new_line(e);
       update_scroll(e, false);
@@ -805,10 +805,13 @@ void handle_enter(Editor* e){
   }
 }
 
-void handle_mouse_click(Editor *e, int char_x, int char_y, ssize_t char_index,
-  ssize_t line_index, bool is_holding){
+void handle_mouse_click(
+  Editor *e, int char_x, int char_y, ssize_t char_index,
+  ssize_t line_index, bool is_holding
+){
 
-  if(e->mouse.y >= char_y && e->mouse.y <= char_y + e->conf.line_height){
+  ssize_t char_height = get_char_size(e->conf.font_data.size).row + e->conf.line_height;
+  if(e->mouse.y >= char_y && e->mouse.y <= char_y + char_height){
     e->buffer.current_line_index = line_index;
     handle_click_on_line(e, char_x, char_index, is_holding);
   }else if(line_index == e->buffer.d_start && e->mouse.y < char_y){
@@ -838,8 +841,9 @@ void handle_mouse_click(Editor *e, int char_x, int char_y, ssize_t char_index,
 
 void handle_click_on_line(Editor *e, int char_x, ssize_t char_index, bool is_holding){
   Line *current_line = e->buffer.lines[e->buffer.current_line_index];
+  ssize_t char_width = get_char_size(e->conf.font_data.size).col + e->conf.letter_spacing;
 
-  if(e->mouse.x >= char_x && e->mouse.x <= char_x + e->conf.letter_spacing){
+  if(e->mouse.x >= char_x && e->mouse.x <= char_x + char_width){
     e->cursor.index = char_index;
   } else if(char_index== 0 && e->mouse.x < char_x){
     e->cursor.index = 0;
