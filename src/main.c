@@ -58,6 +58,7 @@ int main() {
 
 
   InitWindow(ed.s_width, ed.s_height, "Text Editor");
+  SetConfigFlags(FLAG_WINDOW_RESIZABLE);
   SetExitKey(KEY_NULL);
 
   try_loading_config(&ed);
