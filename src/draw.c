@@ -115,22 +115,6 @@ void DrawMenu(Editor * e){
       (Vector2){ menu_rec.x + 2 * char_size.col, txt_y_pos }, 
       e->conf.font_secondary_data.size, 0, txt_color 
     );
-
-    if(current_cmd.type == TOGGLE_VIM)
-    DrawTextEx(
-      e->conf.font_secondary_data.font, e->conf.is_vim_mode ? "ON" : "OFF",
-      (Vector2){ menu_rec.x + menu_rec.width - 5 * char_size.col, txt_y_pos},
-      e->conf.font_secondary_data.size, 0, txt_color
-    );
-    else if(current_cmd.type == SWITCH_LN_MODE)
-    DrawTextEx(
-      e->conf.font_secondary_data.font, e->conf.ln_mode == ABSOLUTE ? "ABSOLUTE" :
-      e->conf.ln_mode == RELATIVE ? "RELATIVE" : "NONE",
-      (Vector2){ menu_rec.x + menu_rec.width -
-      (e->conf.ln_mode == NONE ? 6 : 10) * char_size.col, txt_y_pos},
-      e->conf.font_secondary_data.size, 0, txt_color
-    );
-
   }
 }
 

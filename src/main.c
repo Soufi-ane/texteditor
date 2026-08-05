@@ -56,11 +56,11 @@ int main() {
   filter_cmds_by_prompt(&ed);
   ed.HOME_DIR  = getenv("HOME");
 
-  try_loading_config(&ed);
 
   InitWindow(ed.s_width, ed.s_height, "Text Editor");
   SetExitKey(KEY_NULL);
 
+  try_loading_config(&ed);
   load_font_default(&ed, &ed.conf.font_data);
   load_font_default(&ed, &ed.conf.font_secondary_data);
 

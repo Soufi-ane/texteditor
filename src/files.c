@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <raylib.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -236,6 +237,8 @@ ConfigKey get_config_key(Editor *e, char *key){
   if(!strcmp(key, "padding_bottom"))       return P_BOTTOM;
   if(!strcmp(key, "padding_left"))         return P_LEFT;
   if(!strcmp(key, "padding_right"))        return P_RIGHT;
+  if(!strcmp(key, "primary_font_size"))    return FONT_SIZE;
+  if(!strcmp(key, "secondary_font_size"))  return SECONDARY_FONT_SIZE;
   return UNKOWN_KEY;
 }
 
@@ -298,6 +301,26 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
     case P_RIGHT:
       e->conf.padding.right = number;
       break;
+    case FONT_SIZE:
+      if(number != e->conf.font_data.size){
+        if(number < 500 && number > 10){
+          e->conf.font_data.size = number;
+          load_font_default(e, &e->conf.font_data);
+        }else {
+          new_message(e, TextFormat("Invalid size for primary font at config: %zd", line_number), ERROR);
+        } 
+      }
+      break;
+    case SECONDARY_FONT_SIZE:
+      if(number != e->conf.font_secondary_data.size){
+        if(number <= 45 && number >= 25){
+          e->conf.font_secondary_data.size = number;
+          load_font_default(e, &e->conf.font_secondary_data);
+        }else {
+          new_message(e, TextFormat("Invalid size for secondary font at config: %zd", line_number), ERROR);
+        }
+      }
+      break;
   }
 }
 
@@ -357,7 +380,8 @@ void read_config_line(Editor *e, char *line, size_t len, size_t line_number){
     try_setting_conf_color_value(e, key_type, value, line_number);
   }else if(
     key_type == TAB_S || key_type == P_RIGHT || key_type == P_LEFT ||
-    key_type == P_BOTTOM || key_type == P_TOP
+    key_type == P_BOTTOM || key_type == P_TOP || key_type == FONT_SIZE ||
+    key_type == SECONDARY_FONT_SIZE
     ){
     try_setting_conf_number_value(e, key_type, value, line_number);
   }

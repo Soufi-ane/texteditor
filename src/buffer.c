@@ -14,8 +14,6 @@ int is_g_clicked_before = false;
 Cmd default_cmds[NUM_COMMANDS] = {
   { NEW_FILE , "New file" },
   { OPEN_FILE , "Open file" },
-  { TOGGLE_VIM , "Toggle Vim mode" },
-  { SWITCH_LN_MODE , "switch line numbers mode" },
   { HELP , "Help!" },
   { OPEN_CONFIG , "Open config" },
   { OPEN_MESSAGES , "Open log messages" },
@@ -773,14 +771,6 @@ void handle_command(Editor *e, Cmd cmd){
       break;
     case NEW_FILE:
       start_new_file(e);
-      break;
-    case TOGGLE_VIM:
-      e->conf.is_vim_mode = !e->conf.is_vim_mode;
-      break;
-    case SWITCH_LN_MODE:
-      if(e->conf.ln_mode == ABSOLUTE) e->conf.ln_mode = RELATIVE;
-      else if(e->conf.ln_mode == RELATIVE) e->conf.ln_mode = NONE;
-      else e->conf.ln_mode = ABSOLUTE;
       break;
     case HELP:
       #ifdef PROD
