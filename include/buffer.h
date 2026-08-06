@@ -135,7 +135,8 @@ typedef struct {
 typedef struct {
   Mode mode;
   Buffer **buffers;
-  ssize_t num_buffers;
+  ssize_t length;
+  ssize_t capacity;
   ssize_t current_buff;
   Line *cmd_prompt;
   const char* HOME_DIR;
@@ -231,5 +232,7 @@ void handle_click_on_line(Editor *e, int char_x, ssize_t char_index, bool is_hol
 Editor *init_editor();
 
 void free_buffer(Buffer *buff);
+
+void realloc_editor_buffers(Editor *e);
 
 #endif

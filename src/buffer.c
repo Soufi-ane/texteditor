@@ -439,15 +439,28 @@ void handle_tab(Editor* e, bool is_shift_down) {
   }
 }
 
+void force_quit(Editor *e){
+  e->should_quit = true;
+}
+
 void delete_buffer(Editor *e, ssize_t index){
-  if(index < 0 || index > e->num_buffers - 1) return;
-  free_buffer(e->buffers[index]);
-  for(ssize_t i = index; i < e->num_buffers; i++){
-    e->buffers[i] = e->buffers[i + 1];
+  if(index < 0 || index > e->length - 1) return;
+  Buffer *to_delete = e->buffers[index];
+  if(e->length == 1 && (e->buffers[0]->is_saved || e->buffers[0]->is_readonly)){
+    force_quit(e);
   }
-  e->num_buffers--;
-  if(e->current_buff > 0) e->current_buff--;
-  else if(e->current_buff < e->num_buffers - 1) e->current_buff++;
+  else if(e->capacity < 2){
+    e->buffers[index] = new_buffer(1);
+  }else {
+    for(ssize_t i = index; i < e->capacity; i++){
+      e->buffers[i] = e->buffers[i + 1];
+    }
+    if(e->length > 1) e->length--;
+    e->capacity--;
+    if(e->current_buff > 0) e->current_buff--;
+    else if(e->current_buff < e->length - 1) e->current_buff++;
+  }
+  free_buffer(to_delete);
 }
 
 void try_closing_current_buffer(Editor *e){
@@ -467,13 +480,9 @@ void force_close_current_buffer(Editor *e){
   delete_buffer(e, e->current_buff);
 }
 
-void force_quit(Editor *e){
-  e->should_quit = true;
-}
-
 void try_quitting(Editor *e){
   ssize_t unsaved_index = -1;
-  for(int i = 0; i < e->num_buffers; i++){
+  for(int i = 0; i < e->length; i++){
     if(!e->buffers[i]->is_saved && !e->buffers[i]->is_readonly){
       unsaved_index = i;
       break;
@@ -778,10 +787,8 @@ void handle_insert_mode_keys(Editor* e,int c){
 }
 
 void start_new_file(Editor *e){
-  // todo 
-  e->buffers[e->current_buff] = new_buffer(10);
-  e->mode = INSERT;
-  e->buffers[e->current_buff]->cursor.index = 0;
+  if(e->length > e->capacity - 1) realloc_editor_buffers(e);
+  e->current_buff = e->length++;
 }
 
 void to_lower_case(const char *text, char *dest){
@@ -1083,18 +1090,27 @@ void new_message(Editor *e, const char *message, MessageType type){
   e->buffers[e->current_buff]->current_msg_index = e->num_msgs++;
 }
 
+void realloc_editor_buffers(Editor *e){
+  e->capacity += 5;
+  e->buffers = realloc(e->buffers, sizeof(Buffer*) * e->capacity);
+  for(ssize_t i = e->length; i < e->capacity; i++){
+    e->buffers[i] = new_buffer(1);
+  }
+}
+
 Editor *init_editor(){
   Editor *e = malloc(sizeof(Editor));
   e->cmd_prompt = new_line(DEFAULT_LINE_SIZE);
-  e->num_buffers = 1;
 
-  e->buffers = malloc(sizeof(Buffer*) * e->num_buffers);
+  e->buffers = malloc(sizeof(Buffer*));
+  e->length = 1;
+  e->capacity = 1;
 
-  for(int i = 0; i < e->num_buffers; i++){
+  for(int i = 0; i < e->capacity; i++){
     e->buffers[i] = new_buffer(1);
   }
 
-  e->mode = INSERT;
+  e->mode = NORMAL;
   e->s_width = SCREEN_WIDTH;
   e->s_height = SCREEN_HEIGHT;
   e->num_cmds_displayed = NUM_COMMANDS;
@@ -1118,7 +1134,7 @@ Editor *init_editor(){
     .error_color = 0xFF4C24FF,
     .success_color = 0x00B014FF,
     .selection_color = 0x333738FF,
-    .is_menu_open = true,
+    .is_menu_open = false,
     .is_vim_mode = true,
     .is_spaces_for_tabs = true,
     .caps_lock_as_escape = true,
