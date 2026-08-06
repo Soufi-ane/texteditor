@@ -535,6 +535,7 @@ void delete_lines(Buffer *buff, ssize_t from, ssize_t count){
 void move_cursor_to_last_line(Editor* e){
   e->buffers[e->current_buff]->current_line_index = e->buffers[e->current_buff]->length - 1;
   e->buffers[e->current_buff]->d_start = e->buffers[e->current_buff]->current_line_index - get_max_num_lines(e);
+  if(e->buffers[e->current_buff]->d_start < 0) e->buffers[e->current_buff]->d_start = 0;
   update_scroll(e, false);
   adapte_index_to_current_line(e);
 }
