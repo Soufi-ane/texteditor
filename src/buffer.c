@@ -395,21 +395,38 @@ void remove_current_char(Editor* e){
   e->buffers[e->current_buff]->is_saved = false;
 }
 
+void go_to_next_buffer(Editor *e){
+  if(e->length < 2) return;
+  if(e->current_buff >= e->length - 1) e->current_buff = 0;
+  else e->current_buff++;
+}
+
+void go_to_prev_buffer(Editor *e){
+  if(e->length < 2) return;
+  if(e->current_buff < 1) e->current_buff = e->length - 1;
+  else e->current_buff--;
+}
+
 void handle_tab(Editor* e, bool is_shift_down) {
-  if(e->mode == INSERT && !e->conf.is_menu_open) {
-    if(e->conf.is_spaces_for_tabs) {
-      for(int i = 0; i < e->conf.tab_size; ++i)  {
+  if(!e->conf.is_menu_open){
+    if(e->mode == INSERT){
+      if(e->conf.is_spaces_for_tabs) {
+        for(int i = 0; i < e->conf.tab_size; ++i)  {
+          add_char_to_line(
+            e, e->buffers[e->current_buff]->lines[e->buffers[e->current_buff]->current_line_index],
+            ' ', false
+          );
+        }
+      }
+      else {
         add_char_to_line(
           e, e->buffers[e->current_buff]->lines[e->buffers[e->current_buff]->current_line_index],
-          ' ', false
+          '\t', false
         );
       }
-    }
-    else {
-      add_char_to_line(
-        e, e->buffers[e->current_buff]->lines[e->buffers[e->current_buff]->current_line_index],
-        '\t', false
-      );
+    }else if(e->conf.is_vim_mode){
+      if(is_shift_down) go_to_prev_buffer(e);
+      else go_to_next_buffer(e);
     }
   }else {
     if(is_shift_down){
@@ -740,6 +757,12 @@ void handle_ctrl_plus_key(Editor *e){
   }
   if(IsKeyPressed(KEY_END)){
     move_cursor_to_last_line(e);
+  }
+  if(IsKeyPressed(KEY_N)){
+    go_to_next_buffer(e);
+  }
+  if(IsKeyPressed(KEY_P)){
+    go_to_prev_buffer(e);
   }
 }
 
