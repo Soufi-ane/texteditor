@@ -59,8 +59,9 @@ void read_file(Editor* e, char const * file_path){
   size_t read;
 
   if(e->length > e->capacity - 1) realloc_editor_buffers(e);
+  printf("current buff before is %zd chars\n", e->buffers[e->current_buff]->num_chars);
 
-  if(e->length > 1 || (!e->buffers[0]->is_saved && !e->buffers[0]->is_readonly)){
+  if(!e->buffers[0]->is_saved || e->buffers[0]->num_chars != 0){
     e->current_buff = e->length++;
   }
 
@@ -134,19 +135,23 @@ void try_saving_file(Editor* e){
   }
 }
 
-void load_font_default(Editor *e, FontData *font_data){
+bool load_font_default(Editor *e, FontData *font_data){
   int file_size = 0;
   if(!font_data->is_file_loaded){
     font_data->font_file = LoadFileData(font_data->path, &file_size);
     font_data->is_file_loaded = true;
   }
-  if(font_data->font_file == NULL || font_data->font_file == 0) return;
+  if(font_data->font_file == NULL || font_data->font_file == 0) return false;
   Font font = {0};
 	font.baseSize = (int) font_data->size;
 	font.glyphCount = 95;
 	font.glyphs = LoadFontData(font_data->font_file, file_size, font_data->size, 0, 95, FONT_DEFAULT);
+  if (font.glyphs == NULL) return false;
 	Image atlas = GenImageFontAtlas(font.glyphs, &font.recs, 95, font_data->size, 0, 1);
+  if (font.recs == NULL) return false;
+  if (atlas.data == NULL || atlas.width <= 0 || atlas.height <= 0) return false;
 	font.texture = LoadTextureFromImage(atlas);
+  if (font.texture.id == 0) return false;
 	UnloadImage(atlas);
 	SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
   Font old_font = font_data->font;
@@ -154,6 +159,7 @@ void load_font_default(Editor *e, FontData *font_data){
   if(old_font.texture.id != 0){
     UnloadFont(old_font);
   }
+  return true;
 }
 
 bool str_includes(const char* str, char* sub_str, size_t sub_str_length){
@@ -249,6 +255,8 @@ ConfigKey get_config_key(Editor *e, char *key){
   if(!strcmp(key, "padding_right"))        return P_RIGHT;
   if(!strcmp(key, "primary_font_size"))    return FONT_SIZE;
   if(!strcmp(key, "secondary_font_size"))  return SECONDARY_FONT_SIZE;
+  if(!strcmp(key, "primary_font"))         return FONT_PRIMARY;
+  if(!strcmp(key, "secondary_font"))       return FONT_SECONDARY;
   return UNKOWN_KEY;
 }
 
@@ -292,7 +300,7 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
   char *endpoint;
   int number = strtoul(value, &endpoint, 10);
   if(endpoint == value || *endpoint != '\0' || number < 0) {
-    new_message(e, TextFormat("Invalid value [%s] at config: %zu", value, line_number), ERROR);
+    return new_message(e, TextFormat("Invalid value [%s] at config: %zu", value, line_number), ERROR);
   }
   switch (key_type) {
     case TAB_S:
@@ -331,6 +339,37 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
         }
       }
       break;
+  }
+}
+
+void try_loading_new_font(Editor *e, char *path, ssize_t n_line, bool is_primary){
+  FontData old = e->conf.font_data;
+  if(!is_primary) {
+    old = e->conf.font_secondary_data;
+    e->conf.font_secondary_data.path = strdup(path);
+    e->conf.font_secondary_data.is_file_loaded = false;
+  } else {
+    e->conf.font_data.path = strdup(path);
+    e->conf.font_data.is_file_loaded = false;
+  }
+  if(!load_font_default(e, is_primary ? &e->conf.font_data : &e->conf.font_secondary_data)){
+    if(is_primary) e->conf.font_data = old;
+    else e->conf.font_secondary_data = old;
+    new_message(e, TextFormat("Failed to load font at config: %zu", n_line), ERROR);
+  }
+}
+
+void try_reading_conf_path(Editor *e, ConfigKey key_type, char *path, ssize_t n_line){
+  if(access(path, F_OK) != 0) {
+    return new_message(e, TextFormat("Invalid path at config: %zu", n_line), ERROR);
+  }
+  switch(key_type){
+    case FONT_PRIMARY:
+      try_loading_new_font(e, path, n_line, true);
+    break;
+    case FONT_SECONDARY:
+      try_loading_new_font(e, path, n_line, false);
+    break;
   }
 }
 
@@ -394,6 +433,8 @@ void read_config_line(Editor *e, char *line, size_t len, size_t line_number){
     key_type == SECONDARY_FONT_SIZE
     ){
     try_setting_conf_number_value(e, key_type, value, line_number);
+  }else if(key_type == FONT_PRIMARY || key_type == FONT_SECONDARY) {
+    try_reading_conf_path(e, key_type, value, line_number);
   }
   else try_setting_conf_value(e, key_type, value, line_number);
 }

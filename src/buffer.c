@@ -399,12 +399,16 @@ void go_to_next_buffer(Editor *e){
   if(e->length < 2) return;
   if(e->current_buff >= e->length - 1) e->current_buff = 0;
   else e->current_buff++;
+  e->conf.is_selecting = false;
+  update_line_number_padding(e);
 }
 
 void go_to_prev_buffer(Editor *e){
   if(e->length < 2) return;
   if(e->current_buff < 1) e->current_buff = e->length - 1;
   else e->current_buff--;
+  e->conf.is_selecting = false;
+  update_line_number_padding(e);
 }
 
 void handle_tab(Editor* e, bool is_shift_down) {
@@ -727,6 +731,13 @@ void handle_normal_mode_keys(Editor* e, int c){
   }
 }
 
+void delete_to_beginning_of_line(Buffer *buff){
+  Line *current = buff->lines[buff->current_line_index];
+  current->length -= buff->cursor.index;
+  memmove(&current->chars[0], &current->chars[buff->cursor.index], (size_t) current->length);
+  buff->cursor.index = 0;
+}
+
 void handle_ctrl_plus_key(Editor *e){
   if(IsKeyPressed(KEY_F)) {
     toggle_full_screen(e);
@@ -756,8 +767,7 @@ void handle_ctrl_plus_key(Editor *e){
 
   if(IsKeyPressed(KEY_U)){
     if(e->mode == INSERT || !e->conf.is_vim_mode){
-      e->buffers[e->current_buff]->lines[e->buffers[e->current_buff]->current_line_index]->length = 0;
-      e->buffers[e->current_buff]->cursor.index = 0;
+      delete_to_beginning_of_line(e->buffers[e->current_buff]);
       update_last_index(e);
     }
   }

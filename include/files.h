@@ -7,7 +7,7 @@ extern char* menu_icons_names[];
 
 void load_menu_icons(Texture2D* icons);
 
-void load_font_default(Editor *e, FontData *font_data);
+bool load_font_default(Editor *e, FontData *font_data);
 
 void read_file(Editor* e, char const * file_path);
 
