@@ -365,9 +365,11 @@ void try_reading_conf_path(Editor *e, ConfigKey key_type, char *path, ssize_t n_
   }
   switch(key_type){
     case FONT_PRIMARY:
+      if(strcmp(e->conf.font_data.path, path) == 0) return;
       try_loading_new_font(e, path, n_line, true);
     break;
     case FONT_SECONDARY:
+      if(strcmp(e->conf.font_secondary_data.path, path) == 0) return;
       try_loading_new_font(e, path, n_line, false);
     break;
   }
