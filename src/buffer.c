@@ -187,7 +187,7 @@ void add_char_to_line(Editor* e, Line* line, char c, bool append){
   update_scroll(e, false);
   update_line_number_padding(e);
   e->buffers[e->current_buff]->current_msg_index = - 1;
-  e->buffers[e->current_buff]->is_saved = false;
+  if(!e->conf.is_menu_open) e->buffers[e->current_buff]->is_saved = false;
 }
 
 void pop_char_single_line(Line *line){
