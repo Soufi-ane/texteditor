@@ -57,8 +57,13 @@ void read_file(Editor* e, char const * file_path){
   char* line = NULL;
   size_t size = 0, line_index = 0;
   size_t read;
+
   if(e->length > e->capacity - 1) realloc_editor_buffers(e);
-  e->current_buff = e->length++;
+
+  if(e->length > 1 || (!e->buffers[0]->is_saved && !e->buffers[0]->is_readonly)){
+    e->current_buff = e->length++;
+  }
+
   if(access(file_path, W_OK) != 0) e->buffers[e->current_buff]->is_readonly = true;
   e->buffers[e->current_buff]->file_path = strdup(file_path);
 	while((read = getline(&line,&size,f)) != -1){
