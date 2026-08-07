@@ -795,6 +795,12 @@ void handle_ctrl_plus_key(Editor *e){
   if(IsKeyPressed(KEY_P)){
     go_to_prev_buffer(e);
   }
+  if(IsKeyPressed(KEY_LEFT)){
+    move_to_word_beginning(e);
+  }
+  if(IsKeyPressed(KEY_RIGHT)){
+    move_to_word_ending(e);
+  }
 }
 
 void handle_insert_mode_keys(Editor* e,int c){
