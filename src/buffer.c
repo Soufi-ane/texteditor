@@ -242,9 +242,15 @@ ssize_t get_lines_wraps(Editor *e, int from, int to, bool include_last){
 void update_last_index(Editor* e){ e->buffers[e->current_buff]->cursor.last_index = e->buffers[e->current_buff]->cursor.index; }
 
 void move_cursor_left(Editor* e) {
+  ssize_t *current_index = &e->buffers[e->current_buff]->current_line_index;
   if(e->buffers[e->current_buff]->cursor.index) {
     e->buffers[e->current_buff]->cursor.index--;
     update_last_index(e);
+  }else {
+    if(*current_index) {
+      (*current_index)--;
+      e->buffers[e->current_buff]->cursor.index = e->buffers[e->current_buff]->lines[*current_index]->length - 1;
+    } 
   }
   e->buffers[e->current_buff]->current_msg_index = -1;
 }
@@ -269,12 +275,17 @@ void handle_caps_lock_and_escape(Editor* e){
 }
 
 void move_cursor_right(Editor* e) {
-  Line *current_line = e->buffers[e->current_buff]->lines[e->buffers[e->current_buff]->current_line_index];
-  if(
-    e->buffers[e->current_buff]->cursor.index < current_line->length +
+  ssize_t *current_index = &e->buffers[e->current_buff]->current_line_index;
+  Line *current_line = e->buffers[e->current_buff]->lines[*current_index];
+  if(e->buffers[e->current_buff]->cursor.index < current_line->length +
     ((e->mode == INSERT || !e->conf.is_vim_mode) ? 0 : -1)){
     e->buffers[e->current_buff]->cursor.index++;
     update_last_index(e);
+  }else {
+    if(*current_index < e->buffers[e->current_buff]->length -1 /*todo /*/) {
+      (*current_index)++;
+      e->buffers[e->current_buff]->cursor.index = 0;
+    } 
   }
   e->buffers[e->current_buff]->current_msg_index = -1;
 }
