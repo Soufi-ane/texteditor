@@ -253,6 +253,9 @@ void move_cursor_left(Editor* e) {
     } 
   }
   e->buffers[e->current_buff]->current_msg_index = -1;
+
+  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void handle_caps_lock_and_escape(Editor* e){
@@ -288,6 +291,9 @@ void move_cursor_right(Editor* e) {
     } 
   }
   e->buffers[e->current_buff]->current_msg_index = -1;
+
+  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void move_cursor_down(Editor* e){
@@ -304,6 +310,9 @@ void move_cursor_down(Editor* e){
   update_scroll(e, false);
   update_line_number_padding(e);
   e->buffers[e->current_buff]->current_msg_index = -1;
+
+  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void adapte_index_to_current_line(Editor *e){
@@ -322,12 +331,18 @@ void move_cursor_up(Editor* e){
   update_scroll(e, true);
   update_line_number_padding(e);
   e->buffers[e->current_buff]->current_msg_index = -1;
+
+  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void move_to_beginning_of_line(Editor* e) {
   if(!e->buffers[e->current_buff]->cursor.index) return;
   e->buffers[e->current_buff]->cursor.index = 0;
   update_last_index(e);
+
+  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void move_to_end_of_line(Editor* e) {
@@ -335,6 +350,9 @@ void move_to_end_of_line(Editor* e) {
   if(e->buffers[e->current_buff]->cursor.index == current->length - 1) return;
   e->buffers[e->current_buff]->cursor.index += current->length - e->buffers[e->current_buff]->cursor.index - 1;
   update_last_index(e);
+
+  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void move_to_new_line(Editor* e){
@@ -368,6 +386,9 @@ void move_to_word_ending(Editor* e){
   }
   e->buffers[e->current_buff]->cursor.index = i;
   update_last_index(e);
+
+  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void move_to_word_beginning(Editor* e){
@@ -392,6 +413,9 @@ void move_to_word_beginning(Editor* e){
   }
   e->buffers[e->current_buff]->cursor.index = i;
   update_last_index(e);
+
+  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void remove_current_char(Editor* e){
@@ -750,7 +774,7 @@ void delete_to_beginning_of_line(Buffer *buff){
   buff->cursor.index = 0;
 }
 
-void handle_ctrl_plus_key(Editor *e){
+void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
   if(IsKeyPressed(KEY_F)) {
     toggle_full_screen(e);
     update_scroll(e, true);
@@ -801,6 +825,7 @@ void handle_ctrl_plus_key(Editor *e){
   if(IsKeyPressed(KEY_RIGHT)){
     move_to_word_ending(e);
   }
+  // if(!is_shift_down) e->conf.is_selecting = false;
 }
 
 void handle_insert_mode_keys(Editor* e,int c){
@@ -962,7 +987,16 @@ void handle_keys(Editor* e){
   }
   bool is_ctrl_down = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
 
-  if(is_ctrl_down) handle_ctrl_plus_key(e);
+  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+
+
+  if(!e->conf.is_vim_mode && is_shift_down && !e->conf.is_selecting) {
+    e->conf.is_selecting = true;
+    e->conf.selection_start.row = e->buffers[e->current_buff]->current_line_index;
+    e->conf.selection_start.col = e->buffers[e->current_buff]->cursor.index;
+  } 
+
+  if(is_ctrl_down) handle_ctrl_plus_key(e, is_shift_down);
 
 //backspace
   if (IsKeyPressed(KEY_BACKSPACE)){
@@ -979,7 +1013,6 @@ void handle_keys(Editor* e){
   else if (IsKeyReleased(KEY_BACKSPACE)) long_press_time = 0;
 
   else if(IsKeyPressed(KEY_TAB)) {
-    bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
      handle_tab(e, is_shift_down);
   }
 
