@@ -7,7 +7,7 @@ DATA_DIR     = /usr/local/share/texteditor
 HOME_DIR     = $(shell getent passwd $(SUDO_USER) | cut -d: -f6)
 CONFIG_DIR   = $(HOME_DIR)/.config/texteditor
 ASSETS_DIR   = ./assets
-FONT_NAME    = JetBrainsMonoNF.ttf
+FONT_NAME    = JetBrainsMono-Regular.ttf
 
 CC = gcc
 SRC = src/*.c
