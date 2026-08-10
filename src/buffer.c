@@ -54,29 +54,30 @@ void filter_cmds_by_prompt(Editor *e){
 
 bool is_selected(Editor *e, RowCol row_col){
   if(!e->conf.is_selecting) return false;
+  Buffer *buff = e->buffers[e->current_buff];
   bool is_at_start = row_col.row == e->conf.selection_start.row;
-  bool is_at_current = row_col.row == e->buffers[e->current_buff]->current_line_index;
+  bool is_at_current = row_col.row == buff->current_line_index;
+  bool is_left = buff->cursor.index <= e->conf.selection_start.col;
 
   if(is_at_start && is_at_current){
-    bool is_left = e->buffers[e->current_buff]->cursor.index <= e->conf.selection_start.col;
     return is_left ? 
-      row_col.col <= e->conf.selection_start.col && row_col.col >= e->buffers[e->current_buff]->cursor.index
-      : row_col.col >= e->conf.selection_start.col && row_col.col <= e->buffers[e->current_buff]->cursor.index;
+      row_col.col <= e->conf.selection_start.col && row_col.col >= buff->cursor.index
+      : row_col.col >= e->conf.selection_start.col && row_col.col <= buff->cursor.index;
   }
   if(
     row_col.row >= e->conf.selection_start.row &&
-    row_col.row <= e->buffers[e->current_buff]->current_line_index
+    row_col.row <= buff->current_line_index
   ){
     if(is_at_start) return row_col.col >= e->conf.selection_start.col;
-    if(is_at_current) return row_col.col <= e->buffers[e->current_buff]->cursor.index;
+    if(is_at_current) return row_col.col <= buff->cursor.index;
     return true;
   }
   if(
-    row_col.row >= e->buffers[e->current_buff]->current_line_index &&
+    row_col.row >= buff->current_line_index &&
     row_col.row <= e->conf.selection_start.row
   ){
     if(is_at_start) return row_col.col <= e->conf.selection_start.col;
-    if(is_at_current) return row_col.col >= e->buffers[e->current_buff]->cursor.index;
+    if(is_at_current) return row_col.col >= buff->cursor.index;
     return true;
   }
   return false;
