@@ -24,12 +24,12 @@
 #define DEFAULT_LINE_SIZE     128
 
 // paths
-  
-#define SECONDARY_FONT_PATH "assets/fonts/JetBrainsMono-Regular.ttf"
 #ifdef PROD
-#define FONT_PATH "/usr/local/share/fonts/JetBrainsMono-Regular.ttf"
+#define FONT_PATH           "/usr/local/share/fonts/JetBrainsMono-Regular.ttf"
+#define SECONDARY_FONT_PATH "/usr/local/share/fonts/JetBrainsMono-Regular.ttf"
 #else 
-#define FONT_PATH "assets/fonts/JetBrainsMono-Regular.ttf"
+#define FONT_PATH           "assets/fonts/JetBrainsMono-Regular.ttf"
+#define SECONDARY_FONT_PATH "assets/fonts/JetBrainsMono-Regular.ttf"
 #endif
 
 #endif
