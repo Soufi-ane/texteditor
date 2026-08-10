@@ -250,7 +250,7 @@ void move_cursor_left(Editor* e) {
   e->buffers[e->current_buff]->current_msg_index = -1;
 
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
+  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void handle_caps_lock_and_escape(Editor* e){
