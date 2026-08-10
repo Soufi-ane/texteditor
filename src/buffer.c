@@ -542,22 +542,18 @@ void delete_chars(Line *line, ssize_t from, ssize_t count){
 }
 
 void delete_lines(Buffer *buff, ssize_t from, ssize_t count){
-  if(from + count > buff->capacity || from < 0 || count < 1) return;
+  if((from + count) > buff->length || from < 0 || count < 1 || from >= buff->length) return;
+  
+  for(int i = from; i < from + count; i++) free_line(&buff->lines[i]);
+
   for(int i = from; i < buff->capacity - count; i++){
-    if(i < from + count - 1){
-      free_line(buff->lines[i]);
-    }
     buff->lines[i] = buff->lines[i + count];
   }
   buff->length -= count;
-  buff->capacity -= count;
-  if(buff->length < 1){
-    if(!buff->capacity) {
-      ssize_t new_capacity = buff->capacity + 10;
-      realloc_buffer(buff, new_capacity);
-    }
-    buff->length = 1;
-    buff->current_line_index = 0;
+  if(!buff->length) buff->length = 1;
+
+  for(int i = buff->capacity - count; i < buff->capacity; i++){
+    buff->lines[i] = new_line(DEFAULT_LINE_SIZE);
   }
 }
 
