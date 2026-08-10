@@ -29,5 +29,7 @@ int try_loading_config(Editor *e);
 
 void write_new_message(Editor *e, Message *msg);
 
+void handle_cmd_args(int argc, char **argv);
+
 #endif
 

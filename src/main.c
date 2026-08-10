@@ -1,7 +1,9 @@
 #include "files.h"
 #include "draw.h"
 
-int main() {
+int main(int argc, char **argv) {
+
+  handle_cmd_args(argc, argv);
 
   Editor *e = init_editor();
   filter_cmds_by_prompt(e);
