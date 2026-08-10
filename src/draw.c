@@ -161,6 +161,22 @@ void DrawStatusLine(Editor *e){
     );
   }
 
+  Buffer *buff = e->buffers[e->current_buff];
+
+  int row_span = get_digit_count(buff->current_line_index + 1);
+  int col_span = get_digit_count(buff->cursor.index + 1);
+  int row_col_span = row_span + col_span + 1;
+
+  DrawTextEx(
+    e->conf.font_secondary_data.font,
+    TextFormat("%d:%d", buff->current_line_index + 1, buff->cursor.index + 1),
+    (Vector2){
+      e->s_width - (e->conf.letter_spacing + char_size.col) * (8 + row_col_span),
+      e->s_height - 45
+    },
+    e->conf.font_secondary_data.size, 0, GRAY
+  );
+
   DrawTextEx(
     e->conf.font_secondary_data.font, e->buffers[e->current_buff]->file_path ? 
     get_file_name_from_path(e->buffers[e->current_buff]->file_path) : "Untitled",

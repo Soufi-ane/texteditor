@@ -99,10 +99,14 @@ void update_scroll(Editor *e, bool is_up){
   } 
 }
 
+int get_digit_count(int number){
+  int count = 1;
+  for(int i = number; i > 0; i /= 10) count++;
+  return count > 1 ? (count - 1) : count;
+}
+
 void update_line_number_padding(Editor *e){
-  int pad = 1;
-  for(int i = e->buffers[e->current_buff]->length; i > 0; i /= 10) pad++;
-  e->conf.ln_padding = pad - (pad > 1 ? 1 : 0);
+  e->conf.ln_padding = get_digit_count(e->buffers[e->current_buff]->length);
 }
 
 void handle_append(Editor *e){
