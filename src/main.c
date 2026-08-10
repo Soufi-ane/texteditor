@@ -3,9 +3,9 @@
 
 int main(int argc, char **argv) {
 
-  handle_cmd_args(argc, argv);
-
   Editor *e = init_editor();
+  handle_cmd_args(e, argc, argv);
+
   filter_cmds_by_prompt(e);
 
   SetConfigFlags(FLAG_WINDOW_RESIZABLE);

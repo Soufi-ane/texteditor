@@ -489,14 +489,18 @@ int try_loading_config(Editor *e){
   return 1;
 }
 
-void handle_cmd_args(int argc, char **argv){
+void handle_cmd_args(Editor *e, int argc, char **argv){
   if(argc > 3){
     fprintf(stderr, "Too many args\n");
     exit(1);
   }
-  if(!strcmp(argv[1], "-v")){
+  if(argc > 1 && !strcmp(argv[1], "-v")){
     printf("texteditor: v%s\n", VERSION);
     exit(0);
+  }else if(argc > 2 && !strcmp(argv[1], "-f")){
+    read_file(e, argv[2]);
+  }else if(argc == 2){
+    read_file(e, argv[1]);
   }
 }
 
