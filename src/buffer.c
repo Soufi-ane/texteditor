@@ -288,7 +288,7 @@ void move_cursor_right(Editor* e) {
   e->buffers[e->current_buff]->current_msg_index = -1;
 
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
+  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void move_cursor_down(Editor* e){
@@ -307,7 +307,7 @@ void move_cursor_down(Editor* e){
   e->buffers[e->current_buff]->current_msg_index = -1;
 
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
+  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void adapte_index_to_current_line(Editor *e){
@@ -328,7 +328,7 @@ void move_cursor_up(Editor* e){
   e->buffers[e->current_buff]->current_msg_index = -1;
 
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
+  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void move_to_beginning_of_line(Editor* e) {
@@ -337,7 +337,7 @@ void move_to_beginning_of_line(Editor* e) {
   update_last_index(e);
 
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
+  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void move_to_end_of_line(Editor* e) {
@@ -347,7 +347,7 @@ void move_to_end_of_line(Editor* e) {
   update_last_index(e);
 
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
+  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void move_to_new_line(Editor* e){
@@ -364,7 +364,10 @@ void move_to_word_ending(Editor* e){
     e->buffers[e->current_buff]->current_line_index++;
     current = e->buffers[e->current_buff]->lines[e->buffers[e->current_buff]->current_line_index];
     e->buffers[e->current_buff]->cursor.index = 0;
-    if(!current->length) return move_to_word_ending(e);
+    if(!current->length) {
+      move_to_word_ending(e);
+      return;
+    }
   }
   ssize_t i = e->buffers[e->current_buff]->cursor.index; 
   while(isspace(current->chars[i + 1])){
@@ -383,7 +386,7 @@ void move_to_word_ending(Editor* e){
   update_last_index(e);
 
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
+  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void move_to_word_beginning(Editor* e){
@@ -410,7 +413,7 @@ void move_to_word_beginning(Editor* e){
   update_last_index(e);
 
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
+  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void remove_current_char(Editor* e){
@@ -551,7 +554,10 @@ void delete_lines(Buffer *buff, ssize_t from, ssize_t count){
     buff->lines[i] = buff->lines[i + count];
   }
   buff->length -= count;
-  if(!buff->length) buff->length = 1;
+  if(!buff->length) {
+    buff->length = 1;
+    buff->cursor.index = 0;
+  } 
 
   for(int i = buff->capacity - count; i < buff->capacity; i++){
     buff->lines[i] = new_line(DEFAULT_LINE_SIZE);
@@ -641,8 +647,13 @@ void handle_backspace(Editor* e) {
     if(e->conf.is_menu_open) {
       pop_char_single_line(e->cmd_prompt);
       filter_cmds_by_prompt(e);
+    }else if(e->conf.is_selecting) {
+      handle_delete_selection(e);
+    }
+    else {
+      Buffer *current_buffer = e->buffers[e->current_buff];
+      pop_char_from_line(e, current_buffer->lines[current_buffer->current_line_index]);
     } 
-    else pop_char_from_line(e, e->buffers[e->current_buff]->lines[e->buffers[e->current_buff]->current_line_index]);
   } else {
     move_cursor_left(e);
   } 
@@ -711,14 +722,20 @@ void handle_normal_mode_keys(Editor* e, int c){
       if(e->conf.font_data.size + 10 < 500){
         int new_size = e->conf.font_data.size + 10;
         e->conf.font_data.size = new_size;
-        load_font_default(e,  &e->conf.font_data);
+        if(!load_font_default(e,  &e->conf.font_data)){
+          fprintf(stderr, "Failed to load fonts\n");
+          exit(1);
+        }
       }
       break;
     case '-':
       if(e->conf.font_data.size - 10 > 10){
         int new_size = e->conf.font_data.size - 10;
         e->conf.font_data.size = new_size;
-        load_font_default(e, &e->conf.font_data);
+        if(!load_font_default(e, &e->conf.font_data)){
+          fprintf(stderr, "Failed to load fonts\n");
+          exit(1);
+        }
       }
       break;
       break;
@@ -737,12 +754,13 @@ void handle_normal_mode_keys(Editor* e, int c){
       e->conf.is_menu_open = false;
       break;
     case 'p':
+      if(e->conf.is_selecting) handle_delete_selection(e);
       paste_from_clipboard(e);
       update_scroll(e, true);
       e->conf.is_menu_open = false;
       break;
     case 'd':
-      handle_d_press(e);
+      if(e->conf.is_selecting && e->conf.is_vim_mode) handle_delete_selection(e);
       break;
     case 'q':
       try_closing_current_buffer(e);
@@ -820,7 +838,6 @@ void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
   if(IsKeyPressed(KEY_RIGHT)){
     move_to_word_ending(e);
   }
-  // if(!is_shift_down) e->conf.is_selecting = false;
 }
 
 void handle_insert_mode_keys(Editor* e,int c){
@@ -1087,10 +1104,10 @@ void handle_keys(Editor* e){
   // return i;
 // }
 
-Line *new_line(ssize_t capacity){
+Line *new_line(ssize_t cap){
   Line *line = malloc(sizeof(Line));
-  line->chars = malloc(sizeof(char) * capacity);
-  line->capacity = capacity;
+  line->chars = malloc(sizeof(char) * cap);
+  line->capacity = cap;
   line->length = 0;
   return line;
 }
@@ -1101,7 +1118,7 @@ void realloc_line(Line *line, ssize_t cap){
 }
 
 void free_line(Line **line){
-  if((*line) != NULL){
+  if(*line != NULL){
     free((*line)->chars);
     free(*line);
     *line = NULL;
@@ -1132,7 +1149,7 @@ Buffer *new_buffer(ssize_t capacity){
 
 void free_buffer(Buffer *buff){
   for(ssize_t i = 0; i < buff->capacity; i++) {
-    free_line(buff->lines[i]);
+    free_line(&buff->lines[i]);
   }
   free(buff);
   buff = NULL;
