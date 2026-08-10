@@ -10,7 +10,8 @@ ASSETS_DIR   = ./assets
 FONT_NAME    = JetBrainsMono-Regular.ttf
 
 CC = gcc
-SRC = src/*.c
+SRC = $(wildcard src/*.c)
+HEADERS = $(wildcard include/*.h)
 OUT = build/texteditor_dev
 OUT_PROD = build/texteditor
 
@@ -23,13 +24,15 @@ install: $(OUT_PROD) fonts
 	mkdir -p $(INSTALL_DIR) $(DATA_DIR) $(CONFIG_DIR)
 	cp $(OUT_PROD) $(INSTALL_DIR)
 	cp $(ASSETS_DIR)/help.txt $(DATA_DIR)
+	cp $(ASSETS_DIR)/messages.log $(DATA_DIR)
 	cp $(ASSETS_DIR)/texteditor.conf $(CONFIG_DIR)
 	chown -R $(SUDO_USER):$(SUDO_USER) $(CONFIG_DIR)
+	chown -R $(SUDO_USER):$(SUDO_USER) $(DATA_DIR)
 
-$(OUT_PROD) : $(SRC)
+$(OUT_PROD) : $(SRC) $(HEADERS)
 	$(CC) -o $(OUT_PROD) $(SRC) $(FLAGS) $(PROD_FLAGS)
 
-$(OUT): $(SRC)
+$(OUT): $(SRC) $(HEADERS)
 	$(CC) -o $(OUT) $(SRC) $(FLAGS) 
 
 debug : $(SRC)
