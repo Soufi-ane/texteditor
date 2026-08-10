@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=TextEditor
+Exec=/usr/local/bin/texteditor
+Icon=/usr/local/share/texteditor/texteditor.png
+Terminal=false
+Categories=Utility;TextEditor;

@@ -25,6 +25,7 @@ install: $(OUT_PROD) fonts
 	cp $(OUT_PROD) $(INSTALL_DIR)
 	cp $(ASSETS_DIR)/help.txt $(DATA_DIR)
 	cp $(ASSETS_DIR)/messages.log $(DATA_DIR)
+	cp $(ASSETS_DIR)/texteditor.png $(DATA_DIR)
 	cp $(ASSETS_DIR)/texteditor.conf $(CONFIG_DIR)
 	chown -R $(SUDO_USER):$(SUDO_USER) $(CONFIG_DIR)
 	chown -R $(SUDO_USER):$(SUDO_USER) $(DATA_DIR)
