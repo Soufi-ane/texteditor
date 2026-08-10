@@ -572,62 +572,66 @@ void move_to_first_line(Editor *e){
   adapte_index_to_current_line(e);
 }
 
-void handle_d_press(Editor *e){
-  if(e->conf.is_selecting && e->conf.is_vim_mode){
-    bool is_up = is_selecting_up(e); 
-    ssize_t start = (is_up ? e->buffers[e->current_buff]->current_line_index : e->conf.selection_start.row); 
-    ssize_t finish = (is_up ? e->conf.selection_start.row : e->buffers[e->current_buff]->current_line_index);
+void handle_delete_selection(Editor *e){
+  Buffer *buff = e->buffers[e->current_buff];
+  bool is_up = is_selecting_up(e); 
+  ssize_t start = (is_up ? buff->current_line_index : e->conf.selection_start.row); 
+  ssize_t finish = (is_up ? e->conf.selection_start.row : buff->current_line_index);
+  bool is_left = buff->cursor.index <= e->conf.selection_start.col;
 
-    Line *start_line = e->buffers[e->current_buff]->lines[start];
-    Line *end_line = e->buffers[e->current_buff]->lines[finish];
-
-    if(start != finish){
-      if(is_up){
-       start_line->length = e->buffers[e->current_buff]->cursor.index;
-       if(end_line->length) end_line->length -= e->conf.selection_start.col + 1;
-       memmove(
-         &end_line->chars[0],
-         &end_line->chars[e->conf.selection_start.col + 1],
-         end_line->length
-       );
-      }
-      else {
-       start_line->length = e->conf.selection_start.col;
-       if(end_line->length) end_line->length -= e->buffers[e->current_buff]->cursor.index + 1;
-       memmove(
-         &end_line->chars[0],
-         &end_line->chars[e->buffers[e->current_buff]->cursor.index + 1],
-         (size_t) end_line->length
-       );
-      } 
-      memcpy(
-        &start_line->chars[start_line->length],
-        &end_line->chars[0],
-        (size_t) end_line->length
-      );
-      start_line->length += end_line->length;
-      ssize_t from = start + (start_line->length ? 1 : 0);
-      ssize_t count = finish - start + (ssize_t) (start_line->length ? 0 : 1);
-      delete_lines(e->buffers[e->current_buff], from , count);
-      e->buffers[e->current_buff]->current_line_index = finish - count;
-      if(e->buffers[e->current_buff]->current_line_index < 0) e->buffers[e->current_buff]->current_line_index = 0;
-      if(!e->conf.selection_start.col) e->buffers[e->current_buff]->cursor.index = 0;
-    }else {
-      bool is_left = e->buffers[e->current_buff]->cursor.index <= e->conf.selection_start.col;
-      ssize_t num_chars = is_left ? e->conf.selection_start.col - e->buffers[e->current_buff]->cursor.index + 1
-        : e->buffers[e->current_buff]->cursor.index - e->conf.selection_start.col + 1;
-      if(start_line->length < num_chars) {
-        e->buffers[e->current_buff]->current_line_index--;
-        delete_lines(e->buffers[e->current_buff], start, 1);
-        e->buffers[e->current_buff]->cursor.index = 0;
-      } else {
-        ssize_t start_index = is_left ? e->buffers[e->current_buff]->cursor.index : e->conf.selection_start.col;
-        delete_chars(start_line, start_index , num_chars);
-        if(!is_left) e->buffers[e->current_buff]->cursor.index -= num_chars - 1;
-      }
-    }
-    e->conf.is_selecting = false;
+  if(e->conf.selection_start.col >= buff->lines[e->conf.selection_start.row]->length){
+    e->conf.selection_start.col = buff->lines[e->conf.selection_start.row]->length - 1;
   }
+
+  Line *start_line = buff->lines[start];
+  Line *end_line = buff->lines[finish];
+
+  if(start != finish){
+    if(is_up){
+     start_line->length = buff->cursor.index;
+     if(end_line->length) end_line->length -= e->conf.selection_start.col + 1;
+     memmove(
+       &end_line->chars[0],
+       &end_line->chars[e->conf.selection_start.col + 1],
+       end_line->length
+     );
+    }
+    else {
+     start_line->length = e->conf.selection_start.col;
+     if(end_line->length) end_line->length -= buff->cursor.index + 1;
+     memmove(
+       &end_line->chars[0],
+       &end_line->chars[buff->cursor.index + 1],
+       (size_t) end_line->length
+     );
+    } 
+    memcpy(
+      &start_line->chars[start_line->length],
+      &end_line->chars[0],
+      (size_t) end_line->length
+    );
+    start_line->length += end_line->length;
+    ssize_t from = start + (start_line->length ? 1 : 0);
+    ssize_t count = finish - start;
+    delete_lines(buff, from , count);
+    buff->current_line_index = finish - count;
+    if(buff->current_line_index < 0) buff->current_line_index = 0;
+    if(!e->conf.selection_start.col) buff->cursor.index = 0;
+  }else {
+    ssize_t num_chars = abs(buff->cursor.index - e->conf.selection_start.col) + 1;
+    if(!start_line->length) {
+      if(buff->current_line_index) {
+        buff->current_line_index--;
+        delete_lines(buff, start, 1);
+        buff->cursor.index = 0;
+      }
+    } else {
+      ssize_t start_index = is_left ? buff->cursor.index : e->conf.selection_start.col;
+      delete_chars(start_line, start_index , num_chars);
+      if(!is_left) buff->cursor.index -= num_chars ? (num_chars - 1) : 0;
+    }
+  }
+  e->conf.is_selecting = false;
   update_line_number_padding(e);
 }
 
