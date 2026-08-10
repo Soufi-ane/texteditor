@@ -101,6 +101,7 @@ typedef struct {
   float size;
   bool is_file_loaded;
   unsigned char* font_file;
+  int file_size;
 } FontData ;
 
 typedef struct {
@@ -183,7 +184,7 @@ ssize_t get_max_line_length(Editor *e);
 
 ssize_t get_max_num_lines(Editor *e);
 
-void free_line(Line *line);
+void free_line(Line **line);
 
 ssize_t get_lines_wraps(Editor *e, int from, int to, bool include_last);
 

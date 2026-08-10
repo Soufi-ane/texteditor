@@ -136,24 +136,34 @@ void try_saving_file(Editor* e){
 }
 
 bool load_font_default(Editor *e, FontData *font_data){
-  int file_size = 0;
+  if(!font_data) return false;
   if(!font_data->is_file_loaded){
-    font_data->font_file = LoadFileData(font_data->path, &file_size);
+    int loaded_size = 0;
+    font_data->font_file = LoadFileData(font_data->path, &loaded_size);
+    if(loaded_size <= 0 || !font_data->font_file) return false;
+    font_data->file_size = loaded_size;
     font_data->is_file_loaded = true;
   }
   if(font_data->font_file == NULL || font_data->font_file == 0) return false;
   Font font = {0};
 	font.baseSize = (int) font_data->size;
 	font.glyphCount = 95;
-	font.glyphs = LoadFontData(font_data->font_file, file_size, font_data->size, 0, 95, FONT_DEFAULT);
+	font.glyphs = LoadFontData(font_data->font_file, font_data->file_size, (int) font_data->size, 0, 95, FONT_DEFAULT);
   if (font.glyphs == NULL) return false;
-	Image atlas = GenImageFontAtlas(font.glyphs, &font.recs, 95, font_data->size, 0, 1);
-  if (font.recs == NULL) return false;
-  if (atlas.data == NULL || atlas.width <= 0 || atlas.height <= 0) return false;
+	Image atlas = GenImageFontAtlas(font.glyphs, &font.recs, 95, (int) font_data->size, 0, 1);
+  if (font.recs == NULL || atlas.data == NULL || atlas.width <= 0 || atlas.height <= 0) {
+    UnloadFontData(font.glyphs, 95);
+    if(atlas.data) UnloadImage(atlas);
+    return false;
+  }
 	font.texture = LoadTextureFromImage(atlas);
-  if (font.texture.id == 0) return false;
-	UnloadImage(atlas);
-	SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
+  UnloadImage(atlas);
+  if (font.texture.id == 0) {
+    UnloadFontData(font.glyphs, 95);
+    return false;
+  }
+	// SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
+	SetTextureFilter(font.texture, TEXTURE_FILTER_POINT);
   Font old_font = font_data->font;
   font_data->font = font;
   if(old_font.texture.id != 0){

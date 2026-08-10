@@ -11,8 +11,13 @@ int main() {
   SetExitKey(KEY_NULL);
 
   try_loading_config(e);
-  load_font_default(e, &e->conf.font_data);
-  load_font_default(e, &e->conf.font_secondary_data);
+  if(
+    !load_font_default(e, &e->conf.font_data) || 
+    !load_font_default(e, &e->conf.font_secondary_data)
+  ){
+    fprintf(stderr, "Failed to load fonts\n");
+    return 1;
+  }
 
   SetTargetFPS(120);
   SetConfigFlags(FLAG_MSAA_4X_HINT);
