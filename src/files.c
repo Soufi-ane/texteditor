@@ -117,9 +117,7 @@ void try_saving_file(Editor* e){
     if(is_done){
       if(!strcmp(config_path, e->buffers[e->current_buff]->file_path)){
         try_loading_config(e);
-      } else if(!strcmp(messages_path, e->buffers[e->current_buff]->file_path)){
-        read_file(e, messages_path);
-      }
+      }  
     }
   }
   else {
@@ -162,7 +160,6 @@ bool load_font_default(Editor *e, FontData *font_data){
     UnloadFontData(font.glyphs, 95);
     return false;
   }
-	// SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
 	SetTextureFilter(font.texture, TEXTURE_FILTER_POINT);
   Font old_font = font_data->font;
   font_data->font = font;
@@ -281,7 +278,7 @@ void try_setting_conf_color_value(Editor *e, ConfigKey key_type, char *hex, size
   unsigned int color;
   bool is_color_valid = try_getting_color_from_hex(++hex, &color);
   if(!is_color_valid){
-    new_message(e, TextFormat("Error in value [%s] in config at %zu", hex, line_number), ERROR);
+    new_message( e, TextFormat("Error in value [%s] at: %zu", hex, line_number), ERROR);
     return;
   }
   switch (key_type) {
@@ -310,7 +307,7 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
   char *endpoint;
   int number = strtoul(value, &endpoint, 10);
   if(endpoint == value || *endpoint != '\0' || number < 0) {
-    new_message(e, TextFormat("Invalid value [%s] at config: %zu", value, line_number), ERROR);
+    new_message(e, TextFormat("Invalid value [%s] at: %zu", value, line_number), ERROR);
     return;
   }
   switch (key_type) {
@@ -339,7 +336,7 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
             exit(1);
           }
         }else {
-          new_message(e, TextFormat("Invalid size for primary font at config: %zd", line_number), ERROR);
+          new_message(e, TextFormat("Invalid size for primary font at: %zd", line_number), ERROR);
         } 
       }
       break;
@@ -352,7 +349,7 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
             exit(1);
           }
         }else {
-          new_message(e, TextFormat("Invalid size for secondary font at config: %zd", line_number), ERROR);
+          new_message(e, TextFormat("Invalid size for secondary font: %zd", line_number), ERROR);
         }
       }
       break;
@@ -372,7 +369,7 @@ void try_loading_new_font(Editor *e, char *path, ssize_t n_line, bool is_primary
   if(!load_font_default(e, is_primary ? &e->conf.font_data : &e->conf.font_secondary_data)){
     if(is_primary) e->conf.font_data = old;
     else e->conf.font_secondary_data = old;
-    new_message(e, TextFormat("Failed to load font at config: %zu", n_line), ERROR);
+    new_message( e, TextFormat("Failed to load font at config: %zu", n_line), ERROR);
   }
 }
 

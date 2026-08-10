@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "files.h"
 #include "draw.h"
 #include "tinyfiledialogs.h"
@@ -1175,6 +1176,13 @@ void free_buffer(Buffer *buff){
   buff = NULL;
 }
 
+void get_date_time(char *time_buff, size_t size){
+  time_t current_time;
+  time(&current_time);
+  struct tm *local_time = localtime(&current_time);
+  strftime(time_buff, size, "%H:%M:%S", local_time);
+}
+
 void new_message(Editor *e, const char *message, MessageType type){
   if(e->num_msgs >= MAX_MESSAGES) {
     for(int i = 0; i < e->num_msgs; i++){
@@ -1182,9 +1190,15 @@ void new_message(Editor *e, const char *message, MessageType type){
       e->num_msgs--;
     }
   }
+  char display_msg[1024];
+  char time_buff[128];
+  get_date_time(time_buff, sizeof(time_buff));
+
+  snprintf(display_msg, sizeof(display_msg), "%s - %s", message, time_buff);
   Message *msg = malloc(sizeof(Message));
+
   msg->type = type;
-  msg->text = strdup(message);
+  msg->text = strdup(display_msg);
   write_new_message(e, msg);
   e->messages[e->num_msgs] = msg;
   e->buffers[e->current_buff]->current_msg_index = e->num_msgs++;
