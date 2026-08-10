@@ -104,6 +104,14 @@ void try_saving_file(Editor* e){
   #endif
 
   if(e->buffers[e->current_buff]->file_path){
+    if(!strcmp(messages_path, e->buffers[e->current_buff]->file_path)){
+      e->buffers[e->current_buff]->is_readonly = true;
+    }
+    if(e->buffers[e->current_buff]->is_readonly){
+      new_message(e, "Readonly file!", ERROR);
+      return;
+    }
+
     bool is_done = false;
     if(access(e->buffers[e->current_buff]->file_path, W_OK) == 0 || errno == ENOENT) {
       write_file(e);
@@ -117,8 +125,8 @@ void try_saving_file(Editor* e){
     if(is_done){
       if(!strcmp(config_path, e->buffers[e->current_buff]->file_path)){
         try_loading_config(e);
-      }  
-    }
+      }
+    } 
   }
   else {
     char const * path = 
