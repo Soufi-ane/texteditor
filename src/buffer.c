@@ -275,8 +275,8 @@ void handle_caps_lock_and_escape(Editor* e){
 void move_cursor_right(Editor* e) {
   ssize_t *current_index = &e->buffers[e->current_buff]->current_line_index;
   Line *current_line = e->buffers[e->current_buff]->lines[*current_index];
-  if(e->buffers[e->current_buff]->cursor.index < current_line->length +
-    ((e->mode == INSERT || !e->conf.is_vim_mode) ? 0 : -1)){
+  if(e->buffers[e->current_buff]->cursor.index < current_line->length -
+    (!e->conf.is_selecting && (e->mode == INSERT || !e->conf.is_vim_mode) ? 0 : 1)){
     e->buffers[e->current_buff]->cursor.index++;
     update_last_index(e);
   }else {
