@@ -214,7 +214,7 @@ bool is_selected(Editor *e, RowCol row_col);
 
 bool is_selecting_up(Editor *e);
 
-void pop_char_from_line(Editor* e, Line *line);
+void remove_char_from_line(Editor* e, Line *line);
 
 void pop_char_single_line(Line *line);
 

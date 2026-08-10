@@ -201,26 +201,42 @@ void pop_char_single_line(Line *line){
   line->length--;
 }
 
-void pop_char_from_line(Editor* e, Line *line){
+void remove_char_from_line(Editor* e, Line *line){
+  bool is_removed = false;
   Buffer *current_buffer = e->buffers[e->current_buff];
   if(!current_buffer->num_chars) return;
-  if(current_buffer->current_line_index && current_buffer->cursor.index == 0) {
-    Line *prev_line = current_buffer->lines[current_buffer->current_line_index - 1];
-    current_buffer->cursor.index = prev_line->length;
-    while(prev_line->capacity - prev_line->length < line->length){
-      realloc_line(prev_line, prev_line->capacity * 2);
-    }
-    memcpy(&prev_line->chars[prev_line->length], line->chars, (size_t) line->length);
-    prev_line->length += line->length;
+  if(!current_buffer->cursor.index) {
+    if(current_buffer->current_line_index){
+      Line *prev_line = current_buffer->lines[current_buffer->current_line_index - 1];
+      current_buffer->cursor.index = prev_line->length;
+      while(prev_line->capacity - prev_line->length < line->length){
+        realloc_line(prev_line, prev_line->capacity * 2);
+      }
+      memcpy(&prev_line->chars[prev_line->length], line->chars, (size_t) line->length);
+      current_buffer->cursor.index = prev_line->length;
+      prev_line->length += line->length;
 
-    delete_lines(current_buffer, current_buffer->current_line_index, 1);
-    current_buffer->current_line_index--;
-    current_buffer->cursor.index = prev_line->length;
-  } else if(current_buffer->cursor.index != 0){
+      delete_lines(current_buffer, current_buffer->current_line_index, 1);
+      current_buffer->current_line_index--;
+      is_removed = true;
+    }  
+  } 
+  else if(current_buffer->cursor.index < line->length){
+    memmove(
+      &line->chars[current_buffer->cursor.index - 1],
+      &line->chars[current_buffer->cursor.index],
+      line->length - current_buffer->cursor.index
+    );
+    line->length--;
+    current_buffer->cursor.index--;
+    is_removed = true;
+  }
+  else {
     line->chars[--line->length] = '\0';
     current_buffer->cursor.index--;
+    is_removed = true;
   }
-  current_buffer->num_chars--;
+  if(is_removed) current_buffer->num_chars--;
   update_scroll(e, true);
   update_line_number_padding(e);
   current_buffer->is_saved = false;
@@ -656,7 +672,7 @@ void handle_backspace(Editor* e) {
     }
     else {
       Buffer *current_buffer = e->buffers[e->current_buff];
-      pop_char_from_line(e, current_buffer->lines[current_buffer->current_line_index]);
+      remove_char_from_line(e, current_buffer->lines[current_buffer->current_line_index]);
     } 
   } else {
     move_cursor_left(e);
