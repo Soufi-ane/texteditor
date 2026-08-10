@@ -310,7 +310,8 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
   char *endpoint;
   int number = strtoul(value, &endpoint, 10);
   if(endpoint == value || *endpoint != '\0' || number < 0) {
-    return new_message(e, TextFormat("Invalid value [%s] at config: %zu", value, line_number), ERROR);
+    new_message(e, TextFormat("Invalid value [%s] at config: %zu", value, line_number), ERROR);
+    return;
   }
   switch (key_type) {
     case TAB_S:
@@ -333,7 +334,10 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
       if(number != e->conf.font_data.size){
         if(number < 500 && number > 10){
           e->conf.font_data.size = number;
-          load_font_default(e, &e->conf.font_data);
+          if(!load_font_default(e, &e->conf.font_data)){
+            fprintf(stderr, "Failed to load fonts\n");
+            exit(1);
+          }
         }else {
           new_message(e, TextFormat("Invalid size for primary font at config: %zd", line_number), ERROR);
         } 
@@ -343,7 +347,10 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
       if(number != e->conf.font_secondary_data.size){
         if(number <= 45 && number >= 25){
           e->conf.font_secondary_data.size = number;
-          load_font_default(e, &e->conf.font_secondary_data);
+          if(!load_font_default(e, &e->conf.font_secondary_data)){
+            fprintf(stderr, "Failed to load fonts\n");
+            exit(1);
+          }
         }else {
           new_message(e, TextFormat("Invalid size for secondary font at config: %zd", line_number), ERROR);
         }
@@ -371,7 +378,8 @@ void try_loading_new_font(Editor *e, char *path, ssize_t n_line, bool is_primary
 
 void try_reading_conf_path(Editor *e, ConfigKey key_type, char *path, ssize_t n_line){
   if(access(path, F_OK) != 0) {
-    return new_message(e, TextFormat("Invalid path at config: %zu", n_line), ERROR);
+    new_message(e, TextFormat("Invalid path at config: %zu", n_line), ERROR);
+    return;
   }
   switch(key_type){
     case FONT_PRIMARY:
