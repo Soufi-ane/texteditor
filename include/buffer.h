@@ -236,4 +236,8 @@ void free_buffer(Buffer *buff);
 
 void realloc_editor_buffers(Editor *e);
 
+void delete_lines(Buffer *buff, ssize_t from, ssize_t count);
+
+void realloc_line(Line *line, ssize_t cap);
+
 #endif

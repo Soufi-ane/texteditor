@@ -197,34 +197,28 @@ void pop_char_single_line(Line *line){
 }
 
 void pop_char_from_line(Editor* e, Line *line){
-  if(!e->buffers[e->current_buff]->num_chars) return;
-  if(e->buffers[e->current_buff]->current_line_index && e->buffers[e->current_buff]->cursor.index == 0) {
-    Line *prev_line = e->buffers[e->current_buff]->lines[e->buffers[e->current_buff]->current_line_index - 1];
-    e->buffers[e->current_buff]->cursor.index = prev_line->length;
-    for(ssize_t i = 0; i < line->length; i++){
-      // todo : use memcpy or something
-      add_char_to_line(e, prev_line, line->chars[i], true);
+  Buffer *current_buffer = e->buffers[e->current_buff];
+  if(!current_buffer->num_chars) return;
+  if(current_buffer->current_line_index && current_buffer->cursor.index == 0) {
+    Line *prev_line = current_buffer->lines[current_buffer->current_line_index - 1];
+    current_buffer->cursor.index = prev_line->length;
+    while(prev_line->capacity - prev_line->length < line->length){
+      realloc_line(prev_line, prev_line->capacity * 2);
     }
-    for(ssize_t i = e->buffers[e->current_buff]->current_line_index; i < e->buffers[e->current_buff]->capacity - 1; i++)
-    {
-      e->buffers[e->current_buff]->lines[i] = e->buffers[e->current_buff]->lines[i + 1];
-    }
-    e->buffers[e->current_buff]->lines[e->buffers[e->current_buff]->capacity - 1] = NULL;
-    free_line(line);
-    e->buffers[e->current_buff]->length--;
-    e->buffers[e->current_buff]->capacity--;
-    e->buffers[e->current_buff]->current_line_index--;
-  } else if(e->buffers[e->current_buff]->cursor.index != 0){
-    for(ssize_t i = e->buffers[e->current_buff]->cursor.index; i < line->length; i++){
-      line->chars[i - 1] = line->chars[i];
-    }
+    memcpy(&prev_line->chars[prev_line->length], line->chars, (size_t) line->length);
+    prev_line->length += line->length;
+
+    delete_lines(current_buffer, current_buffer->current_line_index, 1);
+    current_buffer->current_line_index--;
+    current_buffer->cursor.index = prev_line->length;
+  } else if(current_buffer->cursor.index != 0){
     line->chars[--line->length] = '\0';
-    e->buffers[e->current_buff]->cursor.index--;
+    current_buffer->cursor.index--;
   }
-  e->buffers[e->current_buff]->num_chars--;
+  current_buffer->num_chars--;
   update_scroll(e, true);
   update_line_number_padding(e);
-  e->buffers[e->current_buff]->is_saved = false;
+  current_buffer->is_saved = false;
 }
 
 ssize_t get_lines_wraps(Editor *e, int from, int to, bool include_last){
@@ -1100,10 +1094,17 @@ Line *new_line(ssize_t capacity){
   return line;
 }
 
-void free_line(Line *line){
-  free(line->chars);
-  free(line);
-  line = NULL;
+void realloc_line(Line *line, ssize_t cap){
+  line->chars = realloc(line->chars, cap * sizeof(char));
+  line->capacity = cap;
+}
+
+void free_line(Line **line){
+  if((*line) != NULL){
+    free((*line)->chars);
+    free(*line);
+    *line = NULL;
+  }
 }
 
 Buffer *new_buffer(ssize_t capacity){
