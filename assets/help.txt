@@ -1,31 +1,44 @@
 
 Normal mode:
   escape: show menu
+  Ctrl+c: copy
+  Ctrl+v: paste
   Ctrl+f: toggle fullscreen
-  Ctrl+s: Save the file
-  Ctrl+x: Quit
+  Ctrl+s: Save buffer
+  Ctrl+x: Quit buffer/editor if no content
+  Ctrl+X: Force quit buffer/editor if no content
+  Ctrl+n: Switch to next buffer
+  Ctrl+p: Switch to previous buffer
+  Ctrl+u: delete to beginning of line
 
-Vim mode:
 
-  'm' show menu
-  'q' Quit (I made that decision)
-   0.01% of vim stuff is available
+Vim mode (Not really):
+
+  'm' Show menu
+  's' Save buffer
+  'q' Quit
+  'Q' Force Quit
+   0.01% of vim stuff is available like gg, G
 
 Configuration:
 
   make sure you set the $HOME variable
   open the menu and choose open config
 
-  or use another text editor (don't use vscode)
+  or use another text editor (pls don't use vscode)
   Config file: "$HOME/.config/texteditor/texteditor.conf"
 
   You can only customize the properties that already exits
   in the file!
   Comments starting with '#' are ignored
 
+Command line:
+  -v                  : Show the version
+  <file> / -f <file>  : open a file
+
 Bugs:
 
-  I will pay you $0.0000000000000000001 for every bug report
+  I will pay you $0.0000000000000000001 >> 1 for every bug report
   at jabersoufiane77@gmail.com
 
 
