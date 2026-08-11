@@ -49,7 +49,7 @@ void write_file(Editor* e){
 }
 
 void read_file(Editor* e, char const * file_path){
-	FILE* f = fopen(file_path,"r");
+	FILE* f = fopen(file_path,"w+");
   if(!f) {
     printf("Coudn't open the file %s path\n",file_path);
     return;
