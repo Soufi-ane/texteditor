@@ -27,6 +27,9 @@ int main(int argc, char **argv) {
   RowCol char_size = {0};
   Vector2 press_start_pos = {0};
 
+  double last_blink_time = 0;
+  bool is_blinking = false;
+
   while (!WindowShouldClose()) {
     if(e->should_quit) break;
     e->s_width = GetScreenWidth();
@@ -82,10 +85,23 @@ int main(int argc, char **argv) {
         float cursor_x = pad.left + (e->conf.letter_spacing + char_size.col) * x_offset;
         if(e->conf.ln_mode != NONE) cursor_x += (e->conf.letter_spacing + char_size.col) * (e->conf.ln_padding + 1);
         if(i == e->buffers[e->current_buff]->current_line_index && m == e->buffers[e->current_buff]->cursor.index){
+          Buffer *buff = e->buffers[e->current_buff];
+          double now = GetTime();
+          if(
+              now - buff->cursor.last_time_moved > CURSOR_BLINK_DURATION ||
+              now - buff->cursor.last_time_moved < TIME_BEFORE_BLINK
+              ){
+            is_blinking = false;
+          }else {
+            if(now - last_blink_time > CURSOR_BLINK_INTERVAL) {
+              last_blink_time = now;
+              is_blinking = !is_blinking;
+            }
+          }
           DrawCursor(
             e, cursor_x,
             pad.top + ((e->conf.line_height + char_size.row) * y_offset),
-            e->buffers[e->current_buff]->cursor.color
+            is_blinking ? 0x00000000 : e->buffers[e->current_buff]->cursor.color
           );
         }
 
@@ -95,8 +111,8 @@ int main(int argc, char **argv) {
         if(m < current_line->length) {
 
           char c = current_line->chars[m];
-          unsigned int char_color = m == e->buffers[e->current_buff]->cursor.index &&
-            i == e->buffers[e->current_buff]->current_line_index ? 
+          unsigned int char_color = (m == e->buffers[e->current_buff]->cursor.index &&
+            i == e->buffers[e->current_buff]->current_line_index && !is_blinking) ? 
             e->conf.under_cursor_color : e->conf.text_color;
           if(c == '\t') {
             for(int i = 0; i < e->conf.tab_size; i++){
