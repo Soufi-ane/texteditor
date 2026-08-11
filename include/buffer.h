@@ -54,6 +54,7 @@ typedef struct {
   ssize_t last_index;
   float width;
   float height;
+  double last_time_moved;
   unsigned int color;
 } Cursor;
 
