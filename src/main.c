@@ -25,7 +25,6 @@ int main(int argc, char **argv) {
   SetConfigFlags(FLAG_MSAA_4X_HINT);
 
   RowCol char_size = {0};
-  Vector2 press_start_pos = {0};
 
   double last_blink_time = 0;
   bool is_blinking = false;
@@ -39,135 +38,45 @@ int main(int argc, char **argv) {
     e->buffers[e->current_buff]->cursor.height = char_size.row;
     e->buffers[e->current_buff]->cursor.width = char_size.col;
     Padding pad = e->conf.padding;
+    Buffer *buff = e->buffers[e->current_buff];
 
-    ClearBackground(GetColor(e->conf.bg_color));
-    ssize_t max_line_len = get_max_line_length(e);
-    if(e->conf.is_showing_lines) {
-      for (int l = 0; l < get_max_num_lines(e); l++) {
-        int y_pos = pad.top + e->buffers[e->current_buff]->cursor.height + l * (e->conf.line_height + e->buffers[e->current_buff]->cursor.height);
-        int x_pos = e->conf.padding.left + (e->conf.ln_padding + 1)
-          * (char_size.col + e->conf.letter_spacing);
-        DrawLineEx(
-          (Vector2){x_pos, y_pos}, 
-          (Vector2){e->s_width - (e->conf.padding.right), y_pos}, 3.0f,
-          GetColor(e->conf.lines_color)
-        );
+    double now = GetTime();
+    if(
+        now - buff->cursor.last_time_moved > CURSOR_BLINK_DURATION ||
+        now - buff->cursor.last_time_moved < TIME_BEFORE_BLINK
+    ){
+      is_blinking = false;
+    }else {
+      if(now - last_blink_time > CURSOR_BLINK_INTERVAL) {
+        last_blink_time = now;
+        is_blinking = !is_blinking;
       }
     }
-    // todo : render body
+
+    ClearBackground(GetColor(e->conf.bg_color));
+
+    if(e->conf.is_showing_lines) DrawEditorLines(e);
+
     ssize_t y_offset = 0;
     ssize_t i, x_offset = 0;
+    ssize_t display_start = buff->d_start;
+    ssize_t display_end   = display_start + buff->d_length;
+    ssize_t total_length  = buff->length;
 
-    for (
-      i = e->buffers[e->current_buff]->d_start;
-      i < e->buffers[e->current_buff]->d_start + 
-      e->buffers[e->current_buff]->d_length && i < e->buffers[e->current_buff]->length;
-      i++
-    ) {
-      // line numbers
-      if(e->conf.ln_mode != NONE) {
-        ssize_t index = e->buffers[e->current_buff]->current_line_index;
-       DrawTextEx(e->conf.font_data.font,
-         TextFormat( "%zu", 
-           (e->conf.ln_mode == ABSOLUTE || index == i) ?  i + 1 :
-           (index < i ? i - index : index - i)
-         ),
-         (Vector2){
-           pad.left,
-           pad.top + (e->conf.line_height + char_size.row) * y_offset
-          },
-         e->conf.font_data.size, 0, GetColor(e->conf.line_numbers_color));
-      }
-      float char_x;
-      float char_y;
-      Line *current_line = e->buffers[e->current_buff]->lines[i];
-      for(ssize_t m = 0; m <= current_line->length; m++){
-        float cursor_x = pad.left + (e->conf.letter_spacing + char_size.col) * x_offset;
-        if(e->conf.ln_mode != NONE) cursor_x += (e->conf.letter_spacing + char_size.col) * (e->conf.ln_padding + 1);
-        if(i == e->buffers[e->current_buff]->current_line_index && m == e->buffers[e->current_buff]->cursor.index){
-          Buffer *buff = e->buffers[e->current_buff];
-          double now = GetTime();
-          if(
-              now - buff->cursor.last_time_moved > CURSOR_BLINK_DURATION ||
-              now - buff->cursor.last_time_moved < TIME_BEFORE_BLINK
-              ){
-            is_blinking = false;
-          }else {
-            if(now - last_blink_time > CURSOR_BLINK_INTERVAL) {
-              last_blink_time = now;
-              is_blinking = !is_blinking;
-            }
-          }
-          DrawCursor(
-            e, cursor_x,
-            pad.top + ((e->conf.line_height + char_size.row) * y_offset),
-            is_blinking ? 0x00000000 : e->buffers[e->current_buff]->cursor.color
-          );
-        }
+    for (i = display_start; i < display_end && i < total_length; i++) {
 
-        char_x = pad.left + (e->conf.letter_spacing + char_size.col) * x_offset;
-        char_y = pad.top + ((e->conf.line_height + char_size.row) * y_offset);
-        if(e->conf.ln_mode != NONE) char_x += (e->conf.letter_spacing + char_size.col) * (e->conf.ln_padding + 1);
-        if(m < current_line->length) {
+      if(e->conf.ln_mode != NONE) DrawLineNumber(e, i, y_offset);
 
-          char c = current_line->chars[m];
-          unsigned int char_color = (m == e->buffers[e->current_buff]->cursor.index &&
-            i == e->buffers[e->current_buff]->current_line_index && !is_blinking) ? 
-            e->conf.under_cursor_color : e->conf.text_color;
-          if(c == '\t') {
-            for(int i = 0; i < e->conf.tab_size; i++){
-              DrawChar(
-                e, ' ',char_x + i * (e->conf.letter_spacing + char_size.col),
-                char_y , char_color, e->conf.font_data.size
-              );
-              x_offset++;
-            }
-          } else {
-            if(is_selected(e, (RowCol){i, m}) && 
-                !(i == e->buffers[e->current_buff]->current_line_index && m == e->buffers[e->current_buff]->cursor.index)) {
-              DrawCursor(e, char_x, char_y, e->conf.selection_color);
-              DrawChar(e, c,char_x, char_y , e->conf.selected_char_color, e->conf.font_data.size);
-            } else {
-              DrawChar(e, c,char_x, char_y , char_color, e->conf.font_data.size);
-            } 
-          } 
+      DrawLineChars(e, is_blinking, x_offset, y_offset, i);
 
-          if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-            e->conf.is_selecting = false;
-            press_start_pos = e->mouse;
-            handle_mouse_click(e, char_x, char_y, m, i, false);
-          }
-          if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-            float delta_x = e->mouse.x - press_start_pos.x;
-            float delta_y = e->mouse.y - press_start_pos.y;
-            float distance_squared = delta_x * delta_x + delta_y * delta_y;
-            if(distance_squared > 25.0f) {
-              e->conf.is_selecting = true;
-              e->mode = NORMAL;
-              handle_mouse_click(e, char_x, char_y, m, i, true);
-            }
-          }
+      y_offset++;
+      x_offset = 0;
 
-          x_offset++;
-          if((m + 1) % max_line_len == 0) {
-            y_offset++;
-            x_offset = 0;
-          }
-        }else if(!current_line->length) {
-          if(is_selected(e, (RowCol){i, m}) && 
-              !(i == e->buffers[e->current_buff]->current_line_index && m == e->buffers[e->current_buff]->cursor.index)) {
-            DrawCursor(e, char_x, char_y, e->conf.selection_color);
-          }
-        }
-      }
-        y_offset++;
-        x_offset = 0;
     }
 
     handle_keys(e);
-
     DrawStatusLine(e);
-    if(e->buffers[e->current_buff]->current_msg_index > -1) DrawCurrentMessage(e);
+    if(buff->current_msg_index > -1) DrawCurrentMessage(e);
     if(e->conf.is_menu_open) DrawMenu(e);
 
     EndDrawing();
