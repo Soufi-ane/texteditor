@@ -4,10 +4,10 @@ PROD_FLAGS   = -DPROD -O3
 INSTALL_DIR  = /usr/local/bin
 FONTS_DIR    = /usr/local/share/fonts
 DATA_DIR     = /usr/local/share/texteditor
+APP_DIR      = /usr/local/share/applications
 HOME_DIR     = $(shell getent passwd $(SUDO_USER) | cut -d: -f6)
 CONFIG_DIR   = $(HOME_DIR)/.config/texteditor
 ASSETS_DIR   = ./assets
-FONT_NAME    = JetBrainsMono-Regular.ttf
 
 CC = gcc
 SRC = $(wildcard src/*.c)
@@ -17,18 +17,18 @@ OUT_PROD = build/texteditor
 
 all: $(OUT)
 
-run : clean $(OUT)
+run : $(OUT)
 	./$(OUT)
 
-install: $(OUT_PROD) fonts 
-	mkdir -p $(INSTALL_DIR) $(DATA_DIR) $(CONFIG_DIR)
+install: $(OUT_PROD)
+	mkdir -p $(INSTALL_DIR) $(DATA_DIR) $(CONFIG_DIR) $(FONTS_DIR)
+	cp $(ASSETS_DIR)/fonts/JetBrainsMono-Regular.ttf $(FONTS_DIR)
 	cp $(OUT_PROD) $(INSTALL_DIR)
-	cp $(ASSETS_DIR)/help.txt $(DATA_DIR)
-	cp $(ASSETS_DIR)/messages.log $(DATA_DIR)
-	cp $(ASSETS_DIR)/texteditor.png $(DATA_DIR)
+	cp $(ASSETS_DIR)/help.txt $(ASSETS_DIR)/messages.log $(ASSETS_DIR)/texteditor.png $(DATA_DIR)
 	cp $(ASSETS_DIR)/texteditor.conf $(CONFIG_DIR)
-	chown -R $(SUDO_USER):$(SUDO_USER) $(CONFIG_DIR)
-	chown -R $(SUDO_USER):$(SUDO_USER) $(DATA_DIR)
+	cp $(ASSETS_DIR)/texteditor.desktop $(APP_DIR)
+	update-desktop-database -q
+	chown -R $(SUDO_USER):$(SUDO_USER) $(CONFIG_DIR) $(DATA_DIR)
 
 $(OUT_PROD) : $(SRC) $(HEADERS)
 	$(CC) -o $(OUT_PROD) $(SRC) $(FLAGS) $(PROD_FLAGS)
@@ -39,10 +39,6 @@ $(OUT): $(SRC) $(HEADERS)
 debug : $(SRC)
 	$(CC) -o $(OUT) $(SRC) $(FLAGS) $(DEBUG_FLAGS)
 		
-fonts : 
-	mkdir -p $(FONTS_DIR)
-	cp $(ASSETS_DIR)/fonts/$(FONT_NAME) $(FONTS_DIR)
-
 clean:
 	rm -f $(OUT) $(OUT_PROD)
 
