@@ -85,19 +85,21 @@ bool is_selected(Editor *e, RowCol row_col){
 }
 
 void update_scroll(Editor *e, bool is_up){
-  ssize_t wraps = get_lines_wraps(e, e->buffers[e->current_buff]->d_start, e->buffers[e->current_buff]->d_start + e->buffers[e->current_buff]->d_length, true);
-  ssize_t max = get_max_num_lines(e) - wraps;
-  ssize_t current_index = e->buffers[e->current_buff]->current_line_index;
-  e->buffers[e->current_buff]->d_length = e->buffers[e->current_buff]->length < max ? e->buffers[e->current_buff]->length : max;
+  Buffer *buff = e->buffers[e->current_buff];
+  ssize_t wraps = get_lines_wraps(e, buff->d_start, buff->d_start + buff->d_length, true);
+  ssize_t max = get_max_num_lines(e);
+  ssize_t max_lines = max - wraps;
+  ssize_t current_index = buff->current_line_index;
+  buff->d_length = buff->length < max ? buff->length : max;
+  if(buff->d_length < 1) buff->d_length = 1;
 
   if(is_up){
-    if(current_index < e->buffers[e->current_buff]->d_start && e->buffers[e->current_buff]->d_start) e->buffers[e->current_buff]->d_start--;
+    if(current_index < buff->d_start && buff->d_start) buff->d_start--;
   }
   else {
-    if(current_index > e->buffers[e->current_buff]->d_start + e->buffers[e->current_buff]->d_length - 1) {
-      e->buffers[e->current_buff]->d_start = current_index - max + 1;
-    }
+    if(current_index > buff->d_start + buff->d_length - 1) buff->d_start++;
   } 
+  if(current_index < 1) buff->d_start = 0;
 }
 
 int get_digit_count(int number){
