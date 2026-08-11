@@ -20,7 +20,8 @@ typedef enum {
   D_LINES, LINES_COL, LN_MODE, VIM_M,
   P_TOP, P_BOTTOM, P_LEFT, P_RIGHT,
   FONT_SIZE, SECONDARY_FONT_SIZE,
-  FONT_PRIMARY, FONT_SECONDARY
+  FONT_PRIMARY, FONT_SECONDARY, 
+  LINE_HIGHLIGHT, LINE_HIGHLIGHT_COL
 } ConfigKey;
 
 typedef enum{
@@ -113,6 +114,7 @@ typedef struct {
   bool is_selecting;
   bool is_vim_mode;
   bool caps_lock_as_escape;
+  bool is_line_highlight;
   RowCol selection_start;
   ssize_t tab_size;
   LineNumbers ln_mode;
@@ -131,6 +133,7 @@ typedef struct {
   unsigned int success_color;
   unsigned int selection_color;
   unsigned int selected_char_color;
+  unsigned int line_highlight_color;
   ssize_t line_height;
   ssize_t letter_spacing;
 } Config;

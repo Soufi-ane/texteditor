@@ -242,6 +242,18 @@ void DrawLineChars(Editor *e, bool is_blinking, ssize_t x_offset, ssize_t y_offs
   Padding pad = e->conf.padding;
   ssize_t max_line_len = get_max_line_length(e);
   Line *current_line = buff->lines[i];
+
+  if(i == buff->current_line_index && e->conf.is_line_highlight) {
+    Rectangle line_highlight = {
+      pad.left + (e->conf.ln_padding + 1) * (e->conf.letter_spacing + char_size.col), 
+      pad.top + (buff->cursor.height + e->conf.line_height) * (i - buff->d_start) ,
+      e->s_width - (pad.left + pad.right + (e->conf.ln_padding + 1) * (e->conf.letter_spacing + char_size.col)),
+      buff->cursor.height
+    };
+
+    DrawRectangleRec(line_highlight, GetColor(e->conf.line_highlight_color));
+  }
+
   for(ssize_t m = 0; m <= current_line->length; m++){
     float cursor_x = pad.left + (e->conf.letter_spacing + char_size.col) * x_offset;
     if(e->conf.ln_mode != NONE) cursor_x += (e->conf.letter_spacing + char_size.col) * (e->conf.ln_padding + 1);

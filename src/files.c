@@ -252,26 +252,28 @@ void read_from_clipboard(char *buff, size_t max){
 }
 
 ConfigKey get_config_key(Editor *e, char *key){
-  if(!strcmp(key, "line_numbers_mode"))    return LN_MODE;
-  if(!strcmp(key, "spaces_for_tabs"))      return SPACE_FOR_TAB;
-  if(!strcmp(key, "vim_mode"))             return VIM_M;
-  if(!strcmp(key, "draw_lines"))           return D_LINES;
-  if(!strcmp(key, "background_color"))     return BG_COL;
-  if(!strcmp(key, "text_color"))           return TXT_COL;
-  if(!strcmp(key, "cursor_color"))         return CURSOR_COL;
-  if(!strcmp(key, "under_cursor_color"))   return UNDER_CURSOR_COL;
-  if(!strcmp(key, "line_numbers_color"))   return LN_COL;
-  if(!strcmp(key, "lines_color"))          return LINES_COL;
-  if(!strcmp(key, "tab_size"))             return TAB_S;
-  if(!strcmp(key, "caps_lock_as_escape"))  return CAPS_AS_ESCAPE;
-  if(!strcmp(key, "padding_top"))          return P_TOP;
-  if(!strcmp(key, "padding_bottom"))       return P_BOTTOM;
-  if(!strcmp(key, "padding_left"))         return P_LEFT;
-  if(!strcmp(key, "padding_right"))        return P_RIGHT;
-  if(!strcmp(key, "primary_font_size"))    return FONT_SIZE;
-  if(!strcmp(key, "secondary_font_size"))  return SECONDARY_FONT_SIZE;
-  if(!strcmp(key, "primary_font"))         return FONT_PRIMARY;
-  if(!strcmp(key, "secondary_font"))       return FONT_SECONDARY;
+  if(!strcmp(key, "line_numbers_mode"))      return LN_MODE;
+  if(!strcmp(key, "spaces_for_tabs"))        return SPACE_FOR_TAB;
+  if(!strcmp(key, "vim_mode"))               return VIM_M;
+  if(!strcmp(key, "draw_lines"))             return D_LINES;
+  if(!strcmp(key, "background_color"))       return BG_COL;
+  if(!strcmp(key, "text_color"))             return TXT_COL;
+  if(!strcmp(key, "cursor_color"))           return CURSOR_COL;
+  if(!strcmp(key, "under_cursor_color"))     return UNDER_CURSOR_COL;
+  if(!strcmp(key, "line_numbers_color"))     return LN_COL;
+  if(!strcmp(key, "lines_color"))            return LINES_COL;
+  if(!strcmp(key, "tab_size"))               return TAB_S;
+  if(!strcmp(key, "caps_lock_as_escape"))    return CAPS_AS_ESCAPE;
+  if(!strcmp(key, "padding_top"))            return P_TOP;
+  if(!strcmp(key, "padding_bottom"))         return P_BOTTOM;
+  if(!strcmp(key, "padding_left"))           return P_LEFT;
+  if(!strcmp(key, "padding_right"))          return P_RIGHT;
+  if(!strcmp(key, "primary_font_size"))      return FONT_SIZE;
+  if(!strcmp(key, "secondary_font_size"))    return SECONDARY_FONT_SIZE;
+  if(!strcmp(key, "primary_font"))           return FONT_PRIMARY;
+  if(!strcmp(key, "secondary_font"))         return FONT_SECONDARY;
+  if(!strcmp(key, "highlight_active_line"))  return LINE_HIGHLIGHT;
+  if(!strcmp(key, "active_line_color"))      return LINE_HIGHLIGHT_COL;
   return UNKOWN_KEY;
 }
 
@@ -307,6 +309,9 @@ void try_setting_conf_color_value(Editor *e, ConfigKey key_type, char *hex, size
       break;
     case LINES_COL:
       e->conf.lines_color = color;
+      break;
+    case LINE_HIGHLIGHT_COL:
+      e->conf.line_highlight_color = color;
       break;
   }
 }
@@ -427,6 +432,11 @@ void try_setting_conf_value(Editor *e, ConfigKey key_type, char *value, ssize_t 
       else if(!strcmp(value, "false")) e->conf.caps_lock_as_escape = false;
       else is_invalid = true;
       break;
+    case LINE_HIGHLIGHT:
+      if(!strcmp(value, "true"))       e->conf.is_line_highlight = true;
+      else if(!strcmp(value, "false")) e->conf.is_line_highlight = false;
+      else is_invalid = true;
+      break;
   }
   if(is_invalid){
     new_message(e, TextFormat("Invalid value [%s] at config: %zu", value, n_line), ERROR);
@@ -449,7 +459,8 @@ void read_config_line(Editor *e, char *line, size_t len, size_t line_number){
   }
   if(
     key_type == BG_COL || key_type == TXT_COL || key_type == CURSOR_COL ||
-    key_type == UNDER_CURSOR_COL || key_type == LN_COL || key_type == LINES_COL
+    key_type == UNDER_CURSOR_COL || key_type == LN_COL || key_type == LINES_COL ||
+    key_type == LINE_HIGHLIGHT_COL
     ){
     try_setting_conf_color_value(e, key_type, value, line_number);
   }else if(
