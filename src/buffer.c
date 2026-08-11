@@ -113,7 +113,8 @@ void update_line_number_padding(Editor *e){
 void handle_append(Editor *e){
   e->mode = INSERT;
   e->conf.is_selecting = false;
-  if(e->buffers[e->current_buff]->cursor.index > 0) move_cursor_right(e);
+  Buffer *buff = e->buffers[e->current_buff];
+  if(buff->lines[buff->current_line_index]->length > 0) move_cursor_right(e);
 }
 
 void toggle_full_screen(Editor *e){
