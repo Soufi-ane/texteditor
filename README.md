@@ -17,3 +17,5 @@ Install from source
 ### Run
     texteditor
 
+### Usage
+> Press Escape to show the menu
