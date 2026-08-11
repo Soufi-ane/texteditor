@@ -201,6 +201,8 @@ void add_char_to_line(Editor* e, Line* line, char c, bool append){
   buff->current_msg_index = - 1;
   if(!e->conf.is_menu_open) buff->is_saved = false;
   buff->cursor.last_time_moved = GetTime();
+  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
 void pop_char_single_line(Line *line){
@@ -316,7 +318,7 @@ void move_cursor_right(Editor* e) {
     buff->cursor.index++;
     update_last_index(e);
   }else {
-    if(*current_index < buff->length -1 /*todo /*/) {
+    if(*current_index < buff->length -1) {
       (*current_index)++;
       buff->cursor.index = 0;
     } 
@@ -495,7 +497,7 @@ void go_to_prev_buffer(Editor *e){
 void handle_tab(Editor* e, bool is_shift_down) {
   Buffer *buff = e->buffers[e->current_buff];
   if(!e->conf.is_menu_open){
-    if(e->mode == INSERT){
+    if(e->mode == INSERT || !e->conf.is_vim_mode){
       if(e->conf.is_spaces_for_tabs) {
         for(int i = 0; i < e->conf.tab_size; ++i)  {
           add_char_to_line(
@@ -1052,7 +1054,6 @@ void handle_keys(Editor* e){
   bool is_ctrl_down = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
 
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-
 
   if(!e->conf.is_vim_mode && is_shift_down && !e->conf.is_selecting) {
     e->conf.is_selecting = true;
