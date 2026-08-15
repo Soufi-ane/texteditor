@@ -1,6 +1,8 @@
 # Texteditor
 #### It's just a text editor
 
+![Text Editor Preview](assets/demo.png)
+
 Install from source
 -------------------
 #### After installing the dependencies
