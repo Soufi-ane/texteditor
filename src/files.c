@@ -49,17 +49,19 @@ void write_file(Editor* e){
 }
 
 void read_file(Editor* e, char const * file_path){
-	FILE* f = fopen(file_path,"w+");
-  if(!f) {
-    printf("Coudn't open the file %s path\n",file_path);
-    return;
+	FILE* f = fopen(file_path,"r+");
+  if(f == NULL) {
+    f = fopen(file_path, "w+");
+    if(f == NULL) {
+      printf("Coudn't create the file %s path\n",file_path);
+      return;
+    }
   } 
   char* line = NULL;
   size_t size = 0, line_index = 0;
   size_t read;
 
   if(e->length > e->capacity - 1) realloc_editor_buffers(e);
-  printf("current buff before is %zd chars\n", e->buffers[e->current_buff]->num_chars);
 
   if(!e->buffers[0]->is_saved || e->buffers[0]->num_chars != 0){
     e->current_buff = e->length++;
