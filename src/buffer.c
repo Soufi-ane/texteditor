@@ -773,25 +773,10 @@ void handle_normal_mode_keys(Editor* e, int c){
       move_cursor_up(e);
       break;
     case '+':
-      if(e->conf.font_data.size + 10 < 5000){
-        int new_size = e->conf.font_data.size + 10;
-        e->conf.font_data.size = new_size;
-        if(!load_font_default(e,  &e->conf.font_data)){
-          fprintf(stderr, "Failed to load fonts\n");
-          exit(1);
-        }
-      }
+      increase_font_size(e);
       break;
     case '-':
-      if(e->conf.font_data.size - 10 > 10){
-        int new_size = e->conf.font_data.size - 10;
-        e->conf.font_data.size = new_size;
-        if(!load_font_default(e, &e->conf.font_data)){
-          fprintf(stderr, "Failed to load fonts\n");
-          exit(1);
-        }
-      }
-      break;
+      decrease_font_size(e);
       break;
     case 'f':
       toggle_full_screen(e);
@@ -831,6 +816,28 @@ void handle_normal_mode_keys(Editor* e, int c){
       is_g_clicked_before = true;
       //todo : move to line number
     } 
+  }
+}
+
+void decrease_font_size(Editor *e){
+  if(e->conf.font_data.size - 10 > 10){
+    int new_size = e->conf.font_data.size - 10;
+    e->conf.font_data.size = new_size;
+    if(!load_font_default(e, &e->conf.font_data)){
+      fprintf(stderr, "Failed to load fonts\n");
+      exit(1);
+    }
+  }
+}
+
+void increase_font_size(Editor *e){
+  if(e->conf.font_data.size + 10 < 5000){
+    int new_size = e->conf.font_data.size + 10;
+    e->conf.font_data.size = new_size;
+    if(!load_font_default(e,  &e->conf.font_data)){
+      fprintf(stderr, "Failed to load fonts\n");
+      exit(1);
+    }
   }
 }
 
@@ -891,6 +898,12 @@ void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
   }
   if(IsKeyPressed(KEY_RIGHT)){
     move_to_word_ending(e);
+  }
+  if(IsKeyPressed(KEY_MINUS)){
+    decrease_font_size(e);
+  }
+  if(IsKeyPressed(KEY_EQUAL) && is_shift_down){
+    increase_font_size(e);
   }
 }
 

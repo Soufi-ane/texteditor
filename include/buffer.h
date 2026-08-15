@@ -247,4 +247,8 @@ void realloc_line(Line *line, ssize_t cap);
 
 int get_digit_count(int number);
 
+void increase_font_size(Editor *e);
+
+void decrease_font_size(Editor *e);
+
 #endif
