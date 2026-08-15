@@ -134,7 +134,7 @@ unsigned int get_msg_color(Editor *e, MessageType type){
 void DrawCurrentMessage(Editor *e) {
   RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   Message *msg = e->messages[e->buffers[e->current_buff]->current_msg_index];
-  if(!strlen(msg->text)) return;
+  if(!msg || !strlen(msg->text)) return;
   Color color = GetColor(get_msg_color(e, msg->type));
   DrawTextEx(
     e->conf.font_secondary_data.font, msg->text,
