@@ -32,4 +32,3 @@ void write_new_message(Editor *e, Message *msg);
 void handle_cmd_args(Editor *e, int argc, char **argv);
 
 #endif
-

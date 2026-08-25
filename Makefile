@@ -41,5 +41,3 @@ debug : $(SRC)
 		
 clean:
 	rm -f $(OUT) $(OUT_PROD)
-
-

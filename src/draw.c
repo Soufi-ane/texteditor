@@ -320,4 +320,3 @@ void DrawLineChars(Editor *e, bool is_blinking, ssize_t x_offset, ssize_t y_offs
     }
   }
 }
-

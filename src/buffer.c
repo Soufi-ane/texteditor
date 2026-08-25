@@ -1371,4 +1371,3 @@ Editor *init_editor(){
 
   return e;
 }
-

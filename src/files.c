@@ -521,4 +521,3 @@ void handle_cmd_args(Editor *e, int argc, char **argv){
     read_file(e, argv[1]);
   }
 }
-

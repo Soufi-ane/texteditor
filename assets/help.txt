@@ -40,5 +40,3 @@ Bugs:
 
   I will pay you $0.0000000000000000001 >> 1 for every bug report
   at jabersoufiane77@gmail.com
-
-
