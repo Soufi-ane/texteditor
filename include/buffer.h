@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include "conf.h"
 
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 extern double longPressDelay ;
 
 typedef enum {
@@ -250,5 +252,7 @@ int get_digit_count(int number);
 void increase_font_size(Editor *e);
 
 void decrease_font_size(Editor *e);
+
+void move_to_matching_pair(Buffer *buff, char c);
 
 #endif

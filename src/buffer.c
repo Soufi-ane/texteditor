@@ -8,6 +8,8 @@
 
 #define HOLD_PRESS_DELAY 0.02f
 
+#define PAIRS_COUNT 8
+
 double long_press_time = 0.0f;
 double last_press_time = 0.0f;
 int is_g_clicked_before = false;
@@ -35,6 +37,51 @@ ssize_t get_max_num_lines(Editor *e){
 
 bool is_selecting_up(Editor *e){
   return e->buffers[e->current_buff]->current_line_index <= e->conf.selection_start.row;
+}
+
+void move_to_matching_pair(Buffer *buff, char c){
+  int pairs[PAIRS_COUNT] = { '{', '(', '[','<','>', ']', ')', '}' };
+  int pair_index = 0;
+  int i;
+  for(i = 0; i < PAIRS_COUNT; i++) {
+    if(pairs[i] == c){ pair_index = i; break; }
+  }
+  if(i >= PAIRS_COUNT) return;
+  int match = match = pairs[PAIRS_COUNT - pair_index - 1];
+  bool is_opening = pair_index < (PAIRS_COUNT / 2); 
+  int num_opened = 1;
+  int line_index = buff->current_line_index;
+  int char_index = buff->cursor.index;
+  int next = 0;
+  while(num_opened){ 
+    if(is_opening) {
+      char_index++;
+      if(char_index >= buff->lines[line_index]->length) {
+        line_index++;
+        char_index = 0;
+      } 
+      if(line_index >= buff->length) break;
+    }else {
+      char_index--;
+      if(char_index < 0){
+        line_index--;
+        if(line_index < 0) break;
+        char_index = MAX(buff->lines[line_index]->length - 1, 0);
+      }
+    }
+    next = buff->lines[line_index]->chars[char_index];
+    if(next == c) {
+     num_opened++;
+    }
+    else if(next == match) {
+      num_opened--;
+    }
+  }
+  if(next == match && num_opened == 0) {
+    buff->current_line_index = line_index;
+    buff->cursor.index = char_index;
+  }
+  buff->cursor.last_time_moved = GetTime();
 }
 
 void filter_cmds_by_prompt(Editor *e){
@@ -807,6 +854,12 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'Q':
       force_close_current_buffer(e);
+      break;
+    case '%':
+      move_to_matching_pair(
+        buff, 
+        buff->lines[buff->current_line_index]->chars[buff->cursor.index]
+      );
       break;
   }
   if(c == 'g'){
