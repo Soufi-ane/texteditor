@@ -714,6 +714,7 @@ void handle_backspace(Editor* e) {
 }
 
 void handle_normal_mode_keys(Editor* e, int c){
+  Buffer *buff = e->buffers[e->current_buff];
   switch(c){
     case 'G':
       move_cursor_to_last_line(e);
@@ -784,8 +785,8 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'v':
       e->conf.is_selecting = !e->conf.is_selecting;
-      e->conf.selection_start.row = e->buffers[e->current_buff]->current_line_index;
-      e->conf.selection_start.col = e->buffers[e->current_buff]->cursor.index;
+      e->conf.selection_start.row = buff->current_line_index;
+      e->conf.selection_start.col = buff->cursor.index;
       break;
     case 'y':
       copy_selection_to_clipboard(e);
