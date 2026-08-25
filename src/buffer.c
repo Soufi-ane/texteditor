@@ -846,6 +846,7 @@ void delete_to_beginning_of_line(Buffer *buff){
   current->length -= buff->cursor.index;
   memmove(&current->chars[0], &current->chars[buff->cursor.index], (size_t) current->length);
   buff->cursor.index = 0;
+  buff->cursor.last_time_moved = GetTime();
 }
 
 void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
