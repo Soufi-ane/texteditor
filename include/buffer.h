@@ -7,8 +7,6 @@
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-extern double longPressDelay ;
-
 typedef enum {
   INFO,
   GOOD,
@@ -177,8 +175,6 @@ void emptychar(char* line);
 void addChar(Editor* e, char c);
 
 void addchar(Editor* e, char* line, char* text);
-
-void add_char_to_note_body(Editor* e,char c);
 
 int get_first_diplayed_index(Editor* e,bool isUp);
 
