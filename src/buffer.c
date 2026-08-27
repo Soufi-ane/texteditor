@@ -1211,28 +1211,6 @@ void handle_keys(Editor* e){
   }
 }
 
-// int get_first_diplayed_index(Editor* e,bool isUp){
-  // int line_index = get_line_index(e,-1);
-  // todo
-  // if(isUp && e->buffers[e->current_buff]->cursor.row > 0) return e->note->displayStart;
-  // if(isUp) {
-    // int i,j;
-    // for(j = 0,i = e->buffers[e->current_buff]->cursor.index ; i > -2 && j < 1 ;i--){
-      // if(i < 0) continue;
-      // todo
-      // if(e->note->body[i] == '\n') j++; 
-    // }
-    // return i+2
-  // }
-  // int num_hidden_lines = line_index + 2 - LINES_COUNT;
-  int i,j;
-  // for(i=0,j=0; j < num_hidden_lines; i++){
-    // todo
-    // if(e->note->body[i] == '\n') j++; 
-  // }
-  // return i;
-// }
-
 Line *new_line(ssize_t cap){
   Line *line = malloc(sizeof(Line));
   line->chars = malloc(sizeof(char) * cap);
