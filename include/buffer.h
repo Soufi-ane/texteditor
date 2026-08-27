@@ -192,7 +192,9 @@ ssize_t get_lines_wraps(Editor *e, int from, int to, bool include_last);
 
 void move_cursor_right(Editor* e);
 
-void add_char_to_line(Editor* e, Line* line, char c, bool append);
+void add_char_to_line(Line *line, char c, size_t index);
+
+ssize_t add_char_to_current_buffer(Editor* e, char c);
 
 void remove_current_char(Editor* e);
 
