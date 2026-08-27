@@ -646,7 +646,7 @@ void delete_chars(Line *line, ssize_t from, ssize_t count){
 void delete_lines(Buffer *buff, ssize_t from, ssize_t count){
   if((from + count) > buff->length || from < 0 || count < 1 || from >= buff->length) return;
   
-  for(int i = from; i < from + count; i++) free_line(&buff->lines[i]);
+  for(int i = from; i < from + count; i++) free_line(buff->lines[i]);
 
   for(int i = from; i < buff->capacity - count; i++){
     buff->lines[i] = buff->lines[i + count];
@@ -1238,11 +1238,11 @@ void realloc_line(Line *line, ssize_t cap){
   line->capacity = cap;
 }
 
-void free_line(Line **line){
-  if(*line != NULL){
-    free((*line)->chars);
-    free(*line);
-    *line = NULL;
+void free_line(Line *line){
+  if(line != NULL){
+    free(line->chars);
+    free(line);
+    line = NULL;
   }
 }
 
@@ -1270,7 +1270,7 @@ Buffer *new_buffer(ssize_t capacity){
 
 void free_buffer(Buffer *buff){
   for(ssize_t i = 0; i < buff->capacity; i++) {
-    free_line(&buff->lines[i]);
+    free_line(buff->lines[i]);
   }
   free(buff);
   buff = NULL;
