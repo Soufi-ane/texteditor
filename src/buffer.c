@@ -269,10 +269,10 @@ void pop_char_single_line(Line *line){
   line->length--;
 }
 
-void remove_char_from_line(Editor* e, Line *line){
-  bool is_removed = false;
+int remove_char_from_line(Editor* e, Line *line){
+  int char_removed = -1;
   Buffer *buff = e->buffers[e->current_buff];
-  if(!buff->num_chars) return;
+  if(!buff->num_chars) return -1;
   if(!buff->cursor.index) {
     if(buff->current_line_index){
       Line *prev_line = buff->lines[buff->current_line_index - 1];
@@ -286,10 +286,11 @@ void remove_char_from_line(Editor* e, Line *line){
       delete_lines(buff, buff->current_line_index, 1);
       buff->current_line_index--;
       update_scroll(e, true);
-      is_removed = true;
+      // char_removed = delete line action
     }  
   } 
   else if(buff->cursor.index < line->length){
+    char_removed = line->chars[buff->cursor.index - 1];
     memmove(
       &line->chars[buff->cursor.index - 1],
       &line->chars[buff->cursor.index],
@@ -297,18 +298,18 @@ void remove_char_from_line(Editor* e, Line *line){
     );
     line->length--;
     buff->cursor.index--;
-    is_removed = true;
   }
   else {
+    char_removed = line->chars[line->length - 1];
     line->chars[--line->length] = '\0';
     buff->cursor.index--;
-    is_removed = true;
   }
-  if(is_removed) buff->num_chars--;
+  if(char_removed > -1) buff->num_chars--;
   update_scroll(e, true);
   update_line_number_padding(e);
   buff->is_saved = false;
   buff->cursor.last_time_moved = GetTime();
+  return char_removed;
 }
 
 ssize_t get_lines_wraps(Editor *e, int from, int to, bool include_last){
