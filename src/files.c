@@ -57,6 +57,7 @@ void read_file(Editor* e, char const * file_path){
       return;
     }
   } 
+  Buffer *buff = e->buffers[e->current_buff];
   char* line = NULL;
   size_t size = 0, line_index = 0;
   size_t read;
@@ -67,31 +68,30 @@ void read_file(Editor* e, char const * file_path){
     e->current_buff = e->length++;
   }
 
-  if(access(file_path, W_OK) != 0) e->buffers[e->current_buff]->is_readonly = true;
-  e->buffers[e->current_buff]->file_path = strdup(file_path);
+  if(access(file_path, W_OK) != 0) buff->is_readonly = true;
+  buff->file_path = strdup(file_path);
 	while((read = getline(&line,&size,f)) != -1){
 
-    if(e->buffers[e->current_buff]->length > e->buffers[e->current_buff]->capacity - 1){
+    if(buff->length > buff->capacity - 1){
 
-      size_t new_capacity = e->buffers[e->current_buff]->capacity + 10;
-      e->buffers[e->current_buff]->lines = 
-        realloc(e->buffers[e->current_buff]->lines, sizeof(Line*) * new_capacity);
+      size_t new_capacity = buff->capacity + 10;
+      buff->lines = realloc(buff->lines, sizeof(Line*) * new_capacity);
 
-      for(size_t i = e->buffers[e->current_buff]->capacity; i < new_capacity; i++){
-        e->buffers[e->current_buff]->lines[i] = new_line(DEFAULT_LINE_SIZE);
+      for(size_t i = buff->capacity; i < new_capacity; i++){
+        buff->lines[i] = new_line(DEFAULT_LINE_SIZE);
       }
 
-      e->buffers[e->current_buff]->capacity = new_capacity;
+      buff->capacity = new_capacity;
     }
     for(size_t i = 0; i < read - 1; i++) {
-      add_char_to_line(e, e->buffers[e->current_buff]->lines[line_index], line[i], true);
+      add_char_to_line(buff->lines[line_index], line[i], buff->lines[line_index]->length);
     }
-    e->buffers[e->current_buff]->num_chars += read;
+    buff->num_chars += read;
     line_index++;
-    e->buffers[e->current_buff]->length++;
+    buff->length++;
   }
-  if(e->buffers[e->current_buff]->length > 1) e->buffers[e->current_buff]->length--;
-  e->buffers[e->current_buff]->is_saved = true;
+  if(buff->length > 1) buff->length--;
+  buff->is_saved = true;
   free(line);
 }
 
@@ -197,22 +197,23 @@ bool str_includes(const char* str, char* sub_str, size_t sub_str_length){
 }
 
 void copy_selection_to_clipboard(Editor *e){
+  Buffer *buff = e->buffers[e->current_buff];
   Line *selected = new_line(DEFAULT_LINE_SIZE * 10);
-  size_t current_index = e->buffers[e->current_buff]->current_line_index;
+  size_t current_index = buff->current_line_index;
   bool is_up = is_selecting_up(e);
   for(
     int i = (is_up ? current_index : e->conf.selection_start.row);
     i <= (is_up ? e->conf.selection_start.row : current_index);
     i++
   ){
-    for(int j = 0; j < e->buffers[e->current_buff]->lines[i]->length; j++){
+    for(int j = 0; j < buff->lines[i]->length; j++){
       if(is_selected(e, (RowCol){i, j}))
-      add_char_to_line(e, selected, e->buffers[e->current_buff]->lines[i]->chars[j], true);
+      add_char_to_line(selected, buff->lines[i]->chars[j], selected->length);
     }
     if(i < (is_up ? e->conf.selection_start.row : current_index))
-    add_char_to_line(e, selected, '\n', true);
+    add_char_to_line(selected, '\n', selected->length);
   }
-  add_char_to_line(e, selected, '\0', true);
+  add_char_to_line(selected, '\0', selected->length);
   int success = copy_to_clipboard(selected->chars);
   if(success) new_message(e, "Copied!", GOOD);
   else new_message(e, "Failed to copy!", ERROR);
@@ -226,7 +227,7 @@ void paste_from_clipboard(Editor *e){
       start_new_line(e);
     } 
     else {
-      add_char_to_line(e, e->buffers[e->current_buff]->lines[e->buffers[e->current_buff]->current_line_index], buff[i],false);
+      add_char_to_current_buffer(e, buff[i]);
     }
   }
 }
