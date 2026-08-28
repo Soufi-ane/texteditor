@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
 
       DrawLineChars(e, is_blinking, x_offset, y_offset, i);
 
-      y_offset++;
+      y_offset += (buff->lines[i]->length / get_max_line_length(e)) + 1;
       x_offset = 0;
 
     }
