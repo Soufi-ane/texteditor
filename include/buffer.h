@@ -6,6 +6,7 @@
 #include "conf.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MAX_STACK_SIZE 1024
 
 typedef enum {
   INFO,
@@ -43,6 +44,37 @@ typedef enum {
   ABSOLUTE
 } LineNumbers;
 
+typedef struct{
+  ssize_t row;
+  ssize_t col;
+} RowCol;
+
+typedef enum {
+  ADD_STR,
+  DELETE_STR,
+  ADD_LINE,
+  DELETE_LINE,
+  REPLACE
+} ActionType;
+
+typedef struct {
+  ssize_t length;
+  ssize_t capacity;
+  char *chars;
+} Line;
+
+typedef struct {
+  ActionType type;
+  RowCol pos;
+  Line *str;
+  // ssize_t replace_length;
+} Action;
+
+typedef struct {
+  Action actions[MAX_STACK_SIZE];
+  ssize_t top;
+} ActionStack;
+
 typedef struct {
   CmdType type;
   const char *text;
@@ -60,12 +92,6 @@ typedef struct {
 } Cursor;
 
 typedef struct {
-  ssize_t length;
-  ssize_t capacity;
-  char *chars;
-} Line;
-
-typedef struct {
   char *text;
   MessageType type;
 } Message;
@@ -80,15 +106,13 @@ typedef struct {
   ssize_t d_length;
   Line **lines;
   Cursor cursor;
+  ActionStack undo_stack;
+  ActionStack redo_stack;
+  Action *current_action;
   char const * file_path;
   bool is_saved;
   bool is_readonly;
 } Buffer ;
-
-typedef struct{
-  ssize_t row;
-  ssize_t col;
-} RowCol;
 
 typedef struct {
   ssize_t top;
@@ -206,7 +230,7 @@ void move_to_word_beginning(Editor* e);
 
 void move_to_word_ending(Editor* e);
 
-void start_new_line(Editor *e);
+void add_new_line(Buffer *buff, ssize_t index);
 
 void update_scroll(Editor *e, bool is_up);
 
@@ -218,7 +242,7 @@ bool is_selected(Editor *e, RowCol row_col);
 
 bool is_selecting_up(Editor *e);
 
-void remove_char_from_line(Editor* e, Line *line);
+int remove_char_from_cur_buf(Editor *e, ssize_t line_index, ssize_t char_index);
 
 void pop_char_single_line(Line *line);
 
@@ -251,6 +275,30 @@ void increase_font_size(Editor *e);
 
 void decrease_font_size(Editor *e);
 
-void move_to_matching_pair(Buffer *buff, char c);
+void move_to_matching_pair(Editor *e, char c);
+
+void action_stack_push(ActionStack *stack, Action action);
+
+Action *action_stack_pop(ActionStack *stack);
+
+Action* init_action(ActionType type, RowCol pos);
+
+void action_delete_new_str(Editor *e, Action *act);
+
+void action_add_old_str(Editor *e, Action *act);
+
+void undo(Editor *e);
+
+void undo_action(Editor *e, Action *act);
+
+void redo(Editor *e);
+
+void redo_action(Editor *e, Action *act);
+
+void free_action(Action *action);
+
+void action_stack_flush(ActionStack *stack);
+
+void update_action(Action **act, ActionType type, RowCol pos, char c);
 
 #endif

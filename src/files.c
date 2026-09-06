@@ -224,7 +224,10 @@ void paste_from_clipboard(Editor *e){
   read_from_clipboard(buff, sizeof(buff));
   for(int i = 0; buff[i] != '\0'; i++){
     if(buff[i] == '\n') {
-      start_new_line(e);
+      add_new_line(
+        e->buffers[e->current_buff],
+        e->buffers[e->current_buff]->current_line_index + 1
+      );
     } 
     else {
       add_char_to_current_buffer(e, buff[i]);
