@@ -35,10 +35,10 @@ int main(int argc, char **argv) {
     e->s_height = GetScreenHeight();
     e->mouse = GetMousePosition();
     char_size = get_char_size(e->conf.font_data.size);
-    e->buffers[e->current_buff]->cursor.height = char_size.row;
-    e->buffers[e->current_buff]->cursor.width = char_size.col;
+    e->buffs->data[e->current_buff]->cursor.height = char_size.row;
+    e->buffs->data[e->current_buff]->cursor.width = char_size.col;
     Padding pad = e->conf.padding;
-    Buffer *buff = e->buffers[e->current_buff];
+    Buffer *buff = e->buffs->data[e->current_buff];
 
     double now = GetTime();
     if(
@@ -53,31 +53,18 @@ int main(int argc, char **argv) {
       }
     }
 
+    BeginDrawing();
+
     ClearBackground(GetColor(e->conf.bg_color));
 
     if(e->conf.is_showing_lines) DrawEditorLines(e);
 
-    ssize_t y_offset = 0;
-    ssize_t i, x_offset = 0;
-    ssize_t display_start = buff->d_start;
-    ssize_t display_end   = display_start + buff->d_length;
-    ssize_t total_length  = buff->length;
+    DrawBufferText(e, is_blinking);
 
-    for (i = display_start; i < display_end && i < total_length; i++) {
-
-      if(e->conf.ln_mode != NONE) DrawLineNumber(e, i, y_offset);
-
-      DrawLineChars(e, is_blinking, x_offset, y_offset, i);
-
-      y_offset += (buff->lines[i]->length / get_max_line_length(e)) + 1;
-      x_offset = 0;
-
-    }
-
-    handle_keys(e);
     DrawStatusLine(e);
     if(buff->current_msg_index > -1) DrawCurrentMessage(e);
     if(e->conf.is_menu_open) DrawMenu(e);
+    handle_keys(e);
 
     EndDrawing();
   }

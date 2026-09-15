@@ -8,8 +8,8 @@
 
 #define HOLD_PRESS_DELAY 0.02f
 #define PAIRS_COUNT 8
-#define cur_buf  e->buffers[e->current_buff]
-#define cur_line cur_buf->lines[cur_buf->current_line_index]
+#define cur_buf e->buffs->data[e->current_buff]
+#define cur_line cur_buf->lines->data[cur_buf->cur_li]
 
 double long_press_time = 0.0f;
 double last_press_time = 0.0f;
@@ -23,25 +23,98 @@ Cmd default_cmds[NUM_COMMANDS] = {
   { OPEN_MESSAGES , "Open log messages" },
 };
 
-ssize_t get_max_line_length(Editor *e){ 
-  ssize_t char_width = get_char_size(e->conf.font_data.size).col;
-  ssize_t x_padding = e->conf.padding.left + e->conf.padding.right;
+size_t get_max_line_length(Editor *e){ 
+  size_t char_width = get_char_size(e->conf.font_data.size).col;
+  size_t x_padding = e->conf.padding.left + e->conf.padding.right;
   if(e->conf.ln_mode != NONE) x_padding += e->conf.ln_padding * (e->conf.letter_spacing + char_width);
   return (e->s_width - x_padding) / (e->conf.letter_spacing + char_width); 
 }
 
-ssize_t get_max_num_lines(Editor *e){ 
-  ssize_t char_height = get_char_size(e->conf.font_data.size).row;
-  ssize_t y_padding = e->conf.padding.top + e->conf.padding.bottom;
+void update_buf_state(Editor *e){
+  cur_buf->current_msg_index = -1;
+  cur_buf->cursor.last_time_moved = GetTime();
+  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
+  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
+}
+
+size_t get_num_gui_lines(Buffer *buff){
+  size_t num_gui_lines = buff->lines->len ;
+  for(size_t i = 0; i < buff->lines->len; i++){
+    num_gui_lines += buff->lines->data[i].wraps;
+  }
+  return num_gui_lines;
+}
+
+size_t get_line_from_index(Lines *lines, size_t index){
+  for(size_t i = 0; i < lines->len; i++){
+    if(index >= lines->data[i].start && index <= lines->data[i].end) return i;
+  }
+}
+
+void update_line_number_padding(Editor *e){
+  if(!cur_buf->lines) return;
+  e->conf.ln_padding = get_digit_count(cur_buf->lines->len);
+}
+
+void update_lines(Editor *e){
+  if(!cur_buf || !cur_buf->s || !cur_buf->lines) return;
+  cur_buf->lines->len = 0;
+  Line line = {0};
+  size_t max_len = get_max_line_length(e);
+  size_t i, x_offset = 0, y_offset = 0, index = 0;
+  for (i = 0; i <= cur_buf->s->len; i++) {
+    char c = cur_buf->s->data[i];
+    
+    if((x_offset) >= max_len) {
+      y_offset++;
+      x_offset = 0;
+      line.wraps++;
+    }
+    else if(isspace(cur_buf->s->data[i - 1]) || i == 1){
+      int word_len = 0;
+      while(!isspace(cur_buf->s->data[i + word_len++]));
+      if((x_offset + word_len - 1) > max_len && word_len < max_len){
+        x_offset = 0;
+        y_offset++;
+        line.wraps++;
+      }
+    }
+
+    if(index == cur_buf->cursor.index){
+      cur_buf->cur_li = cur_buf->lines->len;
+      cur_buf->cursor.pos.col = x_offset;
+      cur_buf->cursor.pos.row = y_offset;
+    }
+    if(c == '\n'){
+      line.end = i;
+      da_append(cur_buf->lines, line);
+      line.start = i + 1;
+      line.wraps = 0;
+      y_offset++;
+      x_offset = 0;
+      index++;
+      continue;
+    }
+    index++;
+    x_offset++;
+  }
+  line.end = i - 1;
+  da_append(cur_buf->lines, line);
+  update_line_number_padding(e);
+}
+
+size_t get_max_num_lines(Editor *e){ 
+  size_t char_height = get_char_size(e->conf.font_data.size).row;
+  size_t y_padding = e->conf.padding.top + e->conf.padding.bottom;
   return (e->s_height - y_padding) / (e->conf.line_height + char_height); 
 }
 
 bool is_selecting_up(Editor *e){
-  return e->buffers[e->current_buff]->current_line_index <= e->conf.selection_start.row;
+  return cur_buf->cursor.index <= e->conf.selection_start;
 }
 
 void move_to_matching_pair(Editor *e, char c){
-  int pairs[PAIRS_COUNT] = { '{', '(', '[', '<', '>', ']', ')', '}' };
+/*   int pairs[PAIRS_COUNT] = { '{', '(', '[', '<', '>', ']', ')', '}' };
   int pair_index = 0;
   int i;
   for(i = 0; i < PAIRS_COUNT; i++) {
@@ -51,7 +124,7 @@ void move_to_matching_pair(Editor *e, char c){
   int match = match = pairs[PAIRS_COUNT - pair_index - 1];
   bool is_opening = pair_index < (PAIRS_COUNT / 2); 
   int num_opened = 1;
-  int line_index = cur_buf->current_line_index;
+  int line_index = cur_buf->cur_li;
   int char_index = cur_buf->cursor.index;
   int next = 0;
   while(num_opened){ 
@@ -79,21 +152,22 @@ void move_to_matching_pair(Editor *e, char c){
     }
   }
   if(next == match && num_opened == 0) {
-    cur_buf->current_line_index = line_index;
+    cur_buf->cur_li = line_index;
     cur_buf->cursor.index = char_index;
   }
-  cur_buf->cursor.last_time_moved = GetTime();
+  cur_buf->cursor.last_time_moved = GetTime(); */
 }
 
 void filter_cmds_by_prompt(Editor *e){
   int index = 0;
   e->selected_cmd = 0;
-  for(ssize_t i = 0; i < NUM_COMMANDS; i++){
-    if(!e->cmd_prompt->length){
+  for(size_t i = 0; i < NUM_COMMANDS; i++){
+    if(!e->prompt->len){
       e->displayed_cmds[index++] = i;
       continue;
     }
-    bool is_match = str_includes(default_cmds[i].text, e->cmd_prompt->chars, e->cmd_prompt->length);
+
+    bool is_match = str_includes(string(default_cmds[i].text), e->prompt);
     if(is_match){
       e->displayed_cmds[index++] = i;
     }
@@ -101,51 +175,43 @@ void filter_cmds_by_prompt(Editor *e){
   e->num_cmds_displayed = index;
 }
 
-bool is_selected(Editor *e, RowCol row_col){
+bool is_selected(Editor *e, size_t index){
   if(!e->conf.is_selecting) return false;
-  bool is_at_start = row_col.row == e->conf.selection_start.row;
-  bool is_at_current = row_col.row == cur_buf->current_line_index;
-  bool is_left = cur_buf->cursor.index <= e->conf.selection_start.col;
-
-  if(is_at_start && is_at_current){
-    return is_left ? 
-      row_col.col <= e->conf.selection_start.col && row_col.col >= cur_buf->cursor.index
-      : row_col.col >= e->conf.selection_start.col && row_col.col <= cur_buf->cursor.index;
+  bool is_left = cur_buf->cursor.index <= e->conf.selection_start;
+  if(is_left){
+    return index >= cur_buf->cursor.index && index <= e->conf.selection_start;
+  }else {
+    return index >= e->conf.selection_start && index <= cur_buf->cursor.index;
   }
-  if(
-    row_col.row >= e->conf.selection_start.row &&
-    row_col.row <= cur_buf->current_line_index
-  ){
-    if(is_at_start) return row_col.col >= e->conf.selection_start.col;
-    if(is_at_current) return row_col.col <= cur_buf->cursor.index;
-    return true;
-  }
-  if(
-    row_col.row >= cur_buf->current_line_index &&
-    row_col.row <= e->conf.selection_start.row
-  ){
-    if(is_at_start) return row_col.col <= e->conf.selection_start.col;
-    if(is_at_current) return row_col.col >= cur_buf->cursor.index;
-    return true;
-  }
-  return false;
 }
 
-void update_scroll(Editor *e, bool is_up){
-  ssize_t wraps = get_lines_wraps(e, cur_buf->d_start, cur_buf->d_start + cur_buf->d_length, true);
-  ssize_t max = get_max_num_lines(e);
-  ssize_t max_lines = max - wraps;
-  ssize_t current_index = cur_buf->current_line_index;
-  cur_buf->d_length = cur_buf->length < max ? cur_buf->length : max;
-  if(cur_buf->d_length < 1) cur_buf->d_length = 1;
+void update_scroll(Editor *e, bool center_line, bool is_up){
+  size_t max = get_max_num_lines(e);
+  size_t first_gui_i = get_line_from_index(cur_buf->lines, cur_buf->d_start);
+  size_t wraps = get_lines_wraps(e, first_gui_i, first_gui_i + max);
+  size_t max_lines = max - wraps;
+  size_t start_line;
 
-  if(is_up){
-    if(current_index < cur_buf->d_start && cur_buf->d_start) cur_buf->d_start--;
+  if(cur_buf->cur_li < first_gui_i + e->conf.scroll_pad) {
+    if(cur_buf->cur_li < e->conf.scroll_pad) {
+      cur_buf->d_start = 0;
+    }else {
+      start_line = cur_buf->cur_li - e->conf.scroll_pad; 
+      cur_buf->d_start = cur_buf->lines->data[start_line].start;
+    }
   }
-  else {
-    if(current_index > cur_buf->d_start + cur_buf->d_length - 1) cur_buf->d_start++;
-  } 
-  if(current_index < 1) cur_buf->d_start = 0;
+  else if(cur_buf->cur_li > (max_lines / 2)){
+    if(center_line && cur_buf->cur_li < cur_buf->lines->len - (max_lines / 2)) {
+      start_line = cur_buf->cur_li - (max_lines / 2);
+      cur_buf->d_start = cur_buf->lines->data[start_line].start;
+    }else if(!is_up && cur_buf->cur_li > first_gui_i + max_lines - e->conf.scroll_pad) {
+      start_line = cur_buf->cur_li + e->conf.scroll_pad - max_lines;
+      cur_buf->d_start = cur_buf->lines->data[start_line].start;
+    }
+  }else if(cur_buf->cur_li > first_gui_i + max_lines - e->conf.scroll_pad){
+    start_line = cur_buf->cur_li + e->conf.scroll_pad - max_lines;
+    cur_buf->d_start = cur_buf->lines->data[start_line].start;
+  }
 }
 
 int get_digit_count(int number){
@@ -154,14 +220,10 @@ int get_digit_count(int number){
   return count > 1 ? (count - 1) : count;
 }
 
-void update_line_number_padding(Editor *e){
-  e->conf.ln_padding = get_digit_count(cur_buf->length);
-}
-
 void handle_append(Editor *e){
   e->mode = INSERT;
   e->conf.is_selecting = false;
-  if(cur_buf->lines[cur_buf->current_line_index]->length > 0) move_cursor_right(e);
+  if(cur_line.end - cur_line.start > 0) move_cursor_right(e);
 }
 
 void toggle_full_screen(Editor *e){
@@ -185,163 +247,125 @@ void toggle_full_screen(Editor *e){
   e->is_full_screen = !e->is_full_screen;
 }
 
-void realloc_buffer(Buffer *buff, ssize_t new_capacity){
-  buff->lines = realloc(buff->lines, sizeof(Line*) * new_capacity);
-  for(ssize_t i = buff->capacity; i < new_capacity; i++){
-    buff->lines[i] = new_line(DEFAULT_LINE_SIZE);
-  }
-  buff->capacity = new_capacity;
-}
-
-void add_new_line(Buffer *buff, ssize_t index){
-  if(index > buff->length || index < 0) return;
+void add_new_line(Buffer *buff, size_t index){
+/*   if(index > buff->length || index < 0) return;
   if(buff->length >= buff->capacity - 1){
-    ssize_t new_capacity = buff->capacity + 10;
+    size_t new_capacity = buff->capacity + 10;
     realloc_buffer(buff, new_capacity);
   } 
-  for(ssize_t i = buff->length; i > index; i--){
+  for(size_t i = buff->length; i > index; i--){
     buff->lines[i] = buff->lines[i - 1];
   }
   buff->lines[index] = new_line(DEFAULT_LINE_SIZE);
   buff->cursor.index = 0; 
   buff->length++;
-  buff->current_line_index = index;
+  buff->cur_li = index;
   buff->num_chars++;
   buff->is_saved = false;
-  buff->cursor.last_time_moved = GetTime();
+  buff->cursor.last_time_moved = GetTime(); */
 }
 
-ssize_t add_char_to_current_buffer(Editor* e, char c){
-  size_t insertion_index = 0;
+void add_char_to_cur_buf(Editor *e, char c, size_t index){
 
-  if(cur_buf->cursor.index > cur_line->length) return 0;
+  String *str = cur_buf->s;
 
-  if(cur_line->length >= cur_line->capacity - 1){
-    ssize_t new_capacity = cur_line->capacity * 2;
-    realloc_line(cur_line, new_capacity);
+  if(str->len >= str->cap){
+    size_t new_cap = str->cap * 2;
+    realloc_str(str, new_cap);
   } 
 
-  for(ssize_t i = cur_line->length; i > cur_buf->cursor.index; i--) {
-    cur_line->chars[i] = cur_line->chars[i - 1];
-  }
+  memmove(&str->data[index + 1], &str->data[index], str->len - index);
 
-  cur_line->chars[cur_buf->cursor.index] = c;
-  insertion_index = cur_buf->cursor.index;
-  cur_line->length++;
-  cur_buf->cursor.index++;
-  cur_buf->num_chars++;
-  cur_line->chars[cur_line->length] = '\0';
-  update_scroll(e, false);
-  update_line_number_padding(e);
-  cur_buf->current_msg_index = - 1;
-  if(!e->conf.is_menu_open) cur_buf->is_saved = false;
-  cur_buf->cursor.last_time_moved = GetTime();
-  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
-  return insertion_index;
-}
-
-void add_str_to_line(Line *line, char *str, size_t len, size_t index){
-  if(index < 0 || len < 1 || line == NULL) return;
-  if(line->capacity < line->length + len - 1) realloc_line(line, line->capacity * 2);
-  memmove(&line->chars[index + len], &line->chars[index], line->length - index + 1);
-  memcpy(&line->chars[index], str, len);
-  line->length += len;
-}
-
-void replace_char_in_line(Line *line, ssize_t index, char new_char){
-  if(index < 0 || index > line->length - 1 || line == NULL) return;
-  line->chars[index] = new_char;
-}
-
-void add_char_to_line(Line *line, char c, size_t index){
-  if(index < 0 || index > line->length || line == NULL) return;
-  if(line->capacity <= line->length) realloc_line(line, line->capacity * 2);
-  memmove(&line->chars[index + 1], &line->chars[index], line->length - index + 1);
-  line->chars[index] = c;
-  line->length++;
-}
-
-void pop_char_single_line(Line *line){
-  if(!line->length) return;
-  line->chars[line->length - 1] = '\0';
-  line->length--;
-}
-
-int remove_char_from_cur_buf(Editor *e, ssize_t line_index, ssize_t char_index){
-  int char_removed = -1;
-  Line *line = cur_buf->lines[line_index];
-  if(!cur_buf->num_chars) return -1;
-  if(char_index < 0) {
-    if(line_index){
-      Line *prev_line = cur_buf->lines[line_index - 1];
-      while(prev_line->capacity - prev_line->length < line->length){
-        realloc_line(prev_line, prev_line->capacity * 2);
-      }
-      memcpy(&prev_line->chars[prev_line->length], line->chars, (size_t) line->length);
-      cur_buf->cursor.index = prev_line->length;
-      prev_line->length += line->length;
-      delete_lines(cur_buf, line_index, 1);
-      cur_buf->current_line_index = line_index - 1;
-      update_scroll(e, true);
-      char_removed = '\n'; // not really
-    }  
-  } 
-  else if(char_index < line->length - 1){
-    char_removed = line->chars[char_index];
-    memmove(
-      &line->chars[char_index],
-      &line->chars[char_index + 1],
-      line->length - char_index
-    );
-    line->length--;
-    cur_buf->cursor.index = char_index;
-  }
-  else {
-    char_removed = line->chars[line->length - 1];
-    line->chars[--line->length] = '\0';
-    cur_buf->cursor.index = char_index;
-  }
-  if(char_removed > -1) cur_buf->num_chars--;
-  update_scroll(e, true);
-  update_line_number_padding(e);
+  str->data[index] = c;
+  str->len++;
+  cur_buf->cursor.index = index + 1;
+  update_lines(e);
+  update_scroll(e, false, false);
+  update_buf_state(e);
   cur_buf->is_saved = false;
-  cur_buf->cursor.last_time_moved = GetTime();
-  return char_removed;
 }
 
-ssize_t get_lines_wraps(Editor *e, int from, int to, bool include_last){
+void add_str_to_str(String *dest, char *str, size_t len, size_t index){
+  /* if(index < 0 || len < 1 || line == NULL) return;
+  if(line->buffs->cap < line->buffs->len + len - 1) realloc_line(line, line->buffs->cap * 2);
+  memmove(&line->chars[index + len], &line->chars[index], line->buffs->len - index + 1);
+  memcpy(&line->chars[index], str, len);
+  line->buffs->len += len; */
+}
+
+void replace_char(String *str, size_t index, char new_char){
+  /* if(index < 0 || index > line->buffs->len - 1 || line == NULL) return;
+  line->chars[index] = new_char; */
+}
+
+void add_char_to_str(String *str, char c, size_t index){
+  if(index < 0 || index > str->len || str == NULL) return;
+  if(str->cap <= str->len) realloc_str(str, str->cap * 2);
+  memmove(&str->data[index + 1], &str->data[index], str->len - index + 1);
+  str->data[index] = c;
+  str->len++;
+}
+
+void str_pop_char(String *str){
+  /* if(!line->buffs->len) return;
+  line->chars[line->buffs->len - 1] = '\0';
+  line->buffs->len--; */
+}
+
+void remove_chars_from_string(String *str, size_t index, size_t count){
+  memmove(
+    &str->data[index],
+    &str->data[index + count],
+    str->len - index - count
+  );
+  str->len -= count;
+}
+
+size_t get_lines_wraps(Editor *e, size_t from, size_t to){
   if(from > to) return 0;
   if(from < 0) from = 0;
-  if(to >= cur_buf->length) to = cur_buf->length - 1;
-  ssize_t wraps = 0;
-  ssize_t max = get_max_line_length(e);
-  for(ssize_t i = from; (include_last ? (i <= to) : (i < to)); i++){
-    wraps += cur_buf->lines[i]->length / max; 
+  if(to >= cur_buf->lines->len) to = cur_buf->lines->len - 1;
+  size_t wraps = 0;
+  size_t max = get_max_line_length(e);
+  for(size_t i = from; i <= to; i++){
+    wraps += cur_buf->lines->data[i].wraps; 
   }
   return wraps;
 }
   
-void update_last_index(Editor* e){
-  cur_buf->cursor.last_index = cur_buf->cursor.index; 
+void update_last_col(Editor* e){
+  cur_buf->cursor.last_col = cur_buf->cursor.pos.col;
+}
+
+void move_cursor_right(Editor* e) {
+  update_lines(e);
+  bool is_normal = e->conf.is_vim_mode && e->mode == NORMAL;
+  if(cur_buf->cursor.index < cur_buf->s->len - (is_normal ? 1 : 0)){
+    if(cur_buf->cursor.index + 1 == cur_line.end){
+      if(is_normal) {
+        cur_buf->cursor.index++;
+      } 
+    }
+    cur_buf->cursor.index++;
+  }
+  update_lines(e);
+  update_last_col(e);
+
+  update_buf_state(e);
 }
 
 void move_cursor_left(Editor* e) {
-  ssize_t *current_index = &cur_buf->current_line_index;
   if(cur_buf->cursor.index) {
+    if(cur_buf->cursor.index == cur_line.start){
+      if(e->conf.is_vim_mode && e->mode == NORMAL) {
+        cur_buf->cursor.index--;
+      }
+    }
     cur_buf->cursor.index--;
-    update_last_index(e);
-  }else {
-    if(*current_index) {
-      (*current_index)--;
-      cur_buf->cursor.index = cur_buf->lines[*current_index]->length - 1;
-    } 
-  }
-  cur_buf->current_msg_index = -1;
-
-  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
-  cur_buf->cursor.last_time_moved = GetTime();
+  } 
+  update_lines(e);
+  update_last_col(e);
+  update_buf_state(e);
 }
 
 void handle_caps_lock_and_escape(Editor* e){
@@ -349,16 +373,16 @@ void handle_caps_lock_and_escape(Editor* e){
     if(e->conf.is_selecting) e->conf.is_selecting = false;
     else if(e->mode == INSERT){
       e->mode = NORMAL;
-      if(cur_buf->cursor.index) move_cursor_left(e);
+      if(cur_buf->cursor.index != cur_line.start) move_cursor_left(e);
       e->conf.is_menu_open = false;
-      e->cmd_prompt->length = 0;
+      e->prompt->len = 0;
       filter_cmds_by_prompt(e);
       e->conf.is_opening_file = false;
       e->conf.is_selecting = false;
     }
   }else {
     e->conf.is_menu_open = !e->conf.is_menu_open;
-    e->cmd_prompt->length = 0;
+    e->prompt->len = 0;
     filter_cmds_by_prompt(e);
   }
   if(cur_buf->current_action != NULL) {
@@ -368,169 +392,126 @@ void handle_caps_lock_and_escape(Editor* e){
   } 
 }
 
-void move_cursor_right(Editor* e) {
-  ssize_t *current_index = &cur_buf->current_line_index;
-  if(cur_buf->cursor.index < cur_line->length -
-    (!e->conf.is_selecting && (e->mode == INSERT || !e->conf.is_vim_mode) ? 0 : 1)){
-    cur_buf->cursor.index++;
-    update_last_index(e);
-  }else {
-    if(*current_index < cur_buf->length -1) {
-      (*current_index)++;
-      cur_buf->cursor.index = 0;
-    } 
+void move_cursor_up(Editor* e){
+  if(cur_buf->cursor.pos.row > 0){
+    size_t max_lines = get_max_num_lines(e);
+    size_t first_gui_i = get_line_from_index(cur_buf->lines, cur_buf->d_start);
+    if(first_gui_i > 0 && cur_buf->cur_li < first_gui_i + e->conf.scroll_pad) {
+      cur_buf->d_start = cur_buf->lines->data[first_gui_i - 1].start;
+    }
+    Line prev_line = cur_buf->lines->data[cur_buf->cur_li - 1];
+    cur_buf->cursor.index = prev_line.start;
+    update_lines(e);
+    adapte_col_to_cur_line(e);
+    // update_scroll(e, true);
   }
-  cur_buf->current_msg_index = -1;
-
-  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
-  cur_buf->cursor.last_time_moved = GetTime();
+  update_buf_state(e);
 }
 
 void move_cursor_down(Editor* e){
-  if(cur_buf->current_line_index >= cur_buf->length - 1) return;
-  cur_buf->current_line_index++;
-
-  if(!cur_line->length) cur_buf->cursor.index = 0;
-
-  else if(cur_line->length - 1 < cur_buf->cursor.last_index){
-    cur_buf->cursor.index = cur_line->length ? cur_line->length - 1 : 0;
-  } else cur_buf->cursor.index = cur_buf->cursor.last_index;
-
-  update_scroll(e, false);
-  update_line_number_padding(e);
-  cur_buf->current_msg_index = -1;
-
-  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
-  cur_buf->cursor.last_time_moved = GetTime();
+  if(cur_buf->cur_li < cur_buf->lines->len - 1){
+    size_t max_lines = get_max_num_lines(e);
+    size_t first_gui_i = get_line_from_index(cur_buf->lines, cur_buf->d_start);
+    size_t wraps = get_lines_wraps(e, first_gui_i, cur_buf->cur_li);
+    if(cur_buf->cur_li >= first_gui_i + max_lines - wraps - e->conf.scroll_pad /* - 1 */){
+      cur_buf->d_start = cur_buf->lines->data[first_gui_i + 1].start;
+    }
+    Line next_line = cur_buf->lines->data[cur_buf->cur_li + 1];
+    cur_buf->cursor.index = next_line.start;
+    update_lines(e);
+    adapte_col_to_cur_line(e);
+    // update_scroll(e, false);
+  }
+  update_buf_state(e);
 }
 
-void adapte_index_to_current_line(Editor *e){
-  if(!cur_line->length) cur_buf->cursor.index = 0;
-  else if(cur_line->length - 1 < cur_buf->cursor.last_index){
-    cur_buf->cursor.index = cur_line->length ? cur_line->length - 1 : 0;
-  } else cur_buf->cursor.index = cur_buf->cursor.last_index;
-}
-
-void move_cursor_up(Editor* e){
-  if(!cur_buf->current_line_index) return;
-  cur_buf->current_line_index--;
-  adapte_index_to_current_line(e);
-  update_scroll(e, true);
-  update_line_number_padding(e);
-  cur_buf->current_msg_index = -1;
-
-  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
-  cur_buf->cursor.last_time_moved = GetTime();
+void adapte_col_to_cur_line(Editor *e){
+  size_t len = cur_line.end - cur_line.start;
+  if(len - 1 >= cur_buf->cursor.last_col){
+    cur_buf->cursor.index += cur_buf->cursor.last_col;
+  } else cur_buf->cursor.index = cur_line.end - (len ? 1 : 0);
 }
 
 void move_to_beginning_of_line(Editor* e) {
-  if(!cur_buf->cursor.index) return;
-  cur_buf->cursor.index = 0;
-  update_last_index(e);
-
-  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
-  update_scroll(e, true);
-  cur_buf->cursor.last_time_moved = GetTime();
+  if(cur_buf->cursor.pos.col <= 0) return;
+  cur_buf->cursor.index = cur_line.start;
+  update_lines(e);
+  update_last_col(e);
+  // update_scroll(e, true);
+  update_buf_state(e);
 }
 
 void move_to_end_of_line(Editor* e) {
-  if(cur_buf->cursor.index == cur_line->length - 1) return;
-  cur_buf->cursor.index += cur_line->length - cur_buf->cursor.index - 1;
-  update_last_index(e);
-
-  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
-  update_scroll(e, false);
-  cur_buf->cursor.last_time_moved = GetTime();
+  if(cur_buf->cursor.pos.col >= cur_line.end - cur_line.start) return;
+  cur_buf->cursor.index = cur_line.end - 1;
+  update_lines(e);
+  update_last_col(e);
+  // update_scroll(e, false);
+  update_buf_state(e);
 }
 
 void move_to_word_ending(Editor* e){
-  bool next_exists = cur_buf->current_line_index < cur_buf->length - 1;
-  if(next_exists && (!cur_line->length || cur_buf->cursor.index == cur_line->length - 1)){
-    cur_buf->current_line_index++;
-    cur_buf->cursor.index = 0;
-    if(!cur_line->length) {
-      move_to_word_ending(e);
-      return;
-    }
-  }
-  ssize_t i = cur_buf->cursor.index; 
-  while(isspace(cur_line->chars[i + 1])){
+  size_t i = cur_buf->cursor.index; 
+  char *text = cur_buf->s->data;
+  size_t last_index = cur_buf->s->len - 1;
+  while(isspace(text[i + 1]) && i < last_index ){
     move_cursor_right(e);
     i++;
   }
-  if(!isalnum(cur_line->chars[i + 1]) && i < cur_line->length - 1){
+  if(!isalnum(text[i + 1]) && i < last_index){
     move_cursor_right(e);
     i++;
   }
-  while(i < cur_line->length && (isalnum(cur_line->chars[i + 1]) || cur_line->chars[i + 1] == '_')) {
+  while((isalnum(text[i + 1]) || text[i + 1] == '_') && i < last_index) {
     move_cursor_right(e);
     i++;
   }
   cur_buf->cursor.index = i;
-  update_last_index(e);
+  update_last_col(e);
+  update_buf_state(e);
 
-  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
-  update_scroll(e, false);
-  cur_buf->cursor.last_time_moved = GetTime();
+  // update_scroll(e, false);
 }
 
 void move_to_word_beginning(Editor* e){
-  if(cur_buf->cursor.index == 0 && cur_buf->current_line_index) {
-    cur_buf->current_line_index--;
-    cur_buf->cursor.index = cur_line->length ? cur_line->length - 1 : 0;
-  } 
-  ssize_t i = cur_buf->cursor.index; 
-  while(isspace(cur_line->chars[i - 1])){
+  size_t i = cur_buf->cursor.index; 
+  char *text = cur_buf->s->data;
+  while(isspace(text[i - 1]) && i > 0){
     move_cursor_left(e);
     i--;
   }
-  if(!isalnum(cur_line->chars[i - 1]) && cur_buf->cursor.index > 1) {
+  if(!isalnum(text[i - 1]) && i > 0) {
     move_cursor_left(e);
     i--;
   }
-  while(i > 0 && (isalnum(cur_line->chars[i - 1]) || cur_line->chars[i - 1] == '_')) {
+  while((isalnum(text[i - 1]) || text[i - 1] == '_') && i > 0) {
     move_cursor_left(e);
     i--;
   }
   cur_buf->cursor.index = i;
-  update_last_index(e);
+  update_last_col(e);
 
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
   if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
-  update_scroll(e, true);
-  cur_buf->cursor.last_time_moved = GetTime();
-}
-
-void remove_current_char(Editor* e){
-  if(!cur_line->length) return;
-  if(cur_buf->cursor.index < cur_line->length - 1){
-    for(int i = cur_buf->cursor.index; i <= cur_line->length; i++) {
-      cur_line->chars[i] = cur_line->chars[i + 1];
-    }
-  } else move_cursor_left(e);
-  cur_line->length--;
-  cur_buf->is_saved = false;
+  // update_scroll(e, true);
+  cur_buf->cursor.last_time_moved = GetTime(); 
 }
 
 void go_to_next_buffer(Editor *e){
-  if(e->length < 2) return;
-  if(e->current_buff >= e->length - 1) e->current_buff = 0;
+  if(e->buffs->len < 2) return;
+  if(e->current_buff >= e->buffs->len - 1) e->current_buff = 0;
   else e->current_buff++;
   e->conf.is_selecting = false;
+  update_lines(e);
   update_line_number_padding(e);
 }
 
 void go_to_prev_buffer(Editor *e){
-  if(e->length < 2) return;
-  if(e->current_buff < 1) e->current_buff = e->length - 1;
+  if(e->buffs->len < 2) return;
+  if(e->current_buff < 1) e->current_buff = e->buffs->len - 1;
   else e->current_buff--;
   e->conf.is_selecting = false;
+  update_lines(e);
   update_line_number_padding(e);
 }
 
@@ -539,19 +520,19 @@ void handle_tab(Editor* e, bool is_shift_down) {
     if(e->mode == INSERT || !e->conf.is_vim_mode){
       if(e->conf.is_spaces_for_tabs) {
         for(int i = 0; i < e->conf.tab_size; ++i)  {
-          ssize_t index = add_char_to_current_buffer(e, ' ');
-          update_action(
+          add_char_to_cur_buf(e, ' ', cur_buf->cursor.index);
+          /* update_action(
             &cur_buf->current_action, ADD_STR,
-            (RowCol){ cur_buf->current_line_index, index }, ' '
-          );
+            (RowCol){ cur_buf->cur_li, index }, ' '
+          ); */
         }
       }
       else {
-        ssize_t index = add_char_to_current_buffer(e, '\t');
-        update_action(
+        add_char_to_cur_buf(e, '\t', cur_buf->cursor.index);
+        /* update_action(
           &cur_buf->current_action, ADD_STR,
-          (RowCol){ cur_buf->current_line_index, index }, '\t'
-        );
+          (RowCol){ cur_buf->cur_li, index }, '\t'
+        ); */
       }
     }else if(e->conf.is_vim_mode){
       if(is_shift_down) go_to_prev_buffer(e);
@@ -572,24 +553,28 @@ void force_quit(Editor *e){
   e->should_quit = true;
 }
 
-void delete_buffer(Editor *e, ssize_t index){
-  if(index < 0 || index > e->length - 1) return;
-  Buffer *to_delete = e->buffers[index];
-  if(e->length == 1 && (e->buffers[0]->is_saved || e->buffers[0]->is_readonly)){
-    force_quit(e);
-  }
-  else if(e->capacity < 2){
-    e->buffers[index] = new_buffer(1);
-  }else {
-    for(ssize_t i = index; i < e->capacity; i++){
-      e->buffers[i] = e->buffers[i + 1];
-    }
-    if(e->length > 1) e->length--;
-    e->capacity--;
-    if(e->current_buff > 0) e->current_buff--;
-    else if(e->current_buff < e->length - 1) e->current_buff++;
-  }
+void delete_buffer(Editor *e, size_t index){
+  if(index < 0 || index > e->buffs->len - 1) return;
+  Buffer *to_delete = e->buffs->data[index];
+
+  memmove(
+    &e->buffs->data[index],
+    &e->buffs->data[index + 1],
+    (e->buffs->len - index - 1) * sizeof(Buffer*)
+  );
+  e->buffs->len--;
+
   free_buffer(to_delete);
+
+  if(e->buffs->len) {
+    if(e->current_buff > 0) e->current_buff--;
+    else e->current_buff = e->buffs->len - 1;
+    update_lines(e);
+    update_line_number_padding(e);
+    update_buf_state(e);
+  }else {
+    force_quit(e);
+  } 
 }
 
 void try_closing_current_buffer(Editor *e){
@@ -609,9 +594,9 @@ void force_close_current_buffer(Editor *e){
 }
 
 void try_quitting(Editor *e){
-  ssize_t unsaved_index = -1;
-  for(int i = 0; i < e->length; i++){
-    if(!e->buffers[i]->is_saved && !e->buffers[i]->is_readonly){
+  size_t unsaved_index = -1;
+  for(int i = 0; i < e->buffs->len; i++){
+    if(!e->buffs->data[i]->is_saved && !e->buffs->data[i]->is_readonly){
       unsaved_index = i;
       break;
     }
@@ -628,172 +613,87 @@ void try_quitting(Editor *e){
   }
 }
 
-void delete_chars(Line *line, ssize_t from, ssize_t count){
-  if(from + count > line->capacity || from < 0 || count < 1) return;
-  for(int i = from; i < line->capacity - count; i++){
-    line->chars[i] = line->chars[i + count];
+void delete_chars(String *str, size_t from, size_t count){
+  if(from + count > str->cap || from < 0 || count < 1) return;
+  for(int i = from; i < str->cap - count; i++){
+    str->data[i] = str->data[i + count];
   }
-  line->length -= count;
+  str->len -= count;
 }
 
-void delete_lines(Buffer *buff, ssize_t from, ssize_t count){
-  if((from + count) > buff->length || from < 0 || count < 1 || from >= buff->length) return;
-  
-  for(int i = from; i < from + count; i++) free_line(buff->lines[i]);
-
-  for(int i = from; i < buff->capacity - count; i++){
-    buff->lines[i] = buff->lines[i + count];
-  }
-  buff->length -= count;
-  if(!buff->length) {
-    buff->length = 1;
-    buff->cursor.index = 0;
-  } 
-
-  for(int i = buff->capacity - count; i < buff->capacity; i++){
-    buff->lines[i] = new_line(DEFAULT_LINE_SIZE);
-  }
-}
-
-void move_cursor_to_last_line(Editor* e){
-  cur_buf->current_line_index = cur_buf->length - 1;
-  cur_buf->d_start = cur_buf->current_line_index - get_max_num_lines(e);
-  if(cur_buf->d_start < 0) cur_buf->d_start = 0;
-  update_scroll(e, false);
-  adapte_index_to_current_line(e);
+void move_to_last_line(Editor* e){
+  cur_buf->cursor.index = cur_buf->lines->data[cur_buf->lines->len - 1].start;
+  update_lines(e);
+  adapte_col_to_cur_line(e);
+  update_scroll(e, true, false);
+  update_buf_state(e);
 }
 
 void move_to_first_line(Editor *e){
-  cur_buf->current_line_index = 0;
-  cur_buf->d_start = 0;
-  update_scroll(e, true);
-  adapte_index_to_current_line(e);
+  cur_buf->cursor.index = cur_buf->lines->data[0].start;
+  update_lines(e);
+  adapte_col_to_cur_line(e);
+  update_scroll(e, false, true);
+  update_buf_state(e);
 }
 
 void handle_delete_selection(Editor *e){
-  bool is_up = is_selecting_up(e); 
-  ssize_t start = (is_up ? cur_buf->current_line_index : e->conf.selection_start.row); 
-  ssize_t finish = (is_up ? e->conf.selection_start.row : cur_buf->current_line_index);
-  bool is_left = cur_buf->cursor.index <= e->conf.selection_start.col;
-
-  if(e->conf.selection_start.col >= cur_buf->lines[e->conf.selection_start.row]->length){
-    e->conf.selection_start.col = cur_buf->lines[e->conf.selection_start.row]->length - 1;
-  }
-
-  Line *start_line = cur_buf->lines[start];
-  Line *end_line = cur_buf->lines[finish];
-
-  if(start != finish){
-    if(is_up){
-     start_line->length = cur_buf->cursor.index;
-     if(end_line->length) end_line->length -= e->conf.selection_start.col + 1;
-     memmove(
-       &end_line->chars[0],
-       &end_line->chars[e->conf.selection_start.col + 1],
-       end_line->length
-     );
-    }
-    else {
-     start_line->length = e->conf.selection_start.col;
-     if(end_line->length) end_line->length -= cur_buf->cursor.index + 1;
-     memmove(
-       &end_line->chars[0],
-       &end_line->chars[cur_buf->cursor.index + 1],
-       (size_t) end_line->length
-     );
-    } 
-    memcpy(
-      &start_line->chars[start_line->length],
-      &end_line->chars[0],
-      (size_t) end_line->length
-    );
-    start_line->length += end_line->length;
-    ssize_t from = start + (start_line->length ? 1 : 0);
-    ssize_t count = finish - start;
-    delete_lines(cur_buf, from , count);
-    cur_buf->current_line_index = finish - count;
-    if(cur_buf->current_line_index < 0) cur_buf->current_line_index = 0;
-    if(!e->conf.selection_start.col) cur_buf->cursor.index = 0;
-    update_scroll(e, true);
-  }else {
-    ssize_t num_chars = abs(cur_buf->cursor.index - e->conf.selection_start.col) + 1;
-    if(!start_line->length) {
-      if(cur_buf->current_line_index) {
-        delete_lines(cur_buf, start, 1);
-        cur_buf->current_line_index--;
-        update_scroll(e, true);
-        cur_buf->cursor.index = 0;
-      }
-    } else {
-      ssize_t start_index = is_left ? cur_buf->cursor.index : e->conf.selection_start.col;
-      delete_chars(start_line, start_index , num_chars);
-      if(!is_left) cur_buf->cursor.index -= num_chars ? (num_chars - 1) : 0;
-    }
-  }
+  if(!cur_buf->s->len) return;
+  bool is_left = cur_buf->cursor.index <= e->conf.selection_start;
+  size_t start = (is_left ? cur_buf->cursor.index : e->conf.selection_start); 
+  size_t finish = (is_left ? e->conf.selection_start : cur_buf->cursor.index);
+  remove_chars_from_string(cur_buf->s, start, finish - start + 1);
   e->conf.is_selecting = false;
+  cur_buf->cursor.index = start;
+  update_buf_state(e);
   update_line_number_padding(e);
+  cur_buf->is_saved = false;
 }
 
 void handle_backspace(Editor* e) {
   if(e->mode == INSERT || !e->conf.is_vim_mode) {
-    if(e->conf.is_menu_open) {
-      pop_char_single_line(e->cmd_prompt);
+    if(e->conf.is_menu_open && e->prompt->len) {
+      remove_chars_from_string(e->prompt, e->prompt->len - 1, 1);
       filter_cmds_by_prompt(e);
     }else if(e->conf.is_selecting) {
       handle_delete_selection(e);
     }
-    else {
-      int removed_char = remove_char_from_cur_buf(e, cur_buf->current_line_index, cur_buf->cursor.index - 1);
-      if(removed_char == -1) return;
-      if(cur_buf->current_action == NULL || !cur_buf->current_action->str->length){
+    else if(cur_buf->cursor.index - 1 < cur_buf->s->len && cur_buf->s->len){
+      remove_chars_from_string(cur_buf->s, cur_buf->cursor.index - 1, 1);
+      cur_buf->cursor.index--;
+      update_lines(e);
+      update_scroll(e, false, true);
+      cur_buf->is_saved = false;
+      cur_buf->cursor.last_time_moved = GetTime();
+        /* if(cur_buf->current_action == NULL || !cur_buf->current_action->str->length){
         if(cur_buf->current_action != NULL) free_action(cur_buf->current_action);
         cur_buf->current_action = init_action(
           DELETE_STR,
-          (RowCol){ cur_buf->current_line_index, cur_buf->cursor.index }
+          (RowCol){ cur_buf->cur_li, cur_buf->cursor.index }
         );
         add_char_to_line(
           cur_buf->current_action->str, removed_char,
-          cur_buf->current_action->str->length
+          cur_buf->current_action->str->len
         );
       }else {
         if(cur_buf->current_action->type != DELETE_STR){
           pop_char_single_line(cur_buf->current_action->str);
         }else {
-          cur_buf->current_action->pos.row = cur_buf->current_line_index;
+          cur_buf->current_action->pos.row = cur_buf->cur_li;
           cur_buf->current_action->pos.col = cur_buf->cursor.index;
           add_char_to_line(cur_buf->current_action->str, removed_char, 0);
         }
-      }
+      } */
     } 
   } else {
     move_cursor_left(e);
   } 
 }
 
-void debug_print_actions(Editor *e){
-  // printf("top {%zd}\n", cur_buf->undo_stack.top);
-  for(int i = 0; i < cur_buf->undo_stack.top; i++){
-    printf("%s: {\n  str: [%.*s],\n  length: %zd,\n  position: (%zd, %zd)\n}\n", 
-      cur_buf->undo_stack.actions[i].str->length,
-      cur_buf->undo_stack.actions[i].str->chars,
-      cur_buf->undo_stack.actions[i].str->length,
-      cur_buf->undo_stack.actions[i].pos.row,
-      cur_buf->undo_stack.actions[i].pos.col
-    );
-  }
-  /* for(int i = 0; i < cur_buf->redo_stack.top + 1; i++){
-    printf("undo_stack[%s {%zd, %zd}]\n", 
-      cur_buf->redo_stack.actions[i].str->chars,
-      cur_buf->redo_stack.actions[i].pos.row,
-      cur_buf->redo_stack.actions[i].pos.col
-    );
-  } */
-}
-
 void handle_normal_mode_keys(Editor* e, int c){
   switch(c){
     case 'G':
-      move_cursor_to_last_line(e);
+      move_to_last_line(e);
       break;
     case 'a':
       handle_append(e);
@@ -815,7 +715,9 @@ void handle_normal_mode_keys(Editor* e, int c){
       move_to_beginning_of_line(e);
       break;
     case 'x':
-      remove_current_char(e);
+      if(cur_buf->s->len){
+        remove_chars_from_string(cur_buf->s, cur_buf->cursor.index, 1);
+      }
       break;
     case 'b':
       move_to_word_beginning(e);
@@ -857,12 +759,11 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'f':
       toggle_full_screen(e);
-      update_scroll(e, true);
+      // update_scroll(e, true);
       break;
     case 'v':
       e->conf.is_selecting = !e->conf.is_selecting;
-      e->conf.selection_start.row = cur_buf->current_line_index;
-      e->conf.selection_start.col = cur_buf->cursor.index;
+      e->conf.selection_start = cur_buf->cursor.index;
       break;
     case 'y':
       copy_selection_to_clipboard(e);
@@ -872,26 +773,25 @@ void handle_normal_mode_keys(Editor* e, int c){
     case 'p':
       if(e->conf.is_selecting) handle_delete_selection(e);
       paste_from_clipboard(e);
-      update_scroll(e, true);
+      // update_scroll(e, true);
       e->conf.is_menu_open = false;
       break;
     case 'd':
       if(e->conf.is_selecting && e->conf.is_vim_mode) handle_delete_selection(e);
       break;
     case 'q':
-      force_close_current_buffer(e);
+      try_closing_current_buffer(e);
       break;
     case 'Q':
       force_close_current_buffer(e);
       break;
-    case '%':
+    /* case '%':
       move_to_matching_pair(e, cur_line->chars[cur_buf->cursor.index]);
-      break;
+      break; */
     case 'u':
       undo(e);
       break;
     case '?':
-      debug_print_actions(e);
       break;
   }
   if(c == 'g'){
@@ -928,21 +828,23 @@ void increase_font_size(Editor *e){
 }
 
 void delete_to_beginning_of_line(Buffer *buff){
-  Line *line = buff->lines[buff->current_line_index];
-  /* update_action(
+  /*
+  String *chars = buff->lines[buff->cur_li];
+  update_action(
     &buff->current_action, DELETE_STR, 
     (RowCol){}, 
-  ); */
-  line->length -= buff->cursor.index;
-  memmove(&line->chars[0], &line->chars[buff->cursor.index], (size_t) line->length);
+  );
+  line->buffs->len -= buff->cursor.index;
+  memmove(&line->chars[0], &line->chars[buff->cursor.index], (size_t) line->buffs->len);
   buff->cursor.index = 0;
   buff->cursor.last_time_moved = GetTime();
+  */
 }
 
 void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
   if(IsKeyPressed(KEY_F)) {
     toggle_full_screen(e);
-    update_scroll(e, true);
+    // update_scroll(e, true);
   }
   if(IsKeyPressed(KEY_S)) try_saving_file(e);
 
@@ -962,21 +864,21 @@ void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
 
   if(IsKeyPressed(KEY_V)) {
     paste_from_clipboard(e);
-    update_scroll(e, true);
+    // update_scroll(e, true);
     e->conf.is_menu_open = false;
   }
 
   if(IsKeyPressed(KEY_U)){
     if(e->mode == INSERT || !e->conf.is_vim_mode){
-      delete_to_beginning_of_line(e->buffers[e->current_buff]);
-      update_last_index(e);
+      delete_to_beginning_of_line(cur_buf);
+      update_last_col(e);
     }
   }
   if(IsKeyPressed(KEY_HOME)){
     move_to_first_line(e);
   }
   if(IsKeyPressed(KEY_END)){
-    move_cursor_to_last_line(e);
+    move_to_last_line(e);
   }
   if(IsKeyPressed(KEY_N)){
     go_to_next_buffer(e);
@@ -1005,7 +907,7 @@ Action* init_action(ActionType type, RowCol pos){
   Action *action = malloc(sizeof(Action));
   action->type = type;
   action->pos = pos;
-  action->str = new_line(DEFAULT_LINE_SIZE);
+  action->str = new_str(DEFAULT_LINE_SIZE);
   return action;
 }
 
@@ -1023,23 +925,24 @@ void update_action(Action **act, ActionType type, RowCol pos, char c){
      (*act)->replace_length = (*act)->str->length
    }
  }  */
- add_char_to_line((*act)->str, c, (*act)->str->length);
+ add_char_to_str((*act)->str, c, (*act)->str->len);
 }
 
 void handle_insert_mode_keys(Editor* e,int c){
   if (c >= 32) {
     if(e->conf.is_menu_open) {
-      add_char_to_line(e->cmd_prompt, c, e->cmd_prompt->length);
+      add_char_to_str(e->prompt, c, e->prompt->len);
       filter_cmds_by_prompt(e);
     }else {
-      ssize_t index = add_char_to_current_buffer(e, c);
+      add_char_to_cur_buf(e, c, cur_buf->cursor.index);
+      /*
       update_action(
         &cur_buf->current_action, ADD_STR,
-        (RowCol){ cur_buf->current_line_index, index }, c
+        (RowCol){ cur_buf->cur_li, index }, c
       );
-      /* if(cur_buf->current_action == NULL){
+       if(cur_buf->current_action == NULL){
         cur_buf->current_action = init_action(
-          ADD_STR, (RowCol){ cur_buf->current_line_index, index }
+          ADD_STR, (RowCol){ cur_buf->cur_li, index }
         );
       }
       add_char_to_line(cur_buf->current_action->str, c, cur_buf->current_action->str->length); */
@@ -1048,26 +951,36 @@ void handle_insert_mode_keys(Editor* e,int c){
 }
 
 void start_new_file(Editor *e){
-  if(e->length > e->capacity - 1) realloc_editor_buffers(e);
-  e->current_buff = e->length++;
+  if(e->buffs->len > e->buffs->cap - 1) realloc_editor_buffers(e);
+  e->current_buff = e->buffs->len++;
 }
 
-void to_lower_case(const char *text, char *dest){
-  for(int i = 0; i < strlen(text); i++){
-    char c = text[i];
+String *lower_case(String *str){
+  String *result = new_str(str->len + 1);
+  for(size_t i = 0; i < str->len; i++){
+    char c = str->data[i];
     if(c >= 'A' && c <= 'Z'){
-      dest[i] =  c + 32;
-    } else dest[i] = c;
+      result->data[i] =  c + 32;
+    } else result->data[i] = c;
+    result->len++;
   }
+  return result;
 }
 
+String *string(const char *text){
+  size_t len = strlen(text);
+  String *str = new_str(len + 1);
+  str->len = len;
+  memcpy(str->data, text, len + 1);
+  return str;
+}
 
 void handle_open_file(Editor *e){
   e->conf.is_opening_file = true;
   char const * path = tinyfd_openFileDialog("Select File", "", 0, NULL, NULL, 0);
   if(path != NULL){
     read_file(e, path);
-    update_scroll(e, true);
+    update_scroll(e, true, true);
   }
   e->mode = NORMAL;
 }
@@ -1080,8 +993,7 @@ void open_config_file(Editor *e){
   sprintf(path, "assets/texteditor.conf");
   #endif
   read_file(e, path);
-  update_scroll(e, false);
-  update_line_number_padding(e);
+  update_scroll(e, false, true);
   e->mode = NORMAL;
 }
 
@@ -1121,30 +1033,22 @@ void handle_command(Editor *e, Cmd cmd){
   }
   e->conf.is_menu_open = false;
   e->selected_cmd = 0;
-  e->cmd_prompt->length = 0;
+  e->prompt->len= 0;
   filter_cmds_by_prompt(e);
 }
 
 void handle_enter(Editor* e){
   if(e->mode == INSERT || !e->conf.is_vim_mode){
     if(!e->conf.is_menu_open){
-      Line *prev_line = cur_line;
-      ssize_t index = cur_buf->cursor.index;
-      add_new_line(cur_buf, cur_buf->current_line_index + 1);
-      ssize_t num_chars = prev_line->length - index;
-      memcpy(cur_line->chars, &prev_line->chars[index], num_chars);
-      prev_line->length -= num_chars;
-      prev_line->chars[prev_line->length] = '\0';
-      cur_line->length += num_chars;
-      update_scroll(e, false);
-      update_line_number_padding(e);
 
-      if(cur_buf->current_action == NULL){
+      add_char_to_cur_buf(e, '\n', cur_buf->cursor.index);
+
+      /* if(cur_buf->current_action == NULL){
         cur_buf->current_action = init_action(
-          ADD_STR, (RowCol){ cur_buf->current_line_index - 1, index }
+          ADD_STR, (RowCol){ cur_buf->cur_li - 1, index }
         );
       }
-      add_char_to_line(cur_buf->current_action->str, '\n', cur_buf->current_action->str->length);
+      add_char_to_line(cur_buf->current_action->str, '\n', cur_buf->current_action->str->length); */
       // cur_buf->current_action->str->length--; // not counting new line character
     }else {
       handle_command(e, default_cmds[e->displayed_cmds[e->selected_cmd]]);
@@ -1152,16 +1056,18 @@ void handle_enter(Editor* e){
   }
 }
 
-void handle_mouse_click(
-  Editor *e, int char_x, int char_y, ssize_t char_index,
-  ssize_t line_index, bool is_holding
-){
-  ssize_t char_height = get_char_size(e->conf.font_data.size).row + e->conf.line_height;
-  if(e->mouse.y >= char_y && e->mouse.y <= char_y + char_height){
-    cur_buf->current_line_index = line_index;
-    handle_click_on_line(e, char_x, char_index, is_holding);
-  }else if(line_index == cur_buf->d_start && e->mouse.y < char_y){
-    cur_buf->current_line_index = cur_buf->d_start;
+void handle_mouse_click(Editor *e, size_t index, bool is_holding){
+
+  cur_buf->cursor.index = index;
+
+  if(!is_holding) {
+    e->conf.selection_start = cur_buf->cursor.index;
+  } 
+  update_lines(e);
+   
+  /* else if(
+    (line_index == cur_buf->d_start && e->mouse.y < char_y){
+    cur_buf->cur_li = cur_buf->d_start;
     if(cur_buf->d_start > 0 && is_holding){
       double now = GetTime();
       if(now - last_press_time > HOLD_PRESS_DELAY) {
@@ -1171,36 +1077,37 @@ void handle_mouse_click(
       }
     }
     handle_click_on_line(e, char_x, char_index, is_holding);
-  } else if(line_index == cur_buf->d_start + cur_buf->d_length - 1 && e->mouse.y > char_y){
-      cur_buf->current_line_index = cur_buf->d_start + cur_buf->d_length - 1;
+  } */
+  /* else if(line_index == cur_buf->d_start + cur_buf->d_length - 1 && e->mouse.y > char_y){
+      cur_buf->cur_li = cur_buf->d_start + cur_buf->d_length - 1;
       if(cur_buf->d_start + cur_buf->d_length < cur_buf->length && is_holding){
         double now = GetTime();
         if(now - last_press_time > HOLD_PRESS_DELAY) {
-          cur_buf->current_line_index++;
+          cur_buf->cur_li++;
           update_scroll(e, false);
           last_press_time = now;
         }
       }
     handle_click_on_line(e, char_x, char_index, is_holding);
-  }
+  } */
   cur_buf->cursor.last_time_moved = GetTime();
 }
 
-void handle_click_on_line(Editor *e, int char_x, ssize_t char_index, bool is_holding){
-  ssize_t char_width = get_char_size(e->conf.font_data.size).col + e->conf.letter_spacing;
+void handle_click_on_line(Editor *e, int char_x, size_t char_index, bool is_holding){
+  /* size_t char_width = get_char_size(e->conf.font_data.size).col + e->conf.letter_spacing;
 
   if(e->mouse.x >= char_x && e->mouse.x <= char_x + char_width){
-    e->buffers[e->current_buff]->cursor.index = char_index;
+    e->buffs->data[e->current_buff]->cursor.index = char_index;
   } else if(char_index== 0 && e->mouse.x < char_x){
-    e->buffers[e->current_buff]->cursor.index = 0;
-  } else if(char_index == cur_line->length - 1 && e->mouse.x > char_x){
-    e->buffers[e->current_buff]->cursor.index = cur_line->length - is_holding;
+    e->buffs->data[e->current_buff]->cursor.index = 0;
+  } else if(char_index == cur_line->buffs->len - 1 && e->mouse.x > char_x){
+    e->buffs->data[e->current_buff]->cursor.index = cur_line->buffs->len - is_holding;
   }
 
   if(!is_holding) {
-    e->conf.selection_start.row = e->buffers[e->current_buff]->current_line_index;
-    e->conf.selection_start.col = e->buffers[e->current_buff]->cursor.index;
-  }
+    e->conf.selection_start.row = e->buffs->data[e->current_buff]->cur_li;
+    e->conf.selection_start.col = e->buffs->data[e->current_buff]->cursor.index;
+  } */
 }
 
 void handle_keys(Editor* e){
@@ -1215,8 +1122,7 @@ void handle_keys(Editor* e){
 
   if(!e->conf.is_vim_mode && is_shift_down && !e->conf.is_selecting) {
     e->conf.is_selecting = true;
-    e->conf.selection_start.row = e->buffers[e->current_buff]->current_line_index;
-    e->conf.selection_start.col = e->buffers[e->current_buff]->cursor.index;
+    e->conf.selection_start = cur_buf->cursor.index;
   } 
 
   if(is_ctrl_down) handle_ctrl_plus_key(e, is_shift_down);
@@ -1293,45 +1199,48 @@ void handle_keys(Editor* e){
   }
 }
 
-Line *new_line(ssize_t cap){
+Line *new_line(){
   Line *line = malloc(sizeof(Line));
-  line->chars = malloc(sizeof(char) * cap);
-  line->capacity = cap;
-  line->length = 0;
+  line->start = 0;
+  line->end = 0;
+  line->wraps = 0;
   return line;
 }
 
-void realloc_line(Line *line, ssize_t cap){
-  line->chars = realloc(line->chars, cap * sizeof(char));
-  line->capacity = cap;
+String *new_str(size_t cap){
+  String *str = malloc(sizeof(String));
+  str->data = malloc(sizeof(char) * cap);
+  str->cap = cap;
+  str->len = 0;
+  return str;
 }
 
-void free_line(Line *line){
-  if(line != NULL){
-    free(line->chars);
-    free(line);
-    line = NULL;
+void realloc_str(String *str, size_t cap){
+  str->data = realloc(str->data, cap * sizeof(char));
+  str->cap = cap;
+}
+
+void free_str(String *str){
+  if(str != NULL){
+    free(str->data);
+    free(str);
+    str = NULL;
   }
 }
 
 void free_action(Action *action){
-  free_line(action->str);
+  free_str(action->str);
   free(action);
   action = NULL;
 }
 
-Buffer *new_buffer(ssize_t capacity){
+Buffer *new_buffer(){
   Buffer *buff = malloc(sizeof(Buffer));
-  buff->lines = malloc(sizeof(Line*) * capacity);
-  for(ssize_t i = 0; i < capacity; i++){
-    buff->lines[i] = new_line(DEFAULT_LINE_SIZE);
-  }
-  buff->capacity = capacity;
-  buff->length = 1;
+  buff->s = new_str(DEFAULT_LINE_SIZE);
   buff->d_start = 0;
-  buff->d_length = 1;
+  // buff->d_len= 1;
   buff->num_chars = 0;
-  buff->current_line_index = 0;
+  buff->cur_li = 0;
   buff->current_msg_index = -1;
   buff->file_path = NULL;
   buff->is_saved = true;
@@ -1342,13 +1251,16 @@ Buffer *new_buffer(ssize_t capacity){
   buff->undo_stack.top = -1;
   buff->redo_stack.top = -1;
   buff->current_action = NULL;
+  buff->lines = malloc(sizeof(Lines));
+  buff->lines->data = malloc(sizeof(Line*));
+  buff->lines->data[0] = (Line){0};
+  buff->lines->cap = 1;
+  buff->lines->len = 1;
   return buff;
 }
 
 void free_buffer(Buffer *buff){
-  for(ssize_t i = 0; i < buff->capacity; i++) {
-    free_line(buff->lines[i]);
-  }
+  free_str(buff->s);
   free(buff);
   buff = NULL;
 }
@@ -1368,7 +1280,7 @@ Action *action_stack_pop(ActionStack *stack){
 }
 
 void add_str_to_cur_buf(Editor *e, char *str, RowCol pos, size_t len){
-  cur_buf->current_line_index = pos.row;
+/*   cur_buf->cur_li = pos.row;
   cur_buf->cursor.index = pos.col;
   for(int i = 0; i < len; i++){
     if(str[i] != '\n') {
@@ -1377,31 +1289,19 @@ void add_str_to_cur_buf(Editor *e, char *str, RowCol pos, size_t len){
     }else {
       printf("adding new line at %zd\n",pos.row + 1);
       cur_buf->cursor.index = 0;
-      add_new_line(cur_buf, ++cur_buf->current_line_index);
+      add_new_line(cur_buf, ++cur_buf->cur_li);
     } 
     cur_buf->num_chars++;
-  }
-}
-
-void remove_str_from_cur_buf(Editor *e, char *str, RowCol pos, size_t len){
-  cur_buf->current_line_index = pos.row;
-  cur_buf->cursor.index = pos.col;
-  for(int i = 0; i < len; i++){
-    if(str[i] == '\n') {
-      remove_char_from_cur_buf(e, pos.row + 1, -1); // remove virtual '\n' 
-    }else {
-      remove_char_from_cur_buf(e, pos.row, pos.col);
-    }
-  }
+  } */
 }
 
 void undo_action(Editor *e, Action *act){
   switch(act->type){
     case ADD_STR:
-      remove_str_from_cur_buf(e, act->str->chars, act->pos, act->str->length);
+      // remove_str_from_cur_buf(e, act->str->data, act->pos, act->str->len);
       break;
     case DELETE_STR:
-      add_str_to_cur_buf(e, act->str->chars, act->pos, act->str->length);
+      // add_str_to_cur_buf(e, act->str->data, act->pos, act->str->len);
       break;
   }
 }
@@ -1409,10 +1309,10 @@ void undo_action(Editor *e, Action *act){
 void redo_action(Editor *e, Action *act){
   switch(act->type){
     case ADD_STR:
-      add_str_to_cur_buf(e, act->str->chars, act->pos, act->str->length);
+      // add_str_to_cur_buf(e, act->str->data, act->pos, act->str->len);
       break;
     case DELETE_STR:
-      remove_str_from_cur_buf(e, act->str->chars, act->pos, act->str->length);
+      // remove_str_from_cur_buf(e, act->str->data, act->pos, act->str->len);
       break;
   }
 }
@@ -1422,8 +1322,7 @@ void undo(Editor *e){
   if(last_action == NULL) return;
   action_stack_push(&cur_buf->redo_stack, *last_action);
   undo_action(e, last_action);
-  update_scroll(e, false);
-  update_line_number_padding(e);
+  update_scroll(e, false, false);
   cur_buf->cursor.last_time_moved = GetTime();
 }
 
@@ -1432,8 +1331,7 @@ void redo(Editor *e){
   if(last_action == NULL) return;
   action_stack_push(&cur_buf->undo_stack, *last_action);
   redo_action(e, last_action);
-  update_scroll(e, false);
-  update_line_number_padding(e);
+  update_scroll(e, false, false);
   cur_buf->cursor.last_time_moved = GetTime();
 }
 
@@ -1467,31 +1365,45 @@ void new_message(Editor *e, const char *message, MessageType type){
   Message *msg = malloc(sizeof(Message));
 
   msg->type = type;
-  msg->text = strdup(display_msg);
+  msg->text = strdup(message);
   write_new_message(e, msg);
   e->messages[e->num_msgs] = msg;
-  e->buffers[e->current_buff]->current_msg_index = e->num_msgs++;
+  e->buffs->data[e->current_buff]->current_msg_index = e->num_msgs++;
+}
+
+/* void lines_append(Lines *lines, Line line){
+  if(lines->len >= lines->cap){
+    lines->cap *= 2;
+    lines->data = realloc(lines->data, sizeof(Line) * lines->cap);
+  }
+  lines->data[lines->len++] = line;
+} */
+
+void editor_append_buf(Editor *e, Buffer *buff){
+  /* if(e->buffs->len >= e->buffs->cap){
+    e->buffs->cap *= 2;
+    e->buffs->datadata = realloc(lines->data, sizeof(Line) * lines->cap);
+  }
+  lines->data[lines->len++] = line; */
 }
 
 void realloc_editor_buffers(Editor *e){
-  e->capacity += 5;
-  e->buffers = realloc(e->buffers, sizeof(Buffer*) * e->capacity);
-  for(ssize_t i = e->length; i < e->capacity; i++){
-    e->buffers[i] = new_buffer(1);
+  e->buffs->cap += 5;
+  e->buffs->data = realloc(e->buffs->data, sizeof(Buffer*) * e->buffs->cap);
+  for(size_t i = e->buffs->len; i < e->buffs->cap; i++){
+    e->buffs->data[i] = new_buffer();
   }
 }
 
 Editor *init_editor(){
   Editor *e = malloc(sizeof(Editor));
-  e->cmd_prompt = new_line(DEFAULT_LINE_SIZE);
+  e->prompt = new_str(DEFAULT_LINE_SIZE);
 
-  e->buffers = malloc(sizeof(Buffer*));
-  e->length = 1;
-  e->capacity = 1;
-
-  for(int i = 0; i < e->capacity; i++){
-    e->buffers[i] = new_buffer(1);
-  }
+  e->buffs = malloc(sizeof(Buffers));
+  e->buffs->data = malloc(sizeof(Buffer*));
+  e->buffs->data[0] = new_buffer();
+  e->buffs->len = 1;
+  e->buffs->cap = 1;
 
   e->mode = NORMAL;
   e->s_width = SCREEN_WIDTH;
@@ -1509,14 +1421,14 @@ Editor *init_editor(){
     .bg_color = 0x141415FF,
     .text_color = 0xFFFFFFFF,
     .under_cursor_color = 0X000000FF,
-    .selected_char_color = 0XC3C3D5FF,
     .lines_color = 0x545454FF,
     .line_numbers_color = 0x828282FF,
     .file_name_color = 0x828282FF,
     .status_line_color = 0x000000FF,
     .error_color = 0xFF4C24FF,
     .success_color = 0x00B014FF,
-    .selection_color = 0x333738FF,
+    .selected_char_color = 0xE8E8E8FF,
+    .selection_color = 0x383838FF,
     .line_highlight_color = 0x383737FF,
     .is_menu_open = false,
     .is_vim_mode = true,
@@ -1527,14 +1439,15 @@ Editor *init_editor(){
     .is_showing_lines = false,
     .ln_mode = NONE,
     .ln_padding = 1,
-    .line_height = 5,
+    .line_height = 0,
     .letter_spacing = 0,
     .padding = {
       .top = 45,
       .bottom = 45,
       .right = 70,
       .left = 10
-    }
+    },
+    .scroll_pad = 4
   },
   e->HOME_DIR  = getenv("HOME");
 

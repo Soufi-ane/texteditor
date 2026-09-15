@@ -34,21 +34,37 @@ void write_new_message(Editor *e, Message *msg){
 	fclose(file);
 }
 
-void write_file(Editor* e){
-	FILE* file = fopen(e->buffers[e->current_buff]->file_path, "w");
-  if(file == NULL){
-    // TODO : show error
-    return;
-  }
-  for(size_t i = 0; i < e->buffers[e->current_buff]->length; i++){
-    Line *line = e->buffers[e->current_buff]->lines[i];
-    fwrite(line->chars, sizeof(char), sizeof(char) * line->length, file);
-    fputc('\n', file);
-  }
+int write_file(Editor* e){
+	FILE* file = fopen(e->buffs->data[e->current_buff]->file_path, "w");
+  if(file == NULL) return -1;
+  Buffer *buff = e->buffs->data[e->current_buff];
+
+  size_t written = fwrite(buff->s->data, sizeof(char), buff->s->len, file);
+  fputc('\n', file);
+
+  new_message(e, TextFormat("Saved, %zuB written", written), INFO);
+
 	fclose(file);
+  return 0;
 }
 
 void read_file(Editor* e, char const * file_path){
+  Buffer *buff = e->buffs->data[e->current_buff];
+  bool file_buf_exists = false;
+  for(size_t i = 0; i < e->buffs->len; i++){
+    Buffer *b = e->buffs->data[i];
+    if(b->file_path && !strcmp(b->file_path, file_path)){
+      file_buf_exists = true;
+      e->current_buff = i;
+      b->s->len = 0;
+      buff = b;
+    }
+  }
+  if((buff->s->len || !buff->is_saved) && !file_buf_exists){
+    buff = new_buffer();
+    da_append(e->buffs, buff);
+    e->current_buff = e->buffs->len - 1;
+  }
 	FILE* f = fopen(file_path,"r+");
   if(f == NULL) {
     f = fopen(file_path, "w+");
@@ -57,45 +73,38 @@ void read_file(Editor* e, char const * file_path){
       return;
     }
   } 
-  Buffer *buff = e->buffers[e->current_buff];
-  char* line = NULL;
-  size_t size = 0, line_index = 0;
-  size_t read;
+  fseek(f, 0, SEEK_END);
+  long file_size = ftell(f);
+  rewind(f);
 
-  if(e->length > e->capacity - 1) realloc_editor_buffers(e);
+  if(buff->s->cap < file_size + 1) realloc_str(buff->s, file_size + 1);
 
-  if(!e->buffers[0]->is_saved || e->buffers[0]->num_chars != 0){
-    e->current_buff = e->length++;
-  }
+  if(e->buffs->len > e->buffs->cap - 1) realloc_editor_buffers(e);
+
+  /* if(!e->buffs->data[0]->is_saved || e->buffs->data[0]->num_chars != 0){
+    e->current_buff = e->buffs->len++;
+  } */
 
   if(access(file_path, W_OK) != 0) buff->is_readonly = true;
   buff->file_path = strdup(file_path);
-	while((read = getline(&line,&size,f)) != -1){
-
-    if(buff->length > buff->capacity - 1){
-
-      size_t new_capacity = buff->capacity + 10;
-      buff->lines = realloc(buff->lines, sizeof(Line*) * new_capacity);
-
-      for(size_t i = buff->capacity; i < new_capacity; i++){
-        buff->lines[i] = new_line(DEFAULT_LINE_SIZE);
-      }
-
-      buff->capacity = new_capacity;
-    }
-    for(size_t i = 0; i < read - 1; i++) {
-      add_char_to_line(buff->lines[line_index], line[i], buff->lines[line_index]->length);
-    }
-    buff->num_chars += read;
-    line_index++;
-    buff->length++;
+  size_t bytes_read = fread(buff->s->data, 1, file_size, f);
+  if(bytes_read != (size_t) file_size){
+    //todo: error
+    return;
   }
-  if(buff->length > 1) buff->length--;
+  buff->s->data[file_size - 1] = '\0';
+  buff->s->len = bytes_read - 1;
   buff->is_saved = true;
-  free(line);
+  update_lines(e);
+  fclose(f);
 }
 
 void try_saving_file(Editor* e){
+  Buffer *buff = e->buffs->data[e->current_buff];
+  if(buff->is_saved){
+    new_message(e, "No changes to be saved", INFO);
+    return;
+  }
   char config_path[1024];
   #ifdef PROD
   char *messages_path = "/usr/local/share/texteditor/messages.log";
@@ -105,27 +114,28 @@ void try_saving_file(Editor* e){
   sprintf(config_path, "assets/texteditor.conf");
   #endif
 
-  if(e->buffers[e->current_buff]->file_path){
-    if(!strcmp(messages_path, e->buffers[e->current_buff]->file_path)){
-      e->buffers[e->current_buff]->is_readonly = true;
+  if(buff->file_path){
+    if(!strcmp(messages_path, buff->file_path)){
+      buff->is_readonly = true;
     }
-    if(e->buffers[e->current_buff]->is_readonly){
+    if(buff->is_readonly){
       new_message(e, "Readonly file!", ERROR);
       return;
     }
 
     bool is_done = false;
-    if(access(e->buffers[e->current_buff]->file_path, W_OK) == 0 || errno == ENOENT) {
-      write_file(e);
-      is_done = true;
-      new_message(e, "Saved!", GOOD);
-      e->buffers[e->current_buff]->is_saved = true;
+    if(access(buff->file_path, W_OK) == 0 || errno == ENOENT) {
+      int err = write_file(e);
+      if(!err){
+        is_done = true;
+        buff->is_saved = true;
+      }
     } 
     if (errno == EACCES) {
       new_message(e, "Readonly file!", ERROR);
     }
     if(is_done){
-      if(!strcmp(config_path, e->buffers[e->current_buff]->file_path)){
+      if(!strcmp(config_path, buff->file_path)){
         try_loading_config(e);
       }
     } 
@@ -133,11 +143,12 @@ void try_saving_file(Editor* e){
   else {
     char const * path = 
     tinyfd_saveFileDialog(
-     "Save File",
-     e->buffers[e->current_buff]->file_path != NULL ? e->buffers[e->current_buff]->file_path : "Untitled"
-     , 0, NULL, NULL);
+      "Save File",
+      buff->file_path != NULL ? buff->file_path : "Untitled",
+      0, NULL, NULL
+    );
     if (path != NULL) {
-      e->buffers[e->current_buff]->file_path = path;
+      buff->file_path = path;
       try_saving_file(e);
     }
   }
@@ -179,27 +190,25 @@ bool load_font_default(Editor *e, FontData *font_data){
   return true;
 }
 
-bool str_includes(const char* str, char* sub_str, size_t sub_str_length){
-  size_t str_len = strlen(str);
-  char buff[str_len], query[sub_str_length]; 
-  to_lower_case(str, buff);
-  to_lower_case(sub_str, query);
-  int i, j;
-  for(i = 0; i < str_len; i++) {
-    if(buff[i] == query[0]) {
-      for(j = 1; (j < sub_str_length && i < str_len - 1); j++, i++){
-        if(query[j] != buff[i + 1]) break;
+bool str_includes(String *str, String *sub_str){
+  str = lower_case(str);
+  sub_str = lower_case(sub_str);
+  size_t i, j;
+  for(i = 0; i < str->len; i++) {
+    if(str->data[i] == sub_str->data[0]) {
+      for(j = 1; (j < sub_str->len && i < str->len - 1); j++, i++){
+        if(sub_str->data[j] != str->data[i + 1]) break;
       }
-      if(j >= sub_str_length) return true;
+      if(j >= sub_str->len) return true;
     }
   }
   return false;
 }
 
 void copy_selection_to_clipboard(Editor *e){
-  Buffer *buff = e->buffers[e->current_buff];
-  Line *selected = new_line(DEFAULT_LINE_SIZE * 10);
-  size_t current_index = buff->current_line_index;
+/*   Buffer buff = e->buffs->data[e->current_buff]->
+  String *selected = new_str(DEFAULT_LINE_SIZE * 10);
+  size_t current_index = buff->cur_li;
   bool is_up = is_selecting_up(e);
   for(
     int i = (is_up ? current_index : e->conf.selection_start.row);
@@ -208,43 +217,43 @@ void copy_selection_to_clipboard(Editor *e){
   ){
     for(int j = 0; j < buff->lines[i]->length; j++){
       if(is_selected(e, (RowCol){i, j}))
-      add_char_to_line(selected, buff->lines[i]->chars[j], selected->length);
+      add_char_to_line(selected, buff->lines[i]->chars[j], selected->len);
     }
     if(i < (is_up ? e->conf.selection_start.row : current_index))
-    add_char_to_line(selected, '\n', selected->length);
+    add_char_to_line(selected, '\n', selected->len);
   }
-  add_char_to_line(selected, '\0', selected->length);
-  int success = copy_to_clipboard(selected->chars);
+  add_char_to_line(selected, '\0', selected->len);
+  int success = copy_to_clipboard(selected->data);
   if(success) new_message(e, "Copied!", GOOD);
-  else new_message(e, "Failed to copy!", ERROR);
+  else new_message(e, "Failed to copy!", ERROR); */
 }
 
 void paste_from_clipboard(Editor *e){
-  char buff[MAX_PASTE_LENGTH] = {0};
+  /* char buff[MAX_PASTE_LENGTH] = {0};
   read_from_clipboard(buff, sizeof(buff));
   for(int i = 0; buff[i] != '\0'; i++){
     if(buff[i] == '\n') {
       add_new_line(
-        e->buffers[e->current_buff],
-        e->buffers[e->current_buff]->current_line_index + 1
+        e->buffs->data[e->current_buff]->
+        e->buffs->data[e->current_buff]->cur_li + 1
       );
     } 
     else {
-      add_char_to_current_buffer(e, buff[i]);
+      add_char_to_cur_buf(e, buff[i], e->buffs->data[e->current_buff]->cursor.index);
     }
-  }
+  } */
 }
 
 int copy_to_clipboard(const char *text){
-  FILE *pipe = popen("xclip -selection clipboard 2>/dev/null || wl-copy 2>/dev/null", "w");
+  /* FILE *pipe = popen("xclip -selection clipboard 2>/dev/null || wl-copy 2>/dev/null", "w");
   if(!pipe) return 0;
   fputs(text, pipe);
   int status = pclose(pipe);
-  return status == 0;
+  return status == 0; */
 }
 
 void read_from_clipboard(char *buff, size_t max){
-  FILE *pipe = popen("xclip -selection clipboard -o 2>/dev/null || wl-paste 2>/dev/null", "r");
+  /* FILE *pipe = popen("xclip -selection clipboard -o 2>/dev/null || wl-paste 2>/dev/null", "r");
   if(!pipe) return;
   buff[0] = '\0';
   char line[1024];
@@ -254,7 +263,7 @@ void read_from_clipboard(char *buff, size_t max){
     if(rest == 0) break;
     strncat(buff, line, rest);
   }
-  pclose(pipe);
+  pclose(pipe); */
 }
 
 ConfigKey get_config_key(Editor *e, char *key){
@@ -305,7 +314,7 @@ void try_setting_conf_color_value(Editor *e, ConfigKey key_type, char *hex, size
       e->conf.text_color = color;
       break;
     case CURSOR_COL:
-      e->buffers[e->current_buff]->cursor.color = color;
+      e->buffs->data[e->current_buff]->cursor.color = color;
       break;
     case UNDER_CURSOR_COL:
       e->conf.under_cursor_color = color;
@@ -375,7 +384,7 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
   }
 }
 
-void try_loading_new_font(Editor *e, char *path, ssize_t n_line, bool is_primary){
+void try_loading_new_font(Editor *e, char *path, size_t n_line, bool is_primary){
   FontData old = e->conf.font_data;
   if(!is_primary) {
     old = e->conf.font_secondary_data;
@@ -392,7 +401,7 @@ void try_loading_new_font(Editor *e, char *path, ssize_t n_line, bool is_primary
   }
 }
 
-void try_reading_conf_path(Editor *e, ConfigKey key_type, char *path, ssize_t n_line){
+void try_reading_conf_path(Editor *e, ConfigKey key_type, char *path, size_t n_line){
   if(access(path, F_OK) != 0) {
     new_message(e, TextFormat("Invalid path at config: %zu", n_line), ERROR);
     return;
@@ -409,7 +418,7 @@ void try_reading_conf_path(Editor *e, ConfigKey key_type, char *path, ssize_t n_
   }
 }
 
-void try_setting_conf_value(Editor *e, ConfigKey key_type, char *value, ssize_t n_line){
+void try_setting_conf_value(Editor *e, ConfigKey key_type, char *value, size_t n_line){
   bool is_invalid = false;
   switch (key_type) {
     case LN_MODE :

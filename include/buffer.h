@@ -5,6 +5,15 @@
 #include <stdio.h>
 #include "conf.h"
 
+#define da_append(arr, i)                                                     \
+  do {                                                                        \
+    if((arr)->len >= (arr)->cap) {                                            \
+      (arr)->cap *= 2;                                                        \
+      (arr)->data = realloc((arr)->data, (arr)->cap * sizeof(*(arr)->data));  \
+    }                                                                         \
+    (arr)->data[(arr)->len++] = (i);                                          \
+  }while(0)
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MAX_STACK_SIZE 1024
 
@@ -16,13 +25,18 @@ typedef enum {
 
 typedef enum {
   UNKOWN_KEY = 0,
-  BG_COL, TXT_COL, CURSOR_COL, SPACE_FOR_TAB,
-  UNDER_CURSOR_COL, LN_COL, TAB_S, CAPS_AS_ESCAPE,
-  D_LINES, LINES_COL, LN_MODE, VIM_M,
-  P_TOP, P_BOTTOM, P_LEFT, P_RIGHT,
+  BG_COL, TXT_COL,
+  CURSOR_COL, UNDER_CURSOR_COL,
   FONT_SIZE, SECONDARY_FONT_SIZE,
   FONT_PRIMARY, FONT_SECONDARY, 
-  LINE_HIGHLIGHT, LINE_HIGHLIGHT_COL
+  LINE_HIGHLIGHT, LINE_HIGHLIGHT_COL,
+  LN_COL, LN_MODE,
+  LINES_COL, D_LINES,
+  SPACE_FOR_TAB, TAB_S,
+  CAPS_AS_ESCAPE,
+  P_TOP, P_BOTTOM,
+  P_LEFT, P_RIGHT,
+  VIM_M
 } ConfigKey;
 
 typedef enum{
@@ -45,8 +59,8 @@ typedef enum {
 } LineNumbers;
 
 typedef struct{
-  ssize_t row;
-  ssize_t col;
+  size_t row;
+  size_t col;
 } RowCol;
 
 typedef enum {
@@ -58,16 +72,16 @@ typedef enum {
 } ActionType;
 
 typedef struct {
-  ssize_t length;
-  ssize_t capacity;
-  char *chars;
-} Line;
+  char *data;
+  size_t len;
+  size_t cap;
+} String;
 
 typedef struct {
   ActionType type;
   RowCol pos;
-  Line *str;
-  // ssize_t replace_length;
+  String *str;
+  // size_t replace_length;
 } Action;
 
 typedef struct {
@@ -83,8 +97,9 @@ typedef struct {
 extern Cmd default_cmds[NUM_COMMANDS];
 
 typedef struct {
-  ssize_t index;
-  ssize_t last_index;
+  size_t index;
+  RowCol pos;
+  size_t last_col;
   float width;
   float height;
   double last_time_moved;
@@ -92,19 +107,29 @@ typedef struct {
 } Cursor;
 
 typedef struct {
+  size_t start;
+  size_t end;
+  size_t wraps;
+} Line;
+
+typedef struct {
+  Line *data;
+  size_t len;
+  size_t cap;
+} Lines;
+
+typedef struct {
   char *text;
   MessageType type;
 } Message;
 
 typedef struct {
-  ssize_t num_chars;
-  ssize_t current_line_index;
+  size_t num_chars;
+  size_t cur_li; // current line index;
   int current_msg_index;
-  ssize_t length; 
-  ssize_t capacity; 
-  ssize_t d_start;
-  ssize_t d_length;
-  Line **lines;
+  size_t d_start;
+  String *s;
+  Lines *lines;
   Cursor cursor;
   ActionStack undo_stack;
   ActionStack redo_stack;
@@ -115,10 +140,16 @@ typedef struct {
 } Buffer ;
 
 typedef struct {
-  ssize_t top;
-  ssize_t right;
-  ssize_t bottom;
-  ssize_t left;
+  Buffer **data;
+  size_t len;
+  size_t cap;
+} Buffers;
+
+typedef struct {
+  size_t top;
+  size_t right;
+  size_t bottom;
+  size_t left;
 } Padding;
 
 typedef struct {
@@ -139,10 +170,10 @@ typedef struct {
   bool is_vim_mode;
   bool caps_lock_as_escape;
   bool is_line_highlight;
-  RowCol selection_start;
-  ssize_t tab_size;
+  size_t selection_start;
+  size_t tab_size;
   LineNumbers ln_mode;
-  ssize_t ln_padding;
+  size_t ln_padding;
   Padding padding;
   FontData font_data;
   FontData font_secondary_data;
@@ -158,32 +189,31 @@ typedef struct {
   unsigned int selection_color;
   unsigned int selected_char_color;
   unsigned int line_highlight_color;
-  ssize_t line_height;
-  ssize_t letter_spacing;
+  size_t line_height;
+  size_t letter_spacing;
+  size_t scroll_pad;
 } Config;
 
 typedef struct {
   Mode mode;
-  Buffer **buffers;
-  ssize_t length;
-  ssize_t capacity;
-  ssize_t current_buff;
-  Line *cmd_prompt;
+  Buffers *buffs;
+  size_t current_buff;
+  String *prompt;
   const char* HOME_DIR;
   Vector2 mouse;
   Config conf;
   Message *messages[MAX_MESSAGES];
   bool is_full_screen;
   bool should_quit;
-  ssize_t num_msgs;
+  size_t num_msgs;
   char* currentFileName;
   char* searchQuery;
   int numResults;
   int s_width;
   int s_height;
-  ssize_t selected_cmd;
-  ssize_t displayed_cmds[NUM_COMMANDS];
-  ssize_t num_cmds_displayed;
+  size_t selected_cmd;
+  size_t displayed_cmds[NUM_COMMANDS];
+  size_t num_cmds_displayed;
 } Editor;
 
 int get_position(Editor* e);
@@ -192,7 +222,7 @@ void move_cursor_down(Editor* e);
 
 char* createchar(int n);
 
-void deletechar(char** line);
+void delete_chars(String *str, size_t from, size_t count);
 
 void emptychar(char* line);
 
@@ -202,25 +232,23 @@ void addchar(Editor* e, char* line, char* text);
 
 int get_first_diplayed_index(Editor* e,bool isUp);
 
-Line *new_line(ssize_t capacity);
+String *new_str(size_t capacity);
 
-Buffer *new_buffer(ssize_t capacity);
+Buffer *new_buffer();
 
-ssize_t get_max_line_length(Editor *e);
+size_t get_max_line_length(Editor *e);
 
-ssize_t get_max_num_lines(Editor *e);
+size_t get_max_num_lines(Editor *e);
 
-void free_line(Line *line);
+void free_str(String *str);
 
-ssize_t get_lines_wraps(Editor *e, int from, int to, bool include_last);
+size_t get_lines_wraps(Editor *e, size_t from, size_t to);
 
 void move_cursor_right(Editor* e);
 
-void add_char_to_line(Line *line, char c, size_t index);
+void add_char_to_str(String *str, char c, size_t index);
 
-ssize_t add_char_to_current_buffer(Editor* e, char c);
-
-void remove_current_char(Editor* e);
+void add_char_to_cur_buf(Editor *e, char c, size_t index);
 
 void move_to_end_of_line(Editor* e);
 
@@ -230,34 +258,33 @@ void move_to_word_beginning(Editor* e);
 
 void move_to_word_ending(Editor* e);
 
-void add_new_line(Buffer *buff, ssize_t index);
+void add_new_line(Buffer *buff, size_t index);
 
-void update_scroll(Editor *e, bool is_up);
+void update_scroll(Editor *e, bool center_line, bool is_up);
 
 void new_message(Editor *e, const char *message, MessageType type);
 
 void handle_keys(Editor* e);
 
-bool is_selected(Editor *e, RowCol row_col);
+bool is_selected(Editor *e, size_t index);
 
 bool is_selecting_up(Editor *e);
 
-int remove_char_from_cur_buf(Editor *e, ssize_t line_index, ssize_t char_index);
+void remove_chars_from_cur_buf(Editor *e, size_t index, size_t count);
 
-void pop_char_single_line(Line *line);
+void str_pop_char(String *str);
 
 void handle_tab(Editor* e, bool is_shift_down);
 
 void filter_cmds_by_prompt(Editor *e);
 
-void to_lower_case(const char *text, char *dest);
+String *lower_case(String *str);
 
 void handle_insert_mode_keys(Editor* e,int c);
 
-void handle_mouse_click(Editor *e, int char_x, int char_y, ssize_t char_index,
-  ssize_t line_index, bool is_holding);
+void handle_mouse_click(Editor *e, size_t index, bool is_holding);
 
-void handle_click_on_line(Editor *e, int char_x, ssize_t char_index, bool is_holding);
+void handle_click_on_line(Editor *e, int char_x, size_t char_index, bool is_holding);
 
 Editor *init_editor();
 
@@ -265,9 +292,9 @@ void free_buffer(Buffer *buff);
 
 void realloc_editor_buffers(Editor *e);
 
-void delete_lines(Buffer *buff, ssize_t from, ssize_t count);
+void delete_lines(Buffer *buff, size_t from, size_t count);
 
-void realloc_line(Line *line, ssize_t cap);
+void realloc_str(String *str, size_t cap);
 
 int get_digit_count(int number);
 
@@ -300,5 +327,15 @@ void free_action(Action *action);
 void action_stack_flush(ActionStack *stack);
 
 void update_action(Action **act, ActionType type, RowCol pos, char c);
+
+void update_lines(Editor *e);
+
+void move_to_first_line(Editor *e);
+
+void adapte_col_to_cur_line(Editor *e);
+
+size_t get_line_from_index(Lines *lines, size_t index);
+
+String *string(const char *text);
 
 #endif

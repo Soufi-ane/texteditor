@@ -23,4 +23,6 @@ void DrawLineChars(Editor *e, bool is_blinking, ssize_t x_offset, ssize_t y_offs
 
 void DrawEditorLines(Editor *e);
 
+void DrawBufferText(Editor *e, bool is_blinking);
+
 #endif

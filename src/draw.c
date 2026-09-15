@@ -1,5 +1,7 @@
-#include "files.h"
 #include <string.h>
+#include <ctype.h>
+#include <math.h>
+#include "files.h"
 #include "draw.h"
 
 Vector2 press_start_pos = {0};
@@ -18,14 +20,14 @@ void DrawCmdCursor(Editor* e, int cursor_x, int cursor_y){
   RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   DrawRectangle(
     cursor_x, cursor_y, char_size.col,
-    char_size.row, GetColor(e->buffers[e->current_buff]->cursor.color)
+    char_size.row, GetColor(e->buffs->data[e->current_buff]->cursor.color)
   );
 }
 
 void DrawCursor(Editor* e, int x, int y, unsigned int color){
   DrawRectangle(
-    x, y, e->buffers[e->current_buff]->cursor.width,
-    e->buffers[e->current_buff]->cursor.height, GetColor(color)
+    x, y, e->buffs->data[e->current_buff]->cursor.width,
+    e->buffs->data[e->current_buff]->cursor.height, GetColor(color)
   );
 }
 
@@ -54,8 +56,8 @@ void DrawMenu(Editor * e){
 
   float char_w = MeasureTextEx(e->conf.font_data.font, "c", e->conf.font_secondary_data.size, 0).x;
   int text_end_x = (float) e->s_width / 4 + 2 * (e->conf.letter_spacing + char_size.col)
-  + ((e->conf.letter_spacing + char_size.col) * e->cmd_prompt->length);
-  int cursor_x = (float) e->s_width / 4 + (2 + e->cmd_prompt->length) * (e->conf.letter_spacing + char_size.col);
+  + ((e->conf.letter_spacing + char_size.col) * e->prompt->len);
+  int cursor_x = (float) e->s_width / 4 + (2 + e->prompt->len) * (e->conf.letter_spacing + char_size.col);
   if(cursor_x > menu_rec.x + menu_rec.width - 2 * (e->conf.letter_spacing + char_size.col)){
     cursor_x = menu_rec.x + menu_rec.width - 2 * (e->conf.letter_spacing + char_size.col);
   }
@@ -63,7 +65,7 @@ void DrawMenu(Editor * e){
   int max_displayed = (menu_rec.width - 4 * (e->conf.letter_spacing + char_size.col))
     / (e->conf.letter_spacing + char_size.col);
 
-  if(!e->cmd_prompt->length) {
+  if(!e->prompt->len) {
     DrawTextEx(
       e->conf.font_secondary_data.font, "...",
       (Vector2){
@@ -76,15 +78,15 @@ void DrawMenu(Editor * e){
   DrawCmdCursor(e, cursor_x, cursor_y);
 
   for(
-    int i = (e->cmd_prompt->length > max_displayed ? e->cmd_prompt->length - max_displayed : 0);
-    i < e->cmd_prompt->length;
+    int i = (e->prompt->len > max_displayed ? e->prompt->len - max_displayed : 0);
+    i < e->prompt->len;
     i++
   ){
     DrawTextCodepoint(
-      e->conf.font_secondary_data.font, e->cmd_prompt->chars[i],
+      e->conf.font_secondary_data.font, e->prompt->data[i],
       (Vector2){
         e->s_width / 4 + 2 * (e->conf.letter_spacing + char_size.col) +
-        (e->cmd_prompt->length > max_displayed ? i - e->cmd_prompt->length + max_displayed : i)
+        (e->prompt->len > max_displayed ? i - e->prompt->len + max_displayed : i)
         * (e->conf.letter_spacing + char_size.col),
         cursor_y,
       },
@@ -132,8 +134,10 @@ unsigned int get_msg_color(Editor *e, MessageType type){
 }
 
 void DrawCurrentMessage(Editor *e) {
+  Buffer *buff = e->buffs->data[e->current_buff];
   RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
-  Message *msg = e->messages[e->buffers[e->current_buff]->current_msg_index];
+  if(buff->current_msg_index > e->num_msgs - 1) return;
+  Message *msg = e->messages[buff->current_msg_index];
   if(!msg || !strlen(msg->text)) return;
   Color color = GetColor(get_msg_color(e, msg->type));
   DrawTextEx(
@@ -147,44 +151,53 @@ void DrawCurrentMessage(Editor *e) {
 }
 
 void DrawStatusLine(Editor *e){
-  int sline_y = e->s_height - 45;
-  DrawRectangle(0, sline_y, e->s_width, 45, GetColor(e->conf.status_line_color));
-  if(e->buffers[e->current_buff]->current_msg_index > -1) return;
-
+  Buffer *buff = e->buffs->data[e->current_buff];
   RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
+
+  Rectangle status_line = {
+    0, e->s_height - char_size.row, e->s_width, char_size.row
+  };
+
+  DrawRectangleRec(status_line, GetColor(e->conf.status_line_color));
+
+  if(buff->current_msg_index > -1) return;
+
   if(e->conf.is_vim_mode){
     DrawTextEx(
       e->conf.font_secondary_data.font, get_mode_str(e->mode, e->conf.is_selecting),
       (Vector2){
         e->s_width - (e->conf.letter_spacing + char_size.col) * 7,
-        e->s_height - 45
+        status_line.y
       },
       e->conf.font_secondary_data.size, 0, GRAY
     );
   }
 
-  Buffer *buff = e->buffers[e->current_buff];
-
-  int row_span = get_digit_count(buff->current_line_index + 1);
-  int col_span = get_digit_count(buff->cursor.index + 1);
+  Line cur_line = buff->lines->data[buff->cur_li];
+  int row_span = get_digit_count(buff->cur_li + 1);
+  int col_span = get_digit_count(buff->cursor.index - cur_line.start + 1);
   int row_col_span = row_span + col_span + 1;
 
   DrawTextEx(
     e->conf.font_secondary_data.font,
-    TextFormat("%d:%d", buff->current_line_index + 1, buff->cursor.index + 1),
+    TextFormat(
+      "%d:%d", 
+      buff->cur_li + 1,
+      buff->cursor.index - cur_line.start + 1
+    ),
     (Vector2){
       e->s_width - (e->conf.letter_spacing + char_size.col) * (8 + row_col_span),
-      e->s_height - 45
+      status_line.y
     },
     e->conf.font_secondary_data.size, 0, GRAY
   );
 
   DrawTextEx(
-    e->conf.font_secondary_data.font, e->buffers[e->current_buff]->file_path ? 
-    get_file_name_from_path(e->buffers[e->current_buff]->file_path) : "Untitled",
+    e->conf.font_secondary_data.font, e->buffs->data[e->current_buff]->file_path ? 
+    get_file_name_from_path(e->buffs->data[e->current_buff]->file_path) : "Untitled",
     (Vector2){
       e->conf.padding.left,
-      e->s_height - 45
+      status_line.y
     },
     e->conf.font_secondary_data.size, 0, GetColor(e->conf.file_name_color)
   );
@@ -203,7 +216,7 @@ void DrawChar(Editor *e, int c, int x_pos, int y_pos, unsigned int color, float 
 }
 
 void DrawEditorLines(Editor *e){
-  Buffer *buff = e->buffers[e->current_buff];
+  Buffer *buff = e->buffs->data[e->current_buff];
   Padding pad = e->conf.padding;
   RowCol char_size = get_char_size(e->conf.font_data.size);
 
@@ -221,7 +234,7 @@ void DrawEditorLines(Editor *e){
 void DrawLineNumber(Editor *e, ssize_t i, ssize_t y_offset){
   RowCol char_size = get_char_size(e->conf.font_data.size);
   Padding pad = e->conf.padding;
-  ssize_t index = e->buffers[e->current_buff]->current_line_index;
+  ssize_t index = e->buffs->data[e->current_buff]->cur_li;
   DrawTextEx(e->conf.font_data.font,
     TextFormat( "%zu", 
       (e->conf.ln_mode == ABSOLUTE || index == i) ?  i + 1 :
@@ -235,15 +248,15 @@ void DrawLineNumber(Editor *e, ssize_t i, ssize_t y_offset){
 }
 
 void DrawLineChars(Editor *e, bool is_blinking, ssize_t x_offset, ssize_t y_offset, ssize_t i){
-  float char_x;
+/*   float char_x;
   float char_y;
-  Buffer *buff = e->buffers[e->current_buff];
+  Buffer *buff = e->buffs->data[e->current_buff]->
   RowCol char_size = get_char_size(e->conf.font_data.size);
   Padding pad = e->conf.padding;
   ssize_t max_line_len = get_max_line_length(e);
-  Line *current_line = buff->lines[i];
+  String *current_line = buff->lines[i];
 
-  if(i == buff->current_line_index && e->conf.is_line_highlight) {
+  if(i == buff->cur_li && e->conf.is_line_highlight) {
     Rectangle line_highlight = {
       pad.left + (e->conf.ln_padding + 1) * (e->conf.letter_spacing + char_size.col), 
       pad.top + (buff->cursor.height + e->conf.line_height) * (i - buff->d_start) ,
@@ -257,7 +270,7 @@ void DrawLineChars(Editor *e, bool is_blinking, ssize_t x_offset, ssize_t y_offs
   for(ssize_t m = 0; m <= current_line->length; m++){
     float cursor_x = pad.left + (e->conf.letter_spacing + char_size.col) * x_offset;
     if(e->conf.ln_mode != NONE) cursor_x += (e->conf.letter_spacing + char_size.col) * (e->conf.ln_padding + 1);
-    if(i == buff->current_line_index && m == buff->cursor.index){
+    if(i == buff->cur_li && m == buff->cursor.index){
       DrawCursor(
         e, cursor_x,
         pad.top + ((e->conf.line_height + char_size.row) * y_offset),
@@ -271,7 +284,7 @@ void DrawLineChars(Editor *e, bool is_blinking, ssize_t x_offset, ssize_t y_offs
     if(m < current_line->length) {
       char c = current_line->chars[m];
       unsigned int char_color = (m == buff->cursor.index &&
-        i == buff->current_line_index && !is_blinking) ? 
+        i == buff->cur_li && !is_blinking) ? 
         e->conf.under_cursor_color : e->conf.text_color;
       if(c == '\t') {
         for(int i = 0; i < e->conf.tab_size; i++){
@@ -283,7 +296,7 @@ void DrawLineChars(Editor *e, bool is_blinking, ssize_t x_offset, ssize_t y_offs
         }
       } else {
         if(is_selected(e, (RowCol){i, m}) && 
-            !(i == buff->current_line_index && m == buff->cursor.index)) {
+            !(i == buff->cur_li && m == buff->cursor.index)) {
           DrawCursor(e, char_x, char_y, e->conf.selection_color);
           DrawChar(e, c,char_x, char_y , e->conf.selected_char_color, e->conf.font_data.size);
         } else {
@@ -312,11 +325,220 @@ void DrawLineChars(Editor *e, bool is_blinking, ssize_t x_offset, ssize_t y_offs
         y_offset++;
         x_offset = 0;
       }
-    }else if(!current_line->length) {
+    }else if(!current_line->len) {
       if(is_selected(e, (RowCol){i, m}) && 
-          !(i == buff->current_line_index && m == buff->cursor.index)) {
+          !(i == buff->cur_li && m == buff->cursor.index)) {
         DrawCursor(e, char_x, char_y, e->conf.selection_color);
       }
     }
+  } */
+}
+
+void DrawBufferText(Editor *e, bool is_blinking){
+  Buffer *buff = e->buffs->data[e->current_buff];
+  Padding pad = e->conf.padding;
+  RowCol char_size = get_char_size(e->conf.font_data.size);
+  bool has_nums = e->conf.ln_mode != NONE;
+  ssize_t i, index = 0, x_offset = 0, y_offset = 0, num_cariages = 0;
+  ssize_t total_char_w = e->conf.letter_spacing + char_size.col;
+  ssize_t total_char_h = e->conf.line_height + char_size.row;
+  ssize_t total_pl = pad.left;
+  if(has_nums) total_pl += (e->conf.ln_padding + 1) * total_char_w;
+  ssize_t total_pt = pad.top;
+  ssize_t max_len = get_max_line_length(e);
+  int cursor_x_offset = buff->cursor.index % max_len;
+  int cursor_y_offset = buff->cursor.index / max_len;
+  Vector2 char_pos = {0};
+  bool mouse_clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+  bool mouse_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+
+  float delta_x = e->mouse.x - press_start_pos.x;
+  float delta_y = e->mouse.y - press_start_pos.y;
+  bool mouse_dragged = (delta_x * delta_x + delta_y * delta_y) > 25.0f;
+
+  bool matched_char = false;
+  ssize_t closest_char_index = 0;
+  float closest_y = 10000.0f;
+  ssize_t closest_x = 10000.0f;
+
+  // char *text = buff->s->data;
+  size_t max_num_lines = get_max_num_lines(e);
+  size_t first_gui_index = get_line_from_index(buff->lines, buff->d_start);
+  size_t total_wraps =
+    get_lines_wraps(e, first_gui_index, first_gui_index + max_num_lines);
+  size_t cur_line_index = first_gui_index;
+  size_t char_index;
+
+  char *text = buff->s->data;
+  if(e->conf.ln_mode != NONE) DrawLineNumber(e, first_gui_index, y_offset);
+  for (
+    i = buff->d_start;
+    (i <= buff->s->len) && 
+    (cur_line_index < first_gui_index + max_num_lines + 1);
+    i++
+  ) { 
+
+    // buff = e->buffs->data[e->current_buff];
+    char c = text[i];
+
+    char_index = index + buff->d_start;
+    char_pos = (Vector2) {
+      total_pl + x_offset * total_char_w,
+      total_pt + y_offset * total_char_h,
+    };
+
+    if(char_index == buff->cursor.index){
+      if(text[char_index] == '\n' || char_index == buff->s->len){
+        DrawCursor(
+          e, char_pos.x, char_pos.y,
+          is_blinking ? 0x00000000 : buff->cursor.color
+        );
+
+      }
+    }else if(is_selected(e, char_index) && text[char_index - 1] == '\n') {
+      DrawCursor(e, char_pos.x, char_pos.y, e->conf.selection_color);
+    }
+    if(i == buff->s->len) break;
+
+    if(c == '\n'){
+      y_offset++;
+      x_offset = 0;
+      index++;
+      if(e->conf.ln_mode != NONE) DrawLineNumber(e, ++cur_line_index, y_offset);
+      continue;
+    }
+    if(c == '\r') {
+      memmove(&text[i], &text[i + 1], buff->s->len - i);
+      num_cariages++;
+    }
+    else {
+      index++;
+    }
+
+    if((x_offset) >= max_len) {
+      y_offset++;
+      x_offset = 0;
+    }
+    else if(isspace(text[i - 1]) || i == 1){
+      int word_len = 0;
+      while(!isspace(text[i + word_len++]));
+      if((x_offset + word_len - 1) > max_len && word_len < max_len){
+        x_offset = 0;
+        y_offset++;
+      }
+    }
+
+    char_pos = (Vector2) {
+      total_pl + x_offset * total_char_w,
+      total_pt + y_offset * total_char_h,
+    };
+
+    char_index = index + buff->d_start - 1;
+    if(char_index == buff->cursor.index){
+      DrawCursor(
+        e, char_pos.x, char_pos.y,
+        is_blinking ? 0x00000000 : buff->cursor.color
+      );
+
+    }
+    if(is_selected(e, char_index) && char_index != buff->cursor.index) {
+      DrawCursor(e, char_pos.x , char_pos.y, e->conf.selection_color);
+    }
+
+    if(cur_line_index == buff->cur_li && e->conf.is_line_highlight) {
+      Rectangle line_bg = { 
+        total_pl, total_pt + total_char_h * y_offset ,
+        e->s_width - (total_pl + pad.right),
+        total_char_h
+      };
+      DrawRectangleRec(line_bg, GetColor(e->conf.line_highlight_color));
+    }
+
+    DrawTextEx(
+      e->conf.font_data.font, TextFormat("%c", c),
+      char_pos, e->conf.font_data.size,
+      0.0f,
+      GetColor(
+        (char_index == buff->cursor.index && !is_blinking) ? 
+        e->conf.under_cursor_color:
+        e->conf.text_color
+      )
+    );
+
+    if((mouse_clicked || mouse_down) && !matched_char){
+      if(mouse_clicked) {
+        e->conf.is_selecting = false;
+        press_start_pos = e->mouse;
+      }
+      e->conf.is_selecting = mouse_dragged;
+
+      bool is_y_match = e->mouse.y >= char_pos.y && e->mouse.y <= (char_pos.y + total_char_h);
+      bool is_x_match = e->mouse.x >= char_pos.x && e->mouse.x <= (char_pos.x + total_char_w);
+      bool is_y_big   = e->mouse.y > char_pos.y + total_char_h;
+      bool is_x_big   = e->mouse.x > char_pos.x + total_char_w;
+      bool is_y_small = e->mouse.y < char_pos.y;
+      bool is_x_small = e->mouse.x < char_pos.x; 
+      float distance_x = fabsf(char_pos.x - e->mouse.x);
+      float distance_y = fabsf(char_pos.y - e->mouse.y);
+      size_t line_index = get_line_from_index(buff->lines, char_index);
+      Line line = buff->lines->data[line_index];
+
+      if(is_x_match && is_y_match){
+        matched_char = true;
+        handle_mouse_click(e, char_index, mouse_dragged);
+      }else if(is_y_match){
+        if(is_x_small){
+          if(char_index == line.start){
+            matched_char = true;
+            handle_mouse_click(e, line.start, mouse_dragged);
+          }else {
+            if(distance_x < closest_x){
+              closest_x = distance_x;
+              closest_char_index = char_index;
+            } 
+          }
+        }else if (is_x_big){
+          if(index == line.end){
+            matched_char = true;
+            handle_mouse_click(e, line.end - 1, mouse_dragged);
+          }else {
+            if(distance_x < closest_x){
+              closest_x = distance_x;
+              closest_char_index = char_index;
+            } 
+          }
+        }
+      }else if(is_y_small && line_index == 0){
+        if(is_x_match) {
+          matched_char = true;
+          handle_mouse_click(e, char_index, mouse_dragged);
+        }else if(is_x_small || is_x_big){
+           if(distance_x < closest_x){
+             closest_x = distance_x;
+             closest_char_index = char_index;
+           } 
+        }
+      }else if(is_y_big && line_index == buff->lines->len - 1){
+        if(is_x_match){
+          if(char_index > line.start + (max_len - 1) * line.wraps) {
+            matched_char = true;
+            handle_mouse_click(e, char_index, mouse_dragged);
+          }
+        }else if(is_x_small){
+          if(char_index > line.start + max_len * line.wraps - 1) {
+            matched_char = true;
+            handle_mouse_click(e, line.start + max_len * line.wraps, mouse_dragged);
+          }
+        }else if(is_x_big && char_index == line.end - 1){
+          matched_char = true;
+          handle_mouse_click(e, line.end - 1, mouse_dragged);
+        }
+      }
+    }
+    x_offset++;
   }
+  if((mouse_clicked || mouse_down) && !matched_char){
+    handle_mouse_click(e, closest_char_index, mouse_dragged);
+  }
+  buff->s->len -= num_cariages;
 }
