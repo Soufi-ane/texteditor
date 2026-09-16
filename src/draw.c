@@ -386,14 +386,14 @@ void DrawBufferText(Editor *e, bool is_blinking){
     if(e->mouse.y < total_pt + total_char_h * e->conf.scroll_pad){
       double now = GetTime();
       if(now - last_press_time > HOLD_PRESS_DELAY) {
-        scroll_up(e, 1);
+        scroll_down(e, 1);
         last_press_time = now;
       }
     }
     else if(e->mouse.y > e->s_height - pad.bottom - e->conf.scroll_pad * total_char_h) {
       double now = GetTime();
       if(now - last_press_time > HOLD_PRESS_DELAY) {
-        scroll_down(e, 1);
+        scroll_up(e, 1);
         last_press_time = now;
       }
     }
