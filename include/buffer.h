@@ -218,6 +218,8 @@ typedef struct {
 
 int get_position(Editor* e);
 
+void move_cursor_up(Editor* e);
+
 void move_cursor_down(Editor* e);
 
 char* createchar(int n);
@@ -337,5 +339,11 @@ void adapte_col_to_cur_line(Editor *e);
 size_t get_line_from_index(Lines *lines, size_t index);
 
 String *string(const char *text);
+
+void scroll_up(Editor *e, size_t count);
+
+void scroll_down(Editor *e, size_t count);
+
+void update_buf_state(Editor *e);
 
 #endif

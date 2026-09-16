@@ -6,13 +6,11 @@
 #include "draw.h"
 #include "tinyfiledialogs.h"
 
-#define HOLD_PRESS_DELAY 0.02f
 #define PAIRS_COUNT 8
 #define cur_buf e->buffs->data[e->current_buff]
 #define cur_line cur_buf->lines->data[cur_buf->cur_li]
 
 double long_press_time = 0.0f;
-double last_press_time = 0.0f;
 int is_g_clicked_before = false;
 
 Cmd default_cmds[NUM_COMMANDS] = {
@@ -182,6 +180,21 @@ bool is_selected(Editor *e, size_t index){
     return index >= cur_buf->cursor.index && index <= e->conf.selection_start;
   }else {
     return index >= e->conf.selection_start && index <= cur_buf->cursor.index;
+  }
+}
+
+void scroll_up(Editor *e, size_t count){
+  size_t max_num_lines = get_max_num_lines(e);
+  size_t first_gui_index = get_line_from_index(cur_buf->lines, cur_buf->d_start);
+  if(first_gui_index + max_num_lines - e->conf.scroll_pad <= cur_buf->lines->len - count) {
+    cur_buf->d_start = cur_buf->lines->data[first_gui_index + count].start;
+  }
+}
+
+void scroll_down(Editor *e, size_t count){
+  size_t first_gui_index = get_line_from_index(cur_buf->lines, cur_buf->d_start);
+  if(first_gui_index > count - 1) {
+    cur_buf->d_start = cur_buf->lines->data[first_gui_index - count].start;
   }
 }
 
@@ -403,7 +416,7 @@ void move_cursor_up(Editor* e){
     cur_buf->cursor.index = prev_line.start;
     update_lines(e);
     adapte_col_to_cur_line(e);
-    // update_scroll(e, true);
+    // update_scroll(e, false, true);
   }
   update_buf_state(e);
 }
@@ -420,7 +433,7 @@ void move_cursor_down(Editor* e){
     cur_buf->cursor.index = next_line.start;
     update_lines(e);
     adapte_col_to_cur_line(e);
-    // update_scroll(e, false);
+    // update_scroll(e, false, false);
   }
   update_buf_state(e);
 }
@@ -792,6 +805,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       undo(e);
       break;
     case '?':
+      printf("index at[%zu]\n", cur_buf->cursor.index);
       break;
   }
   if(c == 'g'){
@@ -1064,6 +1078,7 @@ void handle_mouse_click(Editor *e, size_t index, bool is_holding){
     e->conf.selection_start = cur_buf->cursor.index;
   } 
   update_lines(e);
+  update_last_col(e);
    
   /* else if(
     (line_index == cur_buf->d_start && e->mouse.y < char_y){

@@ -4,7 +4,9 @@
 #include "files.h"
 #include "draw.h"
 
+#define HOLD_PRESS_DELAY 0.02f
 Vector2 press_start_pos = {0};
+double last_press_time = 0.0f;
 
 const char *get_mode_str(Mode mode, bool is_selecting){
   switch (mode) {
@@ -351,6 +353,51 @@ void DrawBufferText(Editor *e, bool is_blinking){
   Vector2 char_pos = {0};
   bool mouse_clicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
   bool mouse_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+  float wheel_delta_y = GetMouseWheelMove();
+
+  size_t max_num_lines = get_max_num_lines(e);
+  size_t first_gui_index = get_line_from_index(buff->lines, buff->d_start);
+
+  if(wheel_delta_y > 0) {
+    scroll_down(e, 1);
+    if(buff->cur_li > first_gui_index + max_num_lines - e->conf.scroll_pad) {
+      buff->cursor.index = buff->lines->data[
+        first_gui_index + max_num_lines - e->conf.scroll_pad
+      ].start;
+    }
+    update_lines(e);
+    update_buf_state(e);
+  } 
+  else if(wheel_delta_y < 0) {
+    scroll_up(e, 1);
+    if(buff->cur_li < first_gui_index + e->conf.scroll_pad){
+      buff->cursor.index = buff->lines->data[first_gui_index + e->conf.scroll_pad].start;
+    } 
+    update_lines(e);
+    update_buf_state(e);
+  } 
+  
+  size_t total_wraps =
+    get_lines_wraps(e, first_gui_index, first_gui_index + max_num_lines);
+  size_t cur_line_index = first_gui_index;
+  char *text = buff->s->data;
+
+  if(mouse_down && e->conf.is_selecting) {
+    if(e->mouse.y < total_pt + total_char_h * e->conf.scroll_pad){
+      double now = GetTime();
+      if(now - last_press_time > HOLD_PRESS_DELAY) {
+        scroll_up(e, 1);
+        last_press_time = now;
+      }
+    }
+    else if(e->mouse.y > e->s_height - pad.bottom - e->conf.scroll_pad * total_char_h) {
+      double now = GetTime();
+      if(now - last_press_time > HOLD_PRESS_DELAY) {
+        scroll_down(e, 1);
+        last_press_time = now;
+      }
+    }
+  }
 
   float delta_x = e->mouse.x - press_start_pos.x;
   float delta_y = e->mouse.y - press_start_pos.y;
@@ -361,15 +408,8 @@ void DrawBufferText(Editor *e, bool is_blinking){
   float closest_y = 10000.0f;
   ssize_t closest_x = 10000.0f;
 
-  // char *text = buff->s->data;
-  size_t max_num_lines = get_max_num_lines(e);
-  size_t first_gui_index = get_line_from_index(buff->lines, buff->d_start);
-  size_t total_wraps =
-    get_lines_wraps(e, first_gui_index, first_gui_index + max_num_lines);
-  size_t cur_line_index = first_gui_index;
   size_t char_index;
 
-  char *text = buff->s->data;
   if(e->conf.ln_mode != NONE) DrawLineNumber(e, first_gui_index, y_offset);
   for (
     i = buff->d_start;
@@ -399,6 +439,82 @@ void DrawBufferText(Editor *e, bool is_blinking){
       DrawCursor(e, char_pos.x, char_pos.y, e->conf.selection_color);
     }
     if(i == buff->s->len) break;
+
+    if((mouse_clicked || mouse_down) && !matched_char){
+      if(mouse_clicked) {
+        e->conf.is_selecting = false;
+        press_start_pos = e->mouse;
+      }
+      e->conf.is_selecting = mouse_dragged;
+
+      bool is_y_match = e->mouse.y >= char_pos.y && e->mouse.y <= (char_pos.y + total_char_h);
+      bool is_x_match = e->mouse.x >= char_pos.x && e->mouse.x <= (char_pos.x + total_char_w);
+      bool is_y_big   = e->mouse.y > char_pos.y + total_char_h;
+      bool is_x_big   = e->mouse.x > char_pos.x + total_char_w;
+      bool is_y_small = e->mouse.y < char_pos.y;
+      bool is_x_small = e->mouse.x < char_pos.x; 
+      float distance_x = fabsf(char_pos.x - e->mouse.x);
+      float distance_y = fabsf(char_pos.y - e->mouse.y);
+      size_t line_index = get_line_from_index(buff->lines, char_index);
+      Line line = buff->lines->data[line_index];
+
+      if(is_x_match && is_y_match){
+        matched_char = true;
+        handle_mouse_click(e, char_index, mouse_dragged);
+      }else if(is_y_match){
+        if(is_x_small){
+          if(char_index == line.start){
+            matched_char = true;
+            handle_mouse_click(e, line.start, mouse_dragged);
+          }else {
+            if(distance_x < closest_x){
+               matched_char = true;
+              closest_x = distance_x;
+              closest_char_index = char_index;
+            } 
+          }
+        }else if (is_x_big){
+          if(index == line.end){
+            if(line.end - line.start < 1){
+              handle_mouse_click(e, line.start, mouse_dragged);
+            }else {
+              handle_mouse_click(e, line.end - 1, mouse_dragged);
+            }
+            matched_char = true;
+          }else {
+            if(distance_x < closest_x){
+              closest_x = distance_x;
+              closest_char_index = char_index;
+            } 
+          }
+        }
+      }else if(is_y_small && line_index == 0){
+        if(is_x_match) {
+          matched_char = true;
+          handle_mouse_click(e, char_index, mouse_dragged);
+        }else if(is_x_small || is_x_big){
+           if(distance_x < closest_x){
+             closest_x = distance_x;
+             closest_char_index = char_index;
+           } 
+        }
+      }else if(is_y_big && (line_index == buff->lines->len - 1 || line_index == first_gui_index + max_num_lines)){
+        if(is_x_match){
+          if(char_index >= line.start + (max_len - 1) * line.wraps) {
+            matched_char = true;
+            handle_mouse_click(e, char_index, mouse_dragged);
+          }
+        }else if(is_x_small){
+          if(char_index > line.start + max_len * line.wraps - 1) {
+            matched_char = true;
+            handle_mouse_click(e, line.start + max_len * line.wraps, mouse_dragged);
+          }
+        }else if(is_x_big && char_index == line.end - 1){
+          matched_char = true;
+          handle_mouse_click(e, line.end - 1, mouse_dragged);
+        }
+      } 
+    }
 
     if(c == '\n'){
       y_offset++;
@@ -465,76 +581,6 @@ void DrawBufferText(Editor *e, bool is_blinking){
       )
     );
 
-    if((mouse_clicked || mouse_down) && !matched_char){
-      if(mouse_clicked) {
-        e->conf.is_selecting = false;
-        press_start_pos = e->mouse;
-      }
-      e->conf.is_selecting = mouse_dragged;
-
-      bool is_y_match = e->mouse.y >= char_pos.y && e->mouse.y <= (char_pos.y + total_char_h);
-      bool is_x_match = e->mouse.x >= char_pos.x && e->mouse.x <= (char_pos.x + total_char_w);
-      bool is_y_big   = e->mouse.y > char_pos.y + total_char_h;
-      bool is_x_big   = e->mouse.x > char_pos.x + total_char_w;
-      bool is_y_small = e->mouse.y < char_pos.y;
-      bool is_x_small = e->mouse.x < char_pos.x; 
-      float distance_x = fabsf(char_pos.x - e->mouse.x);
-      float distance_y = fabsf(char_pos.y - e->mouse.y);
-      size_t line_index = get_line_from_index(buff->lines, char_index);
-      Line line = buff->lines->data[line_index];
-
-      if(is_x_match && is_y_match){
-        matched_char = true;
-        handle_mouse_click(e, char_index, mouse_dragged);
-      }else if(is_y_match){
-        if(is_x_small){
-          if(char_index == line.start){
-            matched_char = true;
-            handle_mouse_click(e, line.start, mouse_dragged);
-          }else {
-            if(distance_x < closest_x){
-              closest_x = distance_x;
-              closest_char_index = char_index;
-            } 
-          }
-        }else if (is_x_big){
-          if(index == line.end){
-            matched_char = true;
-            handle_mouse_click(e, line.end - 1, mouse_dragged);
-          }else {
-            if(distance_x < closest_x){
-              closest_x = distance_x;
-              closest_char_index = char_index;
-            } 
-          }
-        }
-      }else if(is_y_small && line_index == 0){
-        if(is_x_match) {
-          matched_char = true;
-          handle_mouse_click(e, char_index, mouse_dragged);
-        }else if(is_x_small || is_x_big){
-           if(distance_x < closest_x){
-             closest_x = distance_x;
-             closest_char_index = char_index;
-           } 
-        }
-      }else if(is_y_big && line_index == buff->lines->len - 1){
-        if(is_x_match){
-          if(char_index > line.start + (max_len - 1) * line.wraps) {
-            matched_char = true;
-            handle_mouse_click(e, char_index, mouse_dragged);
-          }
-        }else if(is_x_small){
-          if(char_index > line.start + max_len * line.wraps - 1) {
-            matched_char = true;
-            handle_mouse_click(e, line.start + max_len * line.wraps, mouse_dragged);
-          }
-        }else if(is_x_big && char_index == line.end - 1){
-          matched_char = true;
-          handle_mouse_click(e, line.end - 1, mouse_dragged);
-        }
-      }
-    }
     x_offset++;
   }
   if((mouse_clicked || mouse_down) && !matched_char){
