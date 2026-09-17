@@ -63,20 +63,10 @@ typedef struct{
   size_t col;
 } RowCol;
 
-/* typedef enum {
-  ADD_STR,
-  DELETE_STR,
-  ADD_LINE,
-  DELETE_LINE,
-  REPLACE
-} ActionType; */
-
 typedef struct {
-  // ActionType type;
   size_t index;
   String *new;
   String *old;
-  // size_t replace_length;
 } Action;
 
 typedef struct {
