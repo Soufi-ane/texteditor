@@ -2,7 +2,6 @@
 #include <ctype.h>
 #include <math.h>
 #include "files.h"
-#include "draw.h"
 
 #define HOLD_PRESS_DELAY 0.02f
 Vector2 press_start_pos = {0};
@@ -233,10 +232,10 @@ void DrawEditorLines(Editor *e){
   }
 }
 
-void DrawLineNumber(Editor *e, ssize_t i, ssize_t y_offset){
+void DrawLineNumber(Editor *e, size_t i, size_t y_offset){
   RowCol char_size = get_char_size(e->conf.font_data.size);
   Padding pad = e->conf.padding;
-  ssize_t index = e->buffs->data[e->current_buff]->cur_li;
+  size_t index = e->buffs->data[e->current_buff]->cur_li;
   DrawTextEx(e->conf.font_data.font,
     TextFormat( "%zu", 
       (e->conf.ln_mode == ABSOLUTE || index == i) ?  i + 1 :
@@ -249,105 +248,18 @@ void DrawLineNumber(Editor *e, ssize_t i, ssize_t y_offset){
     e->conf.font_data.size, 0, GetColor(e->conf.line_numbers_color));
 }
 
-void DrawLineChars(Editor *e, bool is_blinking, ssize_t x_offset, ssize_t y_offset, ssize_t i){
-/*   float char_x;
-  float char_y;
-  Buffer *buff = e->buffs->data[e->current_buff]->
-  RowCol char_size = get_char_size(e->conf.font_data.size);
-  Padding pad = e->conf.padding;
-  ssize_t max_line_len = get_max_line_length(e);
-  String *current_line = buff->lines[i];
-
-  if(i == buff->cur_li && e->conf.is_line_highlight) {
-    Rectangle line_highlight = {
-      pad.left + (e->conf.ln_padding + 1) * (e->conf.letter_spacing + char_size.col), 
-      pad.top + (buff->cursor.height + e->conf.line_height) * (i - buff->d_start) ,
-      e->s_width - (pad.left + pad.right + (e->conf.ln_padding + 1) * (e->conf.letter_spacing + char_size.col)),
-      buff->cursor.height
-    };
-
-    DrawRectangleRec(line_highlight, GetColor(e->conf.line_highlight_color));
-  }
-
-  for(ssize_t m = 0; m <= current_line->length; m++){
-    float cursor_x = pad.left + (e->conf.letter_spacing + char_size.col) * x_offset;
-    if(e->conf.ln_mode != NONE) cursor_x += (e->conf.letter_spacing + char_size.col) * (e->conf.ln_padding + 1);
-    if(i == buff->cur_li && m == buff->cursor.index){
-      DrawCursor(
-        e, cursor_x,
-        pad.top + ((e->conf.line_height + char_size.row) * y_offset),
-        is_blinking ? 0x00000000 : buff->cursor.color
-      );
-    }
-
-    char_x = pad.left + (e->conf.letter_spacing + char_size.col) * x_offset;
-    char_y = pad.top + ((e->conf.line_height + char_size.row) * y_offset);
-    if(e->conf.ln_mode != NONE) char_x += (e->conf.letter_spacing + char_size.col) * (e->conf.ln_padding + 1);
-    if(m < current_line->length) {
-      char c = current_line->chars[m];
-      unsigned int char_color = (m == buff->cursor.index &&
-        i == buff->cur_li && !is_blinking) ? 
-        e->conf.under_cursor_color : e->conf.text_color;
-      if(c == '\t') {
-        for(int i = 0; i < e->conf.tab_size; i++){
-          DrawChar(
-            e, ' ',char_x + i * (e->conf.letter_spacing + char_size.col),
-            char_y , char_color, e->conf.font_data.size
-          );
-          x_offset++;
-        }
-      } else {
-        if(is_selected(e, (RowCol){i, m}) && 
-            !(i == buff->cur_li && m == buff->cursor.index)) {
-          DrawCursor(e, char_x, char_y, e->conf.selection_color);
-          DrawChar(e, c,char_x, char_y , e->conf.selected_char_color, e->conf.font_data.size);
-        } else {
-          DrawChar(e, c,char_x, char_y , char_color, e->conf.font_data.size);
-        } 
-      } 
-
-      if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-        e->conf.is_selecting = false;
-        press_start_pos = e->mouse;
-        handle_mouse_click(e, char_x, char_y, m, i, false);
-      }
-      if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-        float delta_x = e->mouse.x - press_start_pos.x;
-        float delta_y = e->mouse.y - press_start_pos.y;
-        float distance_squared = delta_x * delta_x + delta_y * delta_y;
-        if(distance_squared > 25.0f) {
-          e->conf.is_selecting = true;
-          e->mode = NORMAL;
-          handle_mouse_click(e, char_x, char_y, m, i, true);
-        }
-      }
-
-      x_offset++;
-      if((m + 1) % max_line_len == 0) {
-        y_offset++;
-        x_offset = 0;
-      }
-    }else if(!current_line->len) {
-      if(is_selected(e, (RowCol){i, m}) && 
-          !(i == buff->cur_li && m == buff->cursor.index)) {
-        DrawCursor(e, char_x, char_y, e->conf.selection_color);
-      }
-    }
-  } */
-}
-
 void DrawBufferText(Editor *e, bool is_blinking){
   Buffer *buff = e->buffs->data[e->current_buff];
   Padding pad = e->conf.padding;
   RowCol char_size = get_char_size(e->conf.font_data.size);
   bool has_nums = e->conf.ln_mode != NONE;
-  ssize_t i, index = 0, x_offset = 0, y_offset = 0, num_cariages = 0;
-  ssize_t total_char_w = e->conf.letter_spacing + char_size.col;
-  ssize_t total_char_h = e->conf.line_height + char_size.row;
-  ssize_t total_pl = pad.left;
+  size_t i, index = 0, x_offset = 0, y_offset = 0, num_cariages = 0;
+  size_t total_char_w = e->conf.letter_spacing + char_size.col;
+  size_t total_char_h = e->conf.line_height + char_size.row;
+  size_t total_pl = pad.left;
   if(has_nums) total_pl += (e->conf.ln_padding + 1) * total_char_w;
-  ssize_t total_pt = pad.top;
-  ssize_t max_len = get_max_line_length(e);
+  size_t total_pt = pad.top;
+  size_t max_len = get_max_line_length(e);
   int cursor_x_offset = buff->cursor.index % max_len;
   int cursor_y_offset = buff->cursor.index / max_len;
   Vector2 char_pos = {0};
@@ -404,9 +316,9 @@ void DrawBufferText(Editor *e, bool is_blinking){
   bool mouse_dragged = (delta_x * delta_x + delta_y * delta_y) > 25.0f;
 
   bool matched_char = false;
-  ssize_t closest_char_index = 0;
+  size_t closest_char_index = 0;
   float closest_y = 10000.0f;
-  ssize_t closest_x = 10000.0f;
+  size_t closest_x = 10000.0f;
 
   size_t char_index;
 

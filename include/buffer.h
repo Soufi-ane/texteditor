@@ -1,9 +1,9 @@
 #ifndef NOTE_H
 #define NOTE_H
 
-#include <raylib.h>
 #include <stdio.h>
 #include "conf.h"
+#include "str.h"
 
 #define da_append(arr, i)                                                     \
   do {                                                                        \
@@ -70,12 +70,6 @@ typedef struct{
   DELETE_LINE,
   REPLACE
 } ActionType; */
-
-typedef struct {
-  char *data;
-  size_t len;
-  size_t cap;
-} String;
 
 typedef struct {
   // ActionType type;
@@ -233,21 +227,15 @@ void addchar(Editor* e, char* line, char* text);
 
 int get_first_diplayed_index(Editor* e,bool isUp);
 
-String *new_str(size_t capacity);
-
 Buffer *new_buffer();
 
 size_t get_max_line_length(Editor *e);
 
 size_t get_max_num_lines(Editor *e);
 
-void free_str(String *str);
-
 size_t get_lines_wraps(Editor *e, size_t from, size_t to);
 
 void move_cursor_right(Editor* e, size_t count);
-
-void add_char_to_str(String *str, char c, size_t index);
 
 void add_char_to_cur_buf(Editor *e, char c, size_t index);
 
@@ -273,13 +261,9 @@ bool is_selecting_up(Editor *e);
 
 void remove_chars_cur_buf(Editor *e, size_t index, size_t count);
 
-void str_remove_chars(String *str, size_t index, size_t count);
-
 void handle_tab(Editor* e, bool is_shift_down);
 
 void filter_cmds_by_prompt(Editor *e);
-
-String *lower_case(String *str);
 
 void handle_insert_mode_keys(Editor* e,int c);
 
@@ -294,8 +278,6 @@ void free_buffer(Buffer *buff);
 void realloc_editor_buffers(Editor *e);
 
 void delete_lines(Buffer *buff, size_t from, size_t count);
-
-void realloc_str(String *str, size_t cap);
 
 int get_digit_count(int number);
 
@@ -337,14 +319,10 @@ void adapte_col_to_cur_line(Editor *e);
 
 size_t get_line_from_index(Lines *lines, size_t index);
 
-String *string(const char *text);
-
 void scroll_up(Editor *e, size_t count);
 
 void scroll_down(Editor *e, size_t count);
 
 void update_buf_state(Editor *e);
-
-void add_str_to_str(String *dest, String *src, size_t index);
 
 #endif

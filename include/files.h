@@ -1,7 +1,7 @@
 #ifndef FILES_H
 #define FILES_H
-#include <raylib.h>
-#include "buffer.h"
+
+#include "draw.h"
 
 extern char* menu_icons_names[];
 

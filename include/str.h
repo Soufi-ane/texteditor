@@ -1,0 +1,26 @@
+#ifndef STR_H
+#define STR_H
+
+typedef struct {
+  char *data;
+  size_t len;
+  size_t cap;
+} String;
+
+String *new_str(size_t capacity);
+
+void free_str(String *str);
+
+void add_char_to_str(String *str, char c, size_t index);
+
+void str_remove_chars(String *str, size_t index, size_t count);
+
+String *lower_case(String *str);
+
+void realloc_str(String *str, size_t cap);
+
+String *string(const char *text);
+
+void add_str_to_str(String *dest, String *src, size_t index);
+
+#endif

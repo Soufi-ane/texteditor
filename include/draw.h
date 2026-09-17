@@ -1,5 +1,6 @@
 #ifndef DRAW_H
 #define DRAW_H
+
 #include <raylib.h>
 #include "buffer.h"
 
@@ -17,9 +18,9 @@ void DrawChar(Editor *e, int c, int x_pos, int y_pos, unsigned int color, float 
 
 RowCol get_char_size(float font_size);
 
-void DrawLineNumber(Editor *e, ssize_t i, ssize_t y_offset);
+void DrawLineNumber(Editor *e, size_t i, size_t y_offset);
 
-void DrawLineChars(Editor *e, bool is_blinking, ssize_t x_offset, ssize_t y_offset, ssize_t i);
+void DrawLineChars(Editor *e, bool is_blinking, size_t x_offset, size_t y_offset, size_t i);
 
 void DrawEditorLines(Editor *e);
 
