@@ -63,13 +63,13 @@ typedef struct{
   size_t col;
 } RowCol;
 
-typedef enum {
+/* typedef enum {
   ADD_STR,
   DELETE_STR,
   ADD_LINE,
   DELETE_LINE,
   REPLACE
-} ActionType;
+} ActionType; */
 
 typedef struct {
   char *data;
@@ -78,9 +78,10 @@ typedef struct {
 } String;
 
 typedef struct {
-  ActionType type;
-  RowCol pos;
-  String *str;
+  // ActionType type;
+  size_t index;
+  String *new;
+  String *old;
   // size_t replace_length;
 } Action;
 
@@ -133,7 +134,7 @@ typedef struct {
   Cursor cursor;
   ActionStack undo_stack;
   ActionStack redo_stack;
-  Action *current_action;
+  Action *cur_act;
   char const * file_path;
   bool is_saved;
   bool is_readonly;
@@ -224,8 +225,6 @@ void move_cursor_down(Editor* e);
 
 char* createchar(int n);
 
-void delete_chars(String *str, size_t from, size_t count);
-
 void emptychar(char* line);
 
 void addChar(Editor* e, char c);
@@ -246,7 +245,7 @@ void free_str(String *str);
 
 size_t get_lines_wraps(Editor *e, size_t from, size_t to);
 
-void move_cursor_right(Editor* e);
+void move_cursor_right(Editor* e, size_t count);
 
 void add_char_to_str(String *str, char c, size_t index);
 
@@ -272,9 +271,9 @@ bool is_selected(Editor *e, size_t index);
 
 bool is_selecting_up(Editor *e);
 
-void remove_chars_from_cur_buf(Editor *e, size_t index, size_t count);
+void remove_chars_cur_buf(Editor *e, size_t index, size_t count);
 
-void str_pop_char(String *str);
+void str_remove_chars(String *str, size_t index, size_t count);
 
 void handle_tab(Editor* e, bool is_shift_down);
 
@@ -310,7 +309,7 @@ void action_stack_push(ActionStack *stack, Action action);
 
 Action *action_stack_pop(ActionStack *stack);
 
-Action* init_action(ActionType type, RowCol pos);
+Action* init_action(size_t index);
 
 void action_delete_new_str(Editor *e, Action *act);
 
@@ -328,7 +327,7 @@ void free_action(Action *action);
 
 void action_stack_flush(ActionStack *stack);
 
-void update_action(Action **act, ActionType type, RowCol pos, char c);
+void update_action(Action **act, size_t index, char c, bool is_new);
 
 void update_lines(Editor *e);
 
@@ -345,5 +344,7 @@ void scroll_up(Editor *e, size_t count);
 void scroll_down(Editor *e, size_t count);
 
 void update_buf_state(Editor *e);
+
+void add_str_to_str(String *dest, String *src, size_t index);
 
 #endif

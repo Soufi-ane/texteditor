@@ -236,7 +236,7 @@ int get_digit_count(int number){
 void handle_append(Editor *e){
   e->mode = INSERT;
   e->conf.is_selecting = false;
-  if(cur_line.end - cur_line.start > 0) move_cursor_right(e);
+  if(cur_line.end - cur_line.start > 0) move_cursor_right(e, 1);
 }
 
 void toggle_full_screen(Editor *e){
@@ -281,29 +281,15 @@ void add_new_line(Buffer *buff, size_t index){
 void add_char_to_cur_buf(Editor *e, char c, size_t index){
 
   String *str = cur_buf->s;
+  add_char_to_str(str, c, index);
 
-  if(str->len >= str->cap){
-    size_t new_cap = str->cap * 2;
-    realloc_str(str, new_cap);
-  } 
-
-  memmove(&str->data[index + 1], &str->data[index], str->len - index);
-
-  str->data[index] = c;
-  str->len++;
   cur_buf->cursor.index = index + 1;
+
+  update_action(&cur_buf->cur_act, index, c, true);
   update_lines(e);
   update_scroll(e, false, false);
   update_buf_state(e);
   cur_buf->is_saved = false;
-}
-
-void add_str_to_str(String *dest, char *str, size_t len, size_t index){
-  /* if(index < 0 || len < 1 || line == NULL) return;
-  if(line->buffs->cap < line->buffs->len + len - 1) realloc_line(line, line->buffs->cap * 2);
-  memmove(&line->chars[index + len], &line->chars[index], line->buffs->len - index + 1);
-  memcpy(&line->chars[index], str, len);
-  line->buffs->len += len; */
 }
 
 void replace_char(String *str, size_t index, char new_char){
@@ -314,18 +300,18 @@ void replace_char(String *str, size_t index, char new_char){
 void add_char_to_str(String *str, char c, size_t index){
   if(index < 0 || index > str->len || str == NULL) return;
   if(str->cap <= str->len) realloc_str(str, str->cap * 2);
-  memmove(&str->data[index + 1], &str->data[index], str->len - index + 1);
+  memmove(&str->data[index + 1], &str->data[index], str->len - index);
   str->data[index] = c;
   str->len++;
 }
 
-void str_pop_char(String *str){
-  /* if(!line->buffs->len) return;
-  line->chars[line->buffs->len - 1] = '\0';
-  line->buffs->len--; */
+void remove_chars_cur_buf(Editor *e, size_t index, size_t count){
+  String *str = cur_buf->s;
+  update_action(&cur_buf->cur_act, index, str->data[index], false);
+  str_remove_chars(str, index, count);
 }
 
-void remove_chars_from_string(String *str, size_t index, size_t count){
+void str_remove_chars(String *str, size_t index, size_t count){
   memmove(
     &str->data[index],
     &str->data[index + count],
@@ -350,32 +336,27 @@ void update_last_col(Editor* e){
   cur_buf->cursor.last_col = cur_buf->cursor.pos.col;
 }
 
-void move_cursor_right(Editor* e) {
-  update_lines(e);
+void move_cursor_right(Editor* e, size_t count) {
   bool is_normal = e->conf.is_vim_mode && e->mode == NORMAL;
-  if(cur_buf->cursor.index < cur_buf->s->len - (is_normal ? 1 : 0)){
-    if(cur_buf->cursor.index + 1 == cur_line.end){
-      if(is_normal) {
-        cur_buf->cursor.index++;
-      } 
-    }
-    cur_buf->cursor.index++;
+  if(cur_buf->cursor.index < cur_buf->s->len - (is_normal ? count : count - 1)){
+    if(is_normal && cur_buf->s->data[cur_buf->cursor.index + count] == '\n') {
+      cur_buf->cursor.index++;
+    } 
+    cur_buf->cursor.index += count;
   }
   update_lines(e);
   update_last_col(e);
-
   update_buf_state(e);
 }
 
-void move_cursor_left(Editor* e) {
-  if(cur_buf->cursor.index) {
-    if(cur_buf->cursor.index == cur_line.start){
-      if(e->conf.is_vim_mode && e->mode == NORMAL) {
-        cur_buf->cursor.index--;
-      }
-    }
-    cur_buf->cursor.index--;
-  } 
+void move_cursor_left(Editor* e, size_t count) {
+  bool is_normal = e->conf.is_vim_mode && e->mode == NORMAL;
+  if(cur_buf->cursor.index >= count) {
+    if(is_normal && cur_buf->s->data[cur_buf->cursor.index - count] == '\n') {
+      cur_buf->cursor.index--;
+    } 
+    cur_buf->cursor.index -= count;
+  } else cur_buf->cursor.index = 0; 
   update_lines(e);
   update_last_col(e);
   update_buf_state(e);
@@ -386,7 +367,7 @@ void handle_caps_lock_and_escape(Editor* e){
     if(e->conf.is_selecting) e->conf.is_selecting = false;
     else if(e->mode == INSERT){
       e->mode = NORMAL;
-      if(cur_buf->cursor.index != cur_line.start) move_cursor_left(e);
+      if(cur_buf->cursor.index != cur_line.start) move_cursor_left(e, 1);
       e->conf.is_menu_open = false;
       e->prompt->len = 0;
       filter_cmds_by_prompt(e);
@@ -398,10 +379,10 @@ void handle_caps_lock_and_escape(Editor* e){
     e->prompt->len = 0;
     filter_cmds_by_prompt(e);
   }
-  if(cur_buf->current_action != NULL) {
-    action_stack_push(&cur_buf->undo_stack, *cur_buf->current_action);
+  if(cur_buf->cur_act != NULL) {
+    action_stack_push(&cur_buf->undo_stack, *cur_buf->cur_act);
     action_stack_flush(&cur_buf->redo_stack);
-    cur_buf->current_action = NULL;
+    cur_buf->cur_act = NULL;
   } 
 }
 
@@ -416,7 +397,7 @@ void move_cursor_up(Editor* e){
     cur_buf->cursor.index = prev_line.start;
     update_lines(e);
     adapte_col_to_cur_line(e);
-    // update_scroll(e, false, true);
+    update_scroll(e, false, true);
   }
   update_buf_state(e);
 }
@@ -440,7 +421,7 @@ void move_cursor_down(Editor* e){
 
 void adapte_col_to_cur_line(Editor *e){
   size_t len = cur_line.end - cur_line.start;
-  if(len - 1 >= cur_buf->cursor.last_col){
+  if(len >= cur_buf->cursor.last_col + 1){
     cur_buf->cursor.index += cur_buf->cursor.last_col;
   } else cur_buf->cursor.index = cur_line.end - (len ? 1 : 0);
 }
@@ -468,15 +449,15 @@ void move_to_word_ending(Editor* e){
   char *text = cur_buf->s->data;
   size_t last_index = cur_buf->s->len - 1;
   while(isspace(text[i + 1]) && i < last_index ){
-    move_cursor_right(e);
+    move_cursor_right(e, 1);
     i++;
   }
   if(!isalnum(text[i + 1]) && i < last_index){
-    move_cursor_right(e);
+    move_cursor_right(e, 1);
     i++;
   }
   while((isalnum(text[i + 1]) || text[i + 1] == '_') && i < last_index) {
-    move_cursor_right(e);
+    move_cursor_right(e, 1);
     i++;
   }
   cur_buf->cursor.index = i;
@@ -489,16 +470,17 @@ void move_to_word_ending(Editor* e){
 void move_to_word_beginning(Editor* e){
   size_t i = cur_buf->cursor.index; 
   char *text = cur_buf->s->data;
+  // todo move_cursor with count
   while(isspace(text[i - 1]) && i > 0){
-    move_cursor_left(e);
+    move_cursor_left(e, 1);
     i--;
   }
   if(!isalnum(text[i - 1]) && i > 0) {
-    move_cursor_left(e);
+    move_cursor_left(e, 1);
     i--;
   }
   while((isalnum(text[i - 1]) || text[i - 1] == '_') && i > 0) {
-    move_cursor_left(e);
+    move_cursor_left(e, 1);
     i--;
   }
   cur_buf->cursor.index = i;
@@ -535,7 +517,7 @@ void handle_tab(Editor* e, bool is_shift_down) {
         for(int i = 0; i < e->conf.tab_size; ++i)  {
           add_char_to_cur_buf(e, ' ', cur_buf->cursor.index);
           /* update_action(
-            &cur_buf->current_action, ADD_STR,
+            &cur_buf->cur_act, ADD_STR,
             (RowCol){ cur_buf->cur_li, index }, ' '
           ); */
         }
@@ -543,7 +525,7 @@ void handle_tab(Editor* e, bool is_shift_down) {
       else {
         add_char_to_cur_buf(e, '\t', cur_buf->cursor.index);
         /* update_action(
-          &cur_buf->current_action, ADD_STR,
+          &cur_buf->cur_act, ADD_STR,
           (RowCol){ cur_buf->cur_li, index }, '\t'
         ); */
       }
@@ -626,14 +608,6 @@ void try_quitting(Editor *e){
   }
 }
 
-void delete_chars(String *str, size_t from, size_t count){
-  if(from + count > str->cap || from < 0 || count < 1) return;
-  for(int i = from; i < str->cap - count; i++){
-    str->data[i] = str->data[i + count];
-  }
-  str->len -= count;
-}
-
 void move_to_last_line(Editor* e){
   cur_buf->cursor.index = cur_buf->lines->data[cur_buf->lines->len - 1].start;
   update_lines(e);
@@ -655,7 +629,7 @@ void handle_delete_selection(Editor *e){
   bool is_left = cur_buf->cursor.index <= e->conf.selection_start;
   size_t start = (is_left ? cur_buf->cursor.index : e->conf.selection_start); 
   size_t finish = (is_left ? e->conf.selection_start : cur_buf->cursor.index);
-  remove_chars_from_string(cur_buf->s, start, finish - start + 1);
+  remove_chars_cur_buf(e, start, finish - start + 1);
   e->conf.is_selecting = false;
   cur_buf->cursor.index = start;
   update_buf_state(e);
@@ -666,40 +640,40 @@ void handle_delete_selection(Editor *e){
 void handle_backspace(Editor* e) {
   if(e->mode == INSERT || !e->conf.is_vim_mode) {
     if(e->conf.is_menu_open && e->prompt->len) {
-      remove_chars_from_string(e->prompt, e->prompt->len - 1, 1);
+      str_remove_chars(e->prompt, e->prompt->len - 1, 1);
       filter_cmds_by_prompt(e);
     }else if(e->conf.is_selecting) {
       handle_delete_selection(e);
     }
     else if(cur_buf->cursor.index - 1 < cur_buf->s->len && cur_buf->s->len){
-      remove_chars_from_string(cur_buf->s, cur_buf->cursor.index - 1, 1);
+      remove_chars_cur_buf(e, cur_buf->cursor.index - 1, 1);
       cur_buf->cursor.index--;
       update_lines(e);
       update_scroll(e, false, true);
       cur_buf->is_saved = false;
       cur_buf->cursor.last_time_moved = GetTime();
-        /* if(cur_buf->current_action == NULL || !cur_buf->current_action->str->length){
-        if(cur_buf->current_action != NULL) free_action(cur_buf->current_action);
-        cur_buf->current_action = init_action(
+        /* if(cur_buf->cur_act == NULL || !cur_buf->cur_act->str->length){
+        if(cur_buf->cur_act != NULL) free_action(cur_buf->cur_act);
+        cur_buf->cur_act = init_action(
           DELETE_STR,
           (RowCol){ cur_buf->cur_li, cur_buf->cursor.index }
         );
         add_char_to_line(
-          cur_buf->current_action->str, removed_char,
-          cur_buf->current_action->str->len
+          cur_buf->cur_act->str, removed_char,
+          cur_buf->cur_act->str->len
         );
       }else {
-        if(cur_buf->current_action->type != DELETE_STR){
-          pop_char_single_line(cur_buf->current_action->str);
+        if(cur_buf->cur_act->type != DELETE_STR){
+          pop_char_single_line(cur_buf->cur_act->str);
         }else {
-          cur_buf->current_action->pos.row = cur_buf->cur_li;
-          cur_buf->current_action->pos.col = cur_buf->cursor.index;
-          add_char_to_line(cur_buf->current_action->str, removed_char, 0);
+          cur_buf->cur_act->pos.row = cur_buf->cur_li;
+          cur_buf->cur_act->pos.col = cur_buf->cursor.index;
+          add_char_to_line(cur_buf->cur_act->str, removed_char, 0);
         }
       } */
     } 
   } else {
-    move_cursor_left(e);
+    move_cursor_left(e, 1);
   } 
 }
 
@@ -729,7 +703,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'x':
       if(cur_buf->s->len){
-        remove_chars_from_string(cur_buf->s, cur_buf->cursor.index, 1);
+        str_remove_chars(cur_buf->s, cur_buf->cursor.index, 1);
       }
       break;
     case 'b':
@@ -750,12 +724,12 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'h':
       if(e->mode == NORMAL){
-        move_cursor_left(e);
+        move_cursor_left(e, 1);
       }
       break;
     case 'l':
       if(e->mode == NORMAL){
-        move_cursor_right(e);
+        move_cursor_right(e, 1);
       }
       break;
     case 'j':
@@ -805,7 +779,6 @@ void handle_normal_mode_keys(Editor* e, int c){
       undo(e);
       break;
     case '?':
-      printf("index at[%zu]\n", cur_buf->cursor.index);
       break;
   }
   if(c == 'g'){
@@ -845,7 +818,7 @@ void delete_to_beginning_of_line(Buffer *buff){
   /*
   String *chars = buff->lines[buff->cur_li];
   update_action(
-    &buff->current_action, DELETE_STR, 
+    &buff->cur_act, DELETE_STR, 
     (RowCol){}, 
   );
   line->buffs->len -= buff->cursor.index;
@@ -917,29 +890,29 @@ void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
   }
 }
 
-Action* init_action(ActionType type, RowCol pos){
+Action* init_action(size_t index){
   Action *action = malloc(sizeof(Action));
-  action->type = type;
-  action->pos = pos;
-  action->str = new_str(DEFAULT_LINE_SIZE);
+  // action->type = type;
+  action->index = index;
+  action->old = new_str(DEFAULT_LINE_SIZE);
+  action->new = new_str(DEFAULT_LINE_SIZE);
   return action;
 }
 
-void update_action(Action **act, ActionType type, RowCol pos, char c){
+void update_action(Action **act, size_t index, char c, bool is_new){
  if(*act == NULL){
-   *act = init_action(type, pos);
+   *act = init_action(index);
  }
- /* bool is_empty = !(*act)->str->length;
- bool is_same_type = (*act)->type == type;
- if(is_empty || is_same_type) {
-   (*act)->type = type;
+ if(is_new) {
+   add_char_to_str((*act)->new, c, (*act)->new->len);
  }else {
-   if((*act)->type == DELETE_STR && type == ADD_STR){
-     (*act)->type = REPLACE;
-     (*act)->replace_length = (*act)->str->length
+   (*act)->index = index;
+   if((*act)->new->len) {
+     str_remove_chars((*act)->new, (*act)->new->len - 1, 1);
+   }else {
+     add_char_to_str((*act)->old, c, (*act)->new->len);
    }
- }  */
- add_char_to_str((*act)->str, c, (*act)->str->len);
+ }
 }
 
 void handle_insert_mode_keys(Editor* e,int c){
@@ -951,15 +924,15 @@ void handle_insert_mode_keys(Editor* e,int c){
       add_char_to_cur_buf(e, c, cur_buf->cursor.index);
       /*
       update_action(
-        &cur_buf->current_action, ADD_STR,
+        &cur_buf->cur_act, ADD_STR,
         (RowCol){ cur_buf->cur_li, index }, c
       );
-       if(cur_buf->current_action == NULL){
-        cur_buf->current_action = init_action(
+       if(cur_buf->cur_act == NULL){
+        cur_buf->cur_act = init_action(
           ADD_STR, (RowCol){ cur_buf->cur_li, index }
         );
       }
-      add_char_to_line(cur_buf->current_action->str, c, cur_buf->current_action->str->length); */
+      add_char_to_line(cur_buf->cur_act->str, c, cur_buf->cur_act->str->length); */
     }
   }
 }
@@ -1057,13 +1030,13 @@ void handle_enter(Editor* e){
 
       add_char_to_cur_buf(e, '\n', cur_buf->cursor.index);
 
-      /* if(cur_buf->current_action == NULL){
-        cur_buf->current_action = init_action(
+      /* if(cur_buf->cur_act == NULL){
+        cur_buf->cur_act = init_action(
           ADD_STR, (RowCol){ cur_buf->cur_li - 1, index }
         );
       }
-      add_char_to_line(cur_buf->current_action->str, '\n', cur_buf->current_action->str->length); */
-      // cur_buf->current_action->str->length--; // not counting new line character
+      add_char_to_line(cur_buf->cur_act->str, '\n', cur_buf->cur_act->str->length); */
+      // cur_buf->cur_act->str->length--; // not counting new line character
     }else {
       handle_command(e, default_cmds[e->displayed_cmds[e->selected_cmd]]);
     }
@@ -1177,24 +1150,24 @@ void handle_keys(Editor* e){
   }
   else if (IsKeyPressed(KEY_LEFT)) {
     long_press_time = GetTime();
-    move_cursor_left(e);
+    move_cursor_left(e, 1);
   }
   else if (IsKeyPressed(KEY_RIGHT)) {
     long_press_time = GetTime();
-    move_cursor_right(e);
+    move_cursor_right(e, 1);
   }
 
   if (IsKeyDown(KEY_LEFT)) {
     double now = GetTime();
     if(now - long_press_time > LONG_PRESS_DELAY){
-      move_cursor_left(e);
+      move_cursor_left(e, 1);
       long_press_time = now - (LONG_PRESS_DELAY - REPEAT_RATE);
     }
   }
   else if (IsKeyDown(KEY_RIGHT)) {
     double now = GetTime();
     if(now - long_press_time > LONG_PRESS_DELAY){
-      move_cursor_right(e);
+      move_cursor_right(e, 1);
       long_press_time = now - (LONG_PRESS_DELAY - REPEAT_RATE);
     }
   }
@@ -1244,7 +1217,8 @@ void free_str(String *str){
 }
 
 void free_action(Action *action){
-  free_str(action->str);
+  free_str(action->new);
+  free_str(action->old);
   free(action);
   action = NULL;
 }
@@ -1265,7 +1239,7 @@ Buffer *new_buffer(){
   };
   buff->undo_stack.top = -1;
   buff->redo_stack.top = -1;
-  buff->current_action = NULL;
+  buff->cur_act = NULL;
   buff->lines = malloc(sizeof(Lines));
   buff->lines->data = malloc(sizeof(Line*));
   buff->lines->data[0] = (Line){0};
@@ -1294,42 +1268,43 @@ Action *action_stack_pop(ActionStack *stack){
   return NULL;
 }
 
-void add_str_to_cur_buf(Editor *e, char *str, RowCol pos, size_t len){
-/*   cur_buf->cur_li = pos.row;
-  cur_buf->cursor.index = pos.col;
-  for(int i = 0; i < len; i++){
-    if(str[i] != '\n') {
-      add_char_to_line(cur_line, str[i], cur_buf->cursor.index);
-      if(i < len - 1) cur_buf->cursor.index++;
-    }else {
-      printf("adding new line at %zd\n",pos.row + 1);
-      cur_buf->cursor.index = 0;
-      add_new_line(cur_buf, ++cur_buf->cur_li);
-    } 
-    cur_buf->num_chars++;
-  } */
+void add_str_to_str(String *dest, String *src, size_t index){
+  if(index < 0 || index > dest->len || dest == NULL || src == NULL) return;
+  if(dest->cap < dest->len + src->len) {
+    size_t new_cap = dest->cap + src->len;
+    realloc_str(dest, new_cap);
+  } 
+  memmove(&dest->data[index + src->len], &dest->data[index], dest->len - index);
+  memcpy(&dest->data[index], src->data, src->len);
+  dest->len += src->len;
 }
 
 void undo_action(Editor *e, Action *act){
-  switch(act->type){
-    case ADD_STR:
-      // remove_str_from_cur_buf(e, act->str->data, act->pos, act->str->len);
-      break;
-    case DELETE_STR:
-      // add_str_to_cur_buf(e, act->str->data, act->pos, act->str->len);
-      break;
-  }
+  bool is_left = cur_buf->cursor.index >= (act->index + act->old->len);
+  bool is_normal = e->conf.is_vim_mode && e->mode == NORMAL;
+
+  str_remove_chars(cur_buf->s, act->index, act->new->len);
+  add_str_to_str(cur_buf->s, act->old, act->index);
+  update_lines(e);
+
+  if(is_left){
+    move_cursor_left(
+      e, cur_buf->cursor.index - act->index - act->old->len + is_normal
+    );
+  } 
+  else {
+    move_cursor_right(
+      e, act->index - cur_buf->cursor.index + act->old->len - is_normal
+   );
+  } 
+  update_lines(e);
 }
 
 void redo_action(Editor *e, Action *act){
-  switch(act->type){
-    case ADD_STR:
-      // add_str_to_cur_buf(e, act->str->data, act->pos, act->str->len);
-      break;
-    case DELETE_STR:
-      // remove_str_from_cur_buf(e, act->str->data, act->pos, act->str->len);
-      break;
-  }
+  str_remove_chars(cur_buf->s, act->index, act->old->len);
+  cur_buf->cursor.index = act->index;
+  add_str_to_str(cur_buf->s, act->new, act->index);
+  move_cursor_right(e, act->new->len - 1);
 }
 
 void undo(Editor *e){
