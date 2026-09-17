@@ -1,7 +1,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
-#include "files.h"
+#include "io.h"
 
 #define HOLD_PRESS_DELAY 0.02f
 Vector2 press_start_pos = {0};

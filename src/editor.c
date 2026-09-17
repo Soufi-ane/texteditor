@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "files.h"
+#include "io.h"
 #include "tinyfiledialogs.h"
 
 #define PAIRS_COUNT 8

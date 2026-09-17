@@ -1,11 +1,7 @@
-#ifndef FILES_H
-#define FILES_H
+#ifndef IO_H
+#define IO_H
 
 #include "draw.h"
-
-extern char* menu_icons_names[];
-
-void load_menu_icons(Texture2D* icons);
 
 bool load_font_default(Editor *e, FontData *font_data);
 
