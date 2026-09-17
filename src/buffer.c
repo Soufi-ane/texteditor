@@ -259,24 +259,6 @@ void toggle_full_screen(Editor *e){
   e->is_full_screen = !e->is_full_screen;
 }
 
-void add_new_line(Buffer *buff, size_t index){
-/*   if(index > buff->length || index < 0) return;
-  if(buff->length >= buff->capacity - 1){
-    size_t new_capacity = buff->capacity + 10;
-    realloc_buffer(buff, new_capacity);
-  } 
-  for(size_t i = buff->length; i > index; i--){
-    buff->lines[i] = buff->lines[i - 1];
-  }
-  buff->lines[index] = new_line(DEFAULT_LINE_SIZE);
-  buff->cursor.index = 0; 
-  buff->length++;
-  buff->cur_li = index;
-  buff->num_chars++;
-  buff->is_saved = false;
-  buff->cursor.last_time_moved = GetTime(); */
-}
-
 void add_char_to_cur_buf(Editor *e, char c, size_t index){
 
   String *str = cur_buf->s;
@@ -872,31 +854,6 @@ void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
   }
 }
 
-Action* init_action(size_t index){
-  Action *action = malloc(sizeof(Action));
-  // action->type = type;
-  action->index = index;
-  action->old = new_str(DEFAULT_LINE_SIZE);
-  action->new = new_str(DEFAULT_LINE_SIZE);
-  return action;
-}
-
-void update_action(Action **act, size_t index, char c, bool is_new){
- if(*act == NULL){
-   *act = init_action(index);
- }
- if(is_new) {
-   add_char_to_str((*act)->new, c, (*act)->new->len);
- }else {
-   (*act)->index = index;
-   if((*act)->new->len) {
-     str_remove_chars((*act)->new, (*act)->new->len - 1, 1);
-   }else {
-     add_char_to_str((*act)->old, c, (*act)->new->len);
-   }
- }
-}
-
 void handle_insert_mode_keys(Editor* e,int c){
   if (c >= 32) {
     if(e->conf.is_menu_open) {
@@ -1043,23 +1000,6 @@ void handle_mouse_click(Editor *e, size_t index, bool is_holding){
   cur_buf->cursor.last_time_moved = GetTime();
 }
 
-void handle_click_on_line(Editor *e, int char_x, size_t char_index, bool is_holding){
-  /* size_t char_width = get_char_size(e->conf.font_data.size).col + e->conf.letter_spacing;
-
-  if(e->mouse.x >= char_x && e->mouse.x <= char_x + char_width){
-    e->buffs->data[e->current_buff]->cursor.index = char_index;
-  } else if(char_index== 0 && e->mouse.x < char_x){
-    e->buffs->data[e->current_buff]->cursor.index = 0;
-  } else if(char_index == cur_line->buffs->len - 1 && e->mouse.x > char_x){
-    e->buffs->data[e->current_buff]->cursor.index = cur_line->buffs->len - is_holding;
-  }
-
-  if(!is_holding) {
-    e->conf.selection_start.row = e->buffs->data[e->current_buff]->cur_li;
-    e->conf.selection_start.col = e->buffs->data[e->current_buff]->cursor.index;
-  } */
-}
-
 void handle_keys(Editor* e){
   int c;
   if ((c = GetCharPressed()) >= 8) {
@@ -1157,13 +1097,6 @@ Line *new_line(){
   return line;
 }
 
-void free_action(Action *action){
-  free_str(action->new);
-  free_str(action->old);
-  free(action);
-  action = NULL;
-}
-
 Buffer *new_buffer(){
   Buffer *buff = malloc(sizeof(Buffer));
   buff->s = new_str(DEFAULT_LINE_SIZE);
@@ -1202,50 +1135,6 @@ void get_date_time(char *time_buff, size_t size){
   strftime(time_buff, size, "%H:%M:%S", local_time);
 }
 
-Action *action_stack_pop(ActionStack *stack){
-  if(stack->top > -1) {
-    return &stack->actions[stack->top--];
-  } 
-  return NULL;
-}
-
-void undo_action(Editor *e, Action *act){
-  bool is_left = cur_buf->cursor.index >= (act->index + act->old->len);
-  bool is_normal = e->conf.is_vim_mode && e->mode == NORMAL;
-
-  str_remove_chars(cur_buf->s, act->index, act->new->len);
-  add_str_to_str(cur_buf->s, act->old, act->index);
-  update_lines(e);
-
-  if(is_left){
-    move_cursor_left(
-      e, cur_buf->cursor.index - act->index - act->old->len + is_normal
-    );
-  } 
-  else {
-    move_cursor_right(
-      e, act->index - cur_buf->cursor.index + act->old->len - is_normal
-   );
-  } 
-  update_lines(e);
-}
-
-void redo_action(Editor *e, Action *act){
-  str_remove_chars(cur_buf->s, act->index, act->old->len);
-  cur_buf->cursor.index = act->index;
-  add_str_to_str(cur_buf->s, act->new, act->index);
-  move_cursor_right(e, act->new->len - 1);
-}
-
-void undo(Editor *e){
-  Action *last_action = action_stack_pop(&cur_buf->undo_stack);
-  if(last_action == NULL) return;
-  action_stack_push(&cur_buf->redo_stack, *last_action);
-  undo_action(e, last_action);
-  update_scroll(e, false, false);
-  cur_buf->cursor.last_time_moved = GetTime();
-}
-
 void redo(Editor *e){
   Action *last_action = action_stack_pop(&cur_buf->redo_stack);
   if(last_action == NULL) return;
@@ -1253,21 +1142,6 @@ void redo(Editor *e){
   redo_action(e, last_action);
   update_scroll(e, false, false);
   cur_buf->cursor.last_time_moved = GetTime();
-}
-
-void action_stack_flush(ActionStack *stack){
-  stack->top = -1;
-}
-
-void action_stack_push(ActionStack *stack, Action action){
-  if(stack->top >= MAX_STACK_SIZE - 1){
-    int shift_size = 20;
-    for(int i = 0; i < MAX_STACK_SIZE - shift_size; i++){
-      stack->actions[i] = stack->actions[i + shift_size];
-    }
-    stack->top = MAX_STACK_SIZE - shift_size + 1;
-  }
-  stack->actions[++stack->top] = action;
 }
 
 void new_message(Editor *e, const char *message, MessageType type){

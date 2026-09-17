@@ -1,6 +1,7 @@
 #ifndef NOTE_H
 #define NOTE_H
 
+#include <raylib.h>
 #include <stdio.h>
 #include "conf.h"
 #include "str.h"
@@ -201,21 +202,13 @@ typedef struct {
   size_t num_cmds_displayed;
 } Editor;
 
-int get_position(Editor* e);
-
 void move_cursor_up(Editor* e);
 
 void move_cursor_down(Editor* e);
 
-char* createchar(int n);
+void move_cursor_right(Editor* e, size_t count);
 
-void emptychar(char* line);
-
-void addChar(Editor* e, char c);
-
-void addchar(Editor* e, char* line, char* text);
-
-int get_first_diplayed_index(Editor* e,bool isUp);
+void move_cursor_left(Editor* e, size_t count);
 
 Buffer *new_buffer();
 
@@ -225,19 +218,15 @@ size_t get_max_num_lines(Editor *e);
 
 size_t get_lines_wraps(Editor *e, size_t from, size_t to);
 
-void move_cursor_right(Editor* e, size_t count);
-
 void add_char_to_cur_buf(Editor *e, char c, size_t index);
 
-void move_to_end_of_line(Editor* e);
-
 void move_to_beginning_of_line(Editor* e);
+
+void move_to_end_of_line(Editor* e);
 
 void move_to_word_beginning(Editor* e);
 
 void move_to_word_ending(Editor* e);
-
-void add_new_line(Buffer *buff, size_t index);
 
 void update_scroll(Editor *e, bool center_line, bool is_up);
 
@@ -259,15 +248,11 @@ void handle_insert_mode_keys(Editor* e,int c);
 
 void handle_mouse_click(Editor *e, size_t index, bool is_holding);
 
-void handle_click_on_line(Editor *e, int char_x, size_t char_index, bool is_holding);
-
 Editor *init_editor();
 
 void free_buffer(Buffer *buff);
 
 void realloc_editor_buffers(Editor *e);
-
-void delete_lines(Buffer *buff, size_t from, size_t count);
 
 int get_digit_count(int number);
 
@@ -304,6 +289,8 @@ void update_action(Action **act, size_t index, char c, bool is_new);
 void update_lines(Editor *e);
 
 void move_to_first_line(Editor *e);
+
+void move_to_last_line(Editor* e);
 
 void adapte_col_to_cur_line(Editor *e);
 
