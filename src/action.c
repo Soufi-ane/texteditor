@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "buffer.h"
+#include "editor.h"
 
 Action* init_action(size_t index){
   Action *action = malloc(sizeof(Action));

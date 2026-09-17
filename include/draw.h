@@ -2,7 +2,7 @@
 #define DRAW_H
 
 #include <raylib.h>
-#include "buffer.h"
+#include "editor.h"
 
 void DrawCursor(Editor* e, int x, int y, unsigned int color);
 

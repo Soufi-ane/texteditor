@@ -1,5 +1,5 @@
-#ifndef NOTE_H
-#define NOTE_H
+#ifndef EDITOR_H
+#define EDITOR_H
 
 #include <raylib.h>
 #include <stdio.h>
@@ -23,22 +23,6 @@ typedef enum {
   GOOD,
   ERROR
 } MessageType;
-
-typedef enum {
-  UNKOWN_KEY = 0,
-  BG_COL, TXT_COL,
-  CURSOR_COL, UNDER_CURSOR_COL,
-  FONT_SIZE, SECONDARY_FONT_SIZE,
-  FONT_PRIMARY, FONT_SECONDARY, 
-  LINE_HIGHLIGHT, LINE_HIGHLIGHT_COL,
-  LN_COL, LN_MODE,
-  LINES_COL, D_LINES,
-  SPACE_FOR_TAB, TAB_S,
-  CAPS_AS_ESCAPE,
-  P_TOP, P_BOTTOM,
-  P_LEFT, P_RIGHT,
-  VIM_M
-} ConfigKey;
 
 typedef enum{
   OPEN_FILE,
