@@ -69,7 +69,7 @@ void update_lines(Editor *e){
     }
     else if(isspace(cur_buf->s->data[i - 1]) || i == 1){
       int word_len = 0;
-      while(!isspace(cur_buf->s->data[i + word_len++]));
+      while(word_len <= max_len && !isspace(cur_buf->s->data[i + word_len++]));
       if((x_offset + word_len - 1) > max_len && word_len < max_len){
         x_offset = 0;
         y_offset++;
@@ -266,7 +266,7 @@ void add_char_to_cur_buf(Editor *e, char c, size_t index){
 
   cur_buf->cursor.index = index + 1;
 
-  update_action(&cur_buf->cur_act, index, c, true);
+  update_action(&cur_buf->cur_act, index, c_string(c), true);
   update_lines(e);
   update_scroll(e, false, false);
   update_buf_state(e);
@@ -280,8 +280,14 @@ void replace_char(String *str, size_t index, char new_char){
 
 void remove_chars_cur_buf(Editor *e, size_t index, size_t count){
   String *str = cur_buf->s;
-  update_action(&cur_buf->cur_act, index, str->data[index], false);
+
+  String *deleted = new_str(count + 1);
+  memcpy(deleted->data, &cur_buf->s->data[index], count);
+  deleted->len += count;
+  update_action(&cur_buf->cur_act, index, deleted, false);
+
   str_remove_chars(str, index, count);
+  cur_buf->is_saved = false;
 }
 
 size_t get_lines_wraps(Editor *e, size_t from, size_t to){
@@ -424,6 +430,7 @@ void move_to_word_ending(Editor* e){
     move_cursor_right(e, 1);
     i++;
   }
+  // move_cursor_right(e, i - cur_buf->cursor.index);
   cur_buf->cursor.index = i;
   update_last_col(e);
   update_buf_state(e);
@@ -596,9 +603,9 @@ void handle_delete_selection(Editor *e){
   remove_chars_cur_buf(e, start, finish - start + 1);
   e->conf.is_selecting = false;
   cur_buf->cursor.index = start;
+
   update_buf_state(e);
   update_line_number_padding(e);
-  cur_buf->is_saved = false;
 }
 
 void handle_backspace(Editor* e) {
@@ -614,27 +621,7 @@ void handle_backspace(Editor* e) {
       cur_buf->cursor.index--;
       update_lines(e);
       update_scroll(e, false, true);
-      cur_buf->is_saved = false;
-      cur_buf->cursor.last_time_moved = GetTime();
-        /* if(cur_buf->cur_act == NULL || !cur_buf->cur_act->str->length){
-        if(cur_buf->cur_act != NULL) free_action(cur_buf->cur_act);
-        cur_buf->cur_act = init_action(
-          DELETE_STR,
-          (RowCol){ cur_buf->cur_li, cur_buf->cursor.index }
-        );
-        add_char_to_line(
-          cur_buf->cur_act->str, removed_char,
-          cur_buf->cur_act->str->len
-        );
-      }else {
-        if(cur_buf->cur_act->type != DELETE_STR){
-          pop_char_single_line(cur_buf->cur_act->str);
-        }else {
-          cur_buf->cur_act->pos.row = cur_buf->cur_li;
-          cur_buf->cur_act->pos.col = cur_buf->cursor.index;
-          add_char_to_line(cur_buf->cur_act->str, removed_char, 0);
-        }
-      } */
+      update_buf_state(e);
     } 
   } else {
     move_cursor_left(e, 1);

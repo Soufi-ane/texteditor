@@ -206,64 +206,49 @@ bool str_includes(String *str, String *sub_str){
 }
 
 void copy_selection_to_clipboard(Editor *e){
-/*   Buffer buff = e->buffs->data[e->current_buff]->
-  String *selected = new_str(DEFAULT_LINE_SIZE * 10);
-  size_t current_index = buff->cur_li;
-  bool is_up = is_selecting_up(e);
-  for(
-    int i = (is_up ? current_index : e->conf.selection_start.row);
-    i <= (is_up ? e->conf.selection_start.row : current_index);
-    i++
-  ){
-    for(int j = 0; j < buff->lines[i]->length; j++){
-      if(is_selected(e, (RowCol){i, j}))
-      add_char_to_line(selected, buff->lines[i]->chars[j], selected->len);
-    }
-    if(i < (is_up ? e->conf.selection_start.row : current_index))
-    add_char_to_line(selected, '\n', selected->len);
-  }
-  add_char_to_line(selected, '\0', selected->len);
+  if(!e->conf.is_selecting) return;
+  Buffer *buff = e->buffs->data[e->current_buff];
+  size_t start = MIN(buff->cursor.index, e->conf.selection_start);
+  size_t selection_size = abs(buff->cursor.index - e->conf.selection_start) + 1;
+  String *selected = new_str(selection_size + 1);
+  memcpy(selected->data, &buff->s->data[start], selection_size);
+  selected->len = selection_size;
+  add_char_to_str(selected, '\0', selection_size);
   int success = copy_to_clipboard(selected->data);
-  if(success) new_message(e, "Copied!", GOOD);
-  else new_message(e, "Failed to copy!", ERROR); */
+  if(success) new_message(e, "Copied", GOOD);
+  else new_message(e, "Failed to copy", ERROR);
 }
 
 void paste_from_clipboard(Editor *e){
-  /* char buff[MAX_PASTE_LENGTH] = {0};
-  read_from_clipboard(buff, sizeof(buff));
-  for(int i = 0; buff[i] != '\0'; i++){
-    if(buff[i] == '\n') {
-      add_new_line(
-        e->buffs->data[e->current_buff]->
-        e->buffs->data[e->current_buff]->cur_li + 1
-      );
-    } 
-    else {
-      add_char_to_cur_buf(e, buff[i], e->buffs->data[e->current_buff]->cursor.index);
-    }
-  } */
+  Buffer *curr_buff = e->buffs->data[e->current_buff];
+  char temp_buff[MAX_PASTE_LENGTH];
+  read_from_clipboard(temp_buff, sizeof(temp_buff));
+  String *clip_str = string(temp_buff);
+  bool has_text = curr_buff->s->len > 0;
+  bool at_end = curr_buff->cursor.index >= curr_buff->s->len;
+  size_t insert_index = curr_buff->cursor.index + has_text;
+  if(has_text) insert_index -= at_end;
+  update_action(&curr_buff->cur_act, insert_index, clip_str, true);
+  add_str_to_str(curr_buff->s, clip_str, insert_index);
+  move_cursor_right(e, clip_str->len - !has_text - (at_end && has_text));
+  update_lines(e);
+  update_scroll(e, false, false);
 }
 
 int copy_to_clipboard(const char *text){
-  /* FILE *pipe = popen("xclip -selection clipboard 2>/dev/null || wl-copy 2>/dev/null", "w");
+  FILE *pipe = popen("xclip -selection clipboard 2>/dev/null || wl-copy 2>/dev/null", "w");
   if(!pipe) return 0;
   fputs(text, pipe);
   int status = pclose(pipe);
-  return status == 0; */
+  return status == 0;
 }
 
 void read_from_clipboard(char *buff, size_t max){
-  /* FILE *pipe = popen("xclip -selection clipboard -o 2>/dev/null || wl-paste 2>/dev/null", "r");
+  FILE *pipe = popen("xclip -selection clipboard -o 2>/dev/null || wl-paste 2>/dev/null", "r");
   if(!pipe) return;
-  buff[0] = '\0';
-  char line[1024];
-  while(fgets(line, sizeof(line), pipe) != NULL){
-    size_t len = strlen(buff);
-    size_t rest = max - len - 1;
-    if(rest == 0) break;
-    strncat(buff, line, rest);
-  }
-  pclose(pipe); */
+  size_t read = fread(buff, 1, max - 1, pipe);
+  buff[read] = '\0';
+  pclose(pipe);
 }
 
 ConfigKey get_config_key(Editor *e, char *key){

@@ -16,6 +16,8 @@
   }while(0)
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 #define MAX_STACK_SIZE 1024
 
 typedef enum {
@@ -268,7 +270,7 @@ void free_action(Action *action);
 
 void action_stack_flush(ActionStack *stack);
 
-void update_action(Action **act, size_t index, char c, bool is_new);
+void update_action(Action **act, size_t index, String *str, bool is_new);
 
 void update_lines(Editor *e);
 

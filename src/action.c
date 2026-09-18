@@ -38,7 +38,7 @@ void undo_action(Editor *e, Action *act){
 
   if(is_left){
     move_cursor_left(
-      e, buff->cursor.index - act->index - act->old->len + is_normal
+      e, buff->cursor.index - act->index - act->old->len + is_normal - 1
     );
   } 
   else {
@@ -78,18 +78,18 @@ void free_action(Action *action){
   action = NULL;
 }
 
-void update_action(Action **act, size_t index, char c, bool is_new){
+void update_action(Action **act, size_t index, String *str, bool is_new){
  if(*act == NULL){
    *act = init_action(index);
  }
  if(is_new) {
-   add_char_to_str((*act)->new, c, (*act)->new->len);
+   add_str_to_str((*act)->new, str, (*act)->new->len);
  }else {
    (*act)->index = index;
    if((*act)->new->len) {
-     str_remove_chars((*act)->new, (*act)->new->len - 1, 1);
+     str_remove_chars((*act)->new, (*act)->new->len - str->len, str->len);
    }else {
-     add_char_to_str((*act)->old, c, (*act)->new->len);
+     add_str_to_str((*act)->old, str, 0);
    }
  }
 }

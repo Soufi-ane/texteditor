@@ -5,6 +5,7 @@
 String *new_str(size_t cap){
   String *str = malloc(sizeof(String));
   str->data = malloc(sizeof(char) * cap);
+  str->data[0] = '\0';
   str->cap = cap;
   str->len = 0;
   return str;
@@ -50,6 +51,14 @@ String *lower_case(String *str){
 void realloc_str(String *str, size_t cap){
   str->data = realloc(str->data, cap * sizeof(char));
   str->cap = cap;
+}
+
+String *c_string(char c){
+  String *str = new_str(2);
+  str->len = 1;
+  str->data[0] = c;
+  str->data[1] = '\0';
+  return str;
 }
 
 String *string(const char *text){

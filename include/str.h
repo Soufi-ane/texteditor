@@ -21,6 +21,8 @@ void realloc_str(String *str, size_t cap);
 
 String *string(const char *text);
 
+String *c_string(char c);
+
 void add_str_to_str(String *dest, String *src, size_t index);
 
 #endif
