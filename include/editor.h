@@ -45,7 +45,7 @@ typedef enum {
   ABSOLUTE
 } LineNumbers;
 
-typedef struct{
+typedef struct {
   size_t row;
   size_t col;
 } RowCol;
@@ -96,9 +96,15 @@ typedef struct {
 } Message;
 
 typedef struct {
+  Message data[MAX_MESSAGES];
+  size_t len;
+} Messages;
+
+typedef struct {
   size_t num_chars;
-  size_t cur_li; // current line index;
-  int current_msg_index;
+  size_t cur_li; // current gui line index;
+  size_t num_prev_lines;
+  ssize_t msg_index;
   size_t d_start;
   String *s;
   Lines *lines;
@@ -174,10 +180,9 @@ typedef struct {
   const char* HOME_DIR;
   Vector2 mouse;
   Config conf;
-  Message *messages[MAX_MESSAGES];
+  Messages msgs;
   bool is_full_screen;
   bool should_quit;
-  size_t num_msgs;
   char* currentFileName;
   char* searchQuery;
   int numResults;
@@ -280,12 +285,20 @@ void move_to_last_line(Editor* e);
 
 void adapte_col_to_cur_line(Editor *e);
 
-size_t get_line_from_index(Lines *lines, size_t index);
+// size_t get_line_from_index(Lines *lines, size_t index);
 
 void scroll_up(Editor *e, size_t count);
 
 void scroll_down(Editor *e, size_t count);
 
 void update_buf_state(Editor *e);
+
+size_t get_prev_line_start(String *str, size_t index);
+
+size_t seek_back_by_lines(Buffer *buff, size_t from, size_t count);
+
+size_t seek_forward_by_lines(Buffer *buff, size_t from, size_t count);
+
+void update_line_number_padding(Editor *e);
 
 #endif

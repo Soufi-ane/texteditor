@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
     DrawBufferText(e, is_blinking);
 
     DrawStatusLine(e);
-    if(buff->current_msg_index > -1) DrawCurrentMessage(e);
+    if(buff->msg_index > -1) DrawCurrentMessage(e);
     if(e->conf.is_menu_open) DrawMenu(e);
     handle_keys(e);
 

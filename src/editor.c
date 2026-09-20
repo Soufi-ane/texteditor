@@ -28,56 +28,77 @@ size_t get_max_line_length(Editor *e){
 }
 
 void update_buf_state(Editor *e){
-  cur_buf->current_msg_index = -1;
+  cur_buf->msg_index = -1;
   cur_buf->cursor.last_time_moved = GetTime();
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
   if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
 
-size_t get_num_gui_lines(Buffer *buff){
+/* size_t get_num_gui_lines(Buffer *buff){
   size_t num_gui_lines = buff->lines->len ;
   for(size_t i = 0; i < buff->lines->len; i++){
     num_gui_lines += buff->lines->data[i].wraps;
   }
   return num_gui_lines;
-}
+} */
 
-size_t get_line_from_index(Lines *lines, size_t index){
+/* size_t get_line_from_index(Lines *lines, size_t index){
   for(size_t i = 0; i < lines->len; i++){
     if(index >= lines->data[i].start && index <= lines->data[i].end) return i;
   }
-}
+} */
 
 void update_line_number_padding(Editor *e){
   if(!cur_buf->lines) return;
-  e->conf.ln_padding = get_digit_count(cur_buf->lines->len);
+  e->conf.ln_padding = get_digit_count(cur_buf->num_prev_lines + cur_buf->lines->len - 1);
+}
+
+size_t get_count_prev_lines(String *str, size_t from){
+  size_t count = 0;
+  for(size_t i = 0; i < from; i++){
+    if(str->data[i] == '\n') count++;
+  }
+  return count;
 }
 
 void update_lines(Editor *e){
   if(!cur_buf || !cur_buf->s || !cur_buf->lines) return;
   cur_buf->lines->len = 0;
-  Line line = {0};
+  Line line = {
+    .start = cur_buf->d_start
+  };
   size_t max_len = get_max_line_length(e);
-  size_t i, x_offset = 0, y_offset = 0, index = 0;
-  for (i = 0; i <= cur_buf->s->len; i++) {
+  size_t max_num_lines = get_max_num_lines(e);
+  size_t i, x_offset = 0, y_offset = 0, index = 0, total_wraps = 0;
+  for (
+    i = cur_buf->d_start;
+    (i <= cur_buf->s->len) && (cur_buf->lines->len <= max_num_lines);
+    i++
+  ){
     char c = cur_buf->s->data[i];
     
     if((x_offset) >= max_len) {
       y_offset++;
       x_offset = 0;
       line.wraps++;
+      total_wraps++;
     }
-    else if(isspace(cur_buf->s->data[i - 1]) || i == 1){
+    else if(isspace(cur_buf->s->data[i - 1]) || i == cur_buf->d_start + 1){
       int word_len = 0;
-      while(word_len <= max_len && !isspace(cur_buf->s->data[i + word_len++]));
-      if((x_offset + word_len - 1) > max_len && word_len < max_len){
+      while(
+        word_len < max_len - 1 &&
+        i + word_len < cur_buf->s->len &&
+        !isspace(cur_buf->s->data[i + word_len++])
+      );
+      if((x_offset + word_len - 1) > max_len){
         x_offset = 0;
         y_offset++;
         line.wraps++;
+        total_wraps++;
       }
     }
 
-    if(index == cur_buf->cursor.index){
+    if(index + cur_buf->d_start == cur_buf->cursor.index){
       cur_buf->cur_li = cur_buf->lines->len;
       cur_buf->cursor.pos.col = x_offset;
       cur_buf->cursor.pos.row = y_offset;
@@ -97,7 +118,7 @@ void update_lines(Editor *e){
   }
   line.end = i - 1;
   da_append(cur_buf->lines, line);
-  update_line_number_padding(e);
+  // update_line_number_padding(e);
 }
 
 size_t get_max_num_lines(Editor *e){ 
@@ -184,46 +205,77 @@ bool is_selected(Editor *e, size_t index){
 
 void scroll_up(Editor *e, size_t count){
   size_t max_num_lines = get_max_num_lines(e);
-  size_t first_gui_index = get_line_from_index(cur_buf->lines, cur_buf->d_start);
-  if(first_gui_index + max_num_lines - e->conf.scroll_pad <= cur_buf->lines->len - count) {
-    cur_buf->d_start = cur_buf->lines->data[first_gui_index + count].start;
-  }
+  if(cur_buf->lines->len - 1 <= max_num_lines - e->conf.scroll_pad) return;
+  cur_buf->d_start = seek_forward_by_lines(cur_buf, cur_buf->d_start, 1);
 }
 
 void scroll_down(Editor *e, size_t count){
-  size_t first_gui_index = get_line_from_index(cur_buf->lines, cur_buf->d_start);
-  if(first_gui_index > count - 1) {
-    cur_buf->d_start = cur_buf->lines->data[first_gui_index - count].start;
-  }
+  size_t new_start = seek_back_by_lines(cur_buf, cur_buf->d_start, 1);
+  cur_buf->d_start = new_start;
 }
 
-void update_scroll(Editor *e, bool center_line, bool is_up){
-  size_t max = get_max_num_lines(e);
-  size_t first_gui_i = get_line_from_index(cur_buf->lines, cur_buf->d_start);
-  size_t wraps = get_lines_wraps(e, first_gui_i, first_gui_i + max);
-  size_t max_lines = max - wraps;
-  size_t start_line;
+size_t get_next_line_start(String *str, size_t index){
+  size_t i;
+  for(i = index; i < str->len; i++){
+    if(str->data[i] == '\n') return i + 1;
+  }
+  return i;
+}
 
-  if(cur_buf->cur_li < first_gui_i + e->conf.scroll_pad) {
-    if(cur_buf->cur_li < e->conf.scroll_pad) {
-      cur_buf->d_start = 0;
-    }else {
-      start_line = cur_buf->cur_li - e->conf.scroll_pad; 
-      cur_buf->d_start = cur_buf->lines->data[start_line].start;
+size_t seek_forward_by_lines(Buffer *buff, size_t from, size_t count){
+  size_t i;
+  for(i = from; i < buff->s->len && count > 0; i++){
+    if(buff->s->data[i] == '\n') count--;
+  } 
+  if(i == buff->s->len) i--;
+  return i;
+}
+
+size_t seek_back_by_lines(Buffer *buff, size_t from, size_t count){
+  size_t i;
+  for(i = from; i > 0 && count + 1 > 0; i--){
+    if(buff->s->data[i] == '\n') count--;
+  }
+  if(i > 0) i++;
+  return i + (i > 0 && buff->s->data[i + 1] != '\n');
+}
+
+size_t get_prev_line_start(String *str, size_t index){
+  size_t i;
+  bool got_previous = false;
+  for(i = index; i > 0; i--){
+    if(str->data[i] == '\n') {
+      if(got_previous) {
+        if(str->data[i + 1] == '\n') return i;
+        else return i + 1;
+      } 
+      else got_previous = true;
     }
   }
-  else if(cur_buf->cur_li > (max_lines / 2)){
-    if(center_line && cur_buf->cur_li < cur_buf->lines->len - (max_lines / 2)) {
-      start_line = cur_buf->cur_li - (max_lines / 2);
-      cur_buf->d_start = cur_buf->lines->data[start_line].start;
-    }else if(!is_up && cur_buf->cur_li > first_gui_i + max_lines - e->conf.scroll_pad) {
-      start_line = cur_buf->cur_li + e->conf.scroll_pad - max_lines;
-      cur_buf->d_start = cur_buf->lines->data[start_line].start;
-    }
-  }else if(cur_buf->cur_li > first_gui_i + max_lines - e->conf.scroll_pad){
-    start_line = cur_buf->cur_li + e->conf.scroll_pad - max_lines;
-    cur_buf->d_start = cur_buf->lines->data[start_line].start;
+  return i;
+}
+
+ void update_scroll(Editor *e, bool center_line, bool is_up){
+  size_t max = get_max_num_lines(e);
+  size_t index = cur_buf->cursor.index;
+  size_t wraps = get_lines_wraps(e, 0, max);
+  size_t max_lines = max - wraps;
+  size_t top_pad_start = seek_forward_by_lines(cur_buf, cur_buf->d_start, e->conf.scroll_pad);
+  size_t bot_pad_start = seek_forward_by_lines(cur_buf, cur_buf->d_start, max - wraps - e->conf.scroll_pad);
+  size_t new_first = cur_buf->d_start;
+  if(index < top_pad_start){
+    new_first = seek_back_by_lines(cur_buf, index, e->conf.scroll_pad);
   }
+  else if(index > bot_pad_start){
+    new_first = seek_back_by_lines(cur_buf, index, max - e->conf.scroll_pad);
+  } else {
+  } 
+  if(new_first != cur_buf->d_start) {
+    cur_buf->d_start = new_first;
+    cur_buf->num_prev_lines = get_count_prev_lines(cur_buf->s, new_first);
+    update_line_number_padding(e);
+  }
+  update_lines(e);
 }
 
 int get_digit_count(int number){
@@ -257,6 +309,7 @@ void toggle_full_screen(Editor *e){
   }
   SetWindowSize(e->s_width, e->s_height);
   e->is_full_screen = !e->is_full_screen;
+  update_lines(e);
 }
 
 void add_char_to_cur_buf(Editor *e, char c, size_t index){
@@ -293,11 +346,11 @@ void remove_chars_cur_buf(Editor *e, size_t index, size_t count){
 size_t get_lines_wraps(Editor *e, size_t from, size_t to){
   if(from > to) return 0;
   if(from < 0) from = 0;
-  if(to >= cur_buf->lines->len) to = cur_buf->lines->len - 1;
+  // if(to >= cur_buf->lines->len) to = cur_buf->lines->len - 1;
   size_t wraps = 0;
   size_t max = get_max_line_length(e);
   for(size_t i = from; i <= to; i++){
-    wraps += cur_buf->lines->data[i].wraps; 
+    // wraps += cur_buf->lines->data[i].wraps; 
   }
   return wraps;
 }
@@ -315,6 +368,7 @@ void move_cursor_right(Editor* e, size_t count) {
     cur_buf->cursor.index += count;
   }
   update_lines(e);
+  update_scroll(e, false, false);
   update_last_col(e);
   update_buf_state(e);
 }
@@ -328,6 +382,7 @@ void move_cursor_left(Editor* e, size_t count) {
     cur_buf->cursor.index -= count;
   } else cur_buf->cursor.index = 0; 
   update_lines(e);
+  update_scroll(e, false, true);
   update_last_col(e);
   update_buf_state(e);
 }
@@ -359,10 +414,6 @@ void handle_caps_lock_and_escape(Editor* e){
 void move_cursor_up(Editor* e){
   if(cur_buf->cursor.pos.row > 0){
     size_t max_lines = get_max_num_lines(e);
-    size_t first_gui_i = get_line_from_index(cur_buf->lines, cur_buf->d_start);
-    if(first_gui_i > 0 && cur_buf->cur_li < first_gui_i + e->conf.scroll_pad) {
-      cur_buf->d_start = cur_buf->lines->data[first_gui_i - 1].start;
-    }
     Line prev_line = cur_buf->lines->data[cur_buf->cur_li - 1];
     cur_buf->cursor.index = prev_line.start;
     update_lines(e);
@@ -375,16 +426,13 @@ void move_cursor_up(Editor* e){
 void move_cursor_down(Editor* e){
   if(cur_buf->cur_li < cur_buf->lines->len - 1){
     size_t max_lines = get_max_num_lines(e);
-    size_t first_gui_i = get_line_from_index(cur_buf->lines, cur_buf->d_start);
-    size_t wraps = get_lines_wraps(e, first_gui_i, cur_buf->cur_li);
-    if(cur_buf->cur_li >= first_gui_i + max_lines - wraps - e->conf.scroll_pad /* - 1 */){
-      cur_buf->d_start = cur_buf->lines->data[first_gui_i + 1].start;
-    }
+    size_t wraps = get_lines_wraps(e, 0, cur_buf->cur_li);
+    Line curr_line = cur_buf->lines->data[cur_buf->cur_li];
     Line next_line = cur_buf->lines->data[cur_buf->cur_li + 1];
     cur_buf->cursor.index = next_line.start;
     update_lines(e);
     adapte_col_to_cur_line(e);
-    // update_scroll(e, false, false);
+    update_scroll(e, false, false);
   }
   update_buf_state(e);
 }
@@ -397,20 +445,22 @@ void adapte_col_to_cur_line(Editor *e){
 }
 
 void move_to_beginning_of_line(Editor* e) {
-  if(cur_buf->cursor.pos.col <= 0) return;
-  cur_buf->cursor.index = cur_line.start;
+  size_t max = get_max_line_length(e);
+  Line line = cur_buf->lines->data[cur_buf->cur_li];
+  cur_buf->cursor.index = line.start;
   update_lines(e);
   update_last_col(e);
-  // update_scroll(e, true);
+  if(line.end - line.start > max) update_scroll(e, false, true);
   update_buf_state(e);
 }
 
 void move_to_end_of_line(Editor* e) {
-  if(cur_buf->cursor.pos.col >= cur_line.end - cur_line.start) return;
-  cur_buf->cursor.index = cur_line.end - 1;
+  size_t max = get_max_line_length(e);
+  Line line = cur_buf->lines->data[cur_buf->cur_li];
+  cur_buf->cursor.index = line.end - 1;
   update_lines(e);
   update_last_col(e);
-  // update_scroll(e, false);
+  if(line.end - line.start > max) update_scroll(e, false, false);
   update_buf_state(e);
 }
 
@@ -469,7 +519,7 @@ void go_to_next_buffer(Editor *e){
   else e->current_buff++;
   e->conf.is_selecting = false;
   update_lines(e);
-  update_line_number_padding(e);
+  // update_line_number_padding(e);
 }
 
 void go_to_prev_buffer(Editor *e){
@@ -478,7 +528,7 @@ void go_to_prev_buffer(Editor *e){
   else e->current_buff--;
   e->conf.is_selecting = false;
   update_lines(e);
-  update_line_number_padding(e);
+  // update_line_number_padding(e);
 }
 
 void handle_tab(Editor* e, bool is_shift_down) {
@@ -536,7 +586,7 @@ void delete_buffer(Editor *e, size_t index){
     if(e->current_buff > 0) e->current_buff--;
     else e->current_buff = e->buffs->len - 1;
     update_lines(e);
-    update_line_number_padding(e);
+    // update_line_number_padding(e);
     update_buf_state(e);
   }else {
     force_quit(e);
@@ -580,7 +630,11 @@ void try_quitting(Editor *e){
 }
 
 void move_to_last_line(Editor* e){
-  cur_buf->cursor.index = cur_buf->lines->data[cur_buf->lines->len - 1].start;
+  size_t i;
+  for(i = cur_buf->s->len ; i > 0; i--){
+    if(cur_buf->s->data[i] == '\n') break;
+  }
+  cur_buf->cursor.index = i + 1;
   update_lines(e);
   adapte_col_to_cur_line(e);
   update_scroll(e, true, false);
@@ -588,7 +642,7 @@ void move_to_last_line(Editor* e){
 }
 
 void move_to_first_line(Editor *e){
-  cur_buf->cursor.index = cur_buf->lines->data[0].start;
+  cur_buf->cursor.index = 0;
   update_lines(e);
   adapte_col_to_cur_line(e);
   update_scroll(e, false, true);
@@ -605,7 +659,8 @@ void handle_delete_selection(Editor *e){
   cur_buf->cursor.index = start;
 
   update_buf_state(e);
-  update_line_number_padding(e);
+  update_scroll(e, false, true);
+  // update_line_number_padding(e);
 }
 
 void handle_backspace(Editor* e) {
@@ -1091,7 +1146,7 @@ Buffer *new_buffer(){
   // buff->d_len= 1;
   buff->num_chars = 0;
   buff->cur_li = 0;
-  buff->current_msg_index = -1;
+  buff->msg_index = -1;
   buff->file_path = NULL;
   buff->is_saved = true;
   buff->is_readonly = false;
@@ -1132,10 +1187,10 @@ void redo(Editor *e){
 }
 
 void new_message(Editor *e, const char *message, MessageType type){
-  if(e->num_msgs >= MAX_MESSAGES) {
-    for(int i = 0; i < e->num_msgs; i++){
-      e->messages[i] = e->messages[i + 1];
-      e->num_msgs--;
+  if(e->msgs.len >= MAX_MESSAGES) {
+    for(int i = 0; i < e->msgs.len; i++){
+      e->msgs.data[i] = e->msgs.data[i + 1];
+      e->msgs.len--;
     }
   }
   char display_msg[1024];
@@ -1143,13 +1198,13 @@ void new_message(Editor *e, const char *message, MessageType type){
   get_date_time(time_buff, sizeof(time_buff));
 
   snprintf(display_msg, sizeof(display_msg), "%s - %s", message, time_buff);
-  Message *msg = malloc(sizeof(Message));
-
-  msg->type = type;
-  msg->text = strdup(message);
-  write_new_message(e, msg);
-  e->messages[e->num_msgs] = msg;
-  e->buffs->data[e->current_buff]->current_msg_index = e->num_msgs++;
+  Message msg = {
+    .type = type,
+    .text = strdup(message)
+  };
+  write_new_message(e, &msg);
+  e->msgs.data[e->msgs.len] = msg;
+  e->buffs->data[e->current_buff]->msg_index = e->msgs.len++;
 }
 
 /* void lines_append(Lines *lines, Line line){
@@ -1220,8 +1275,8 @@ Editor *init_editor(){
     .is_showing_lines = false,
     .ln_mode = NONE,
     .ln_padding = 1,
-    .line_height = 0,
-    .letter_spacing = 0,
+    // .line_height = 0,
+    // .letter_spacing = 0,
     .padding = {
       .top = 45,
       .bottom = 45,

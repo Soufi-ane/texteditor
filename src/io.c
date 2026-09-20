@@ -96,6 +96,7 @@ void read_file(Editor* e, char const * file_path){
   buff->s->len = bytes_read - 1;
   buff->is_saved = true;
   update_lines(e);
+  update_line_number_padding(e);
   fclose(f);
 }
 
@@ -221,9 +222,10 @@ void copy_selection_to_clipboard(Editor *e){
 
 void paste_from_clipboard(Editor *e){
   Buffer *curr_buff = e->buffs->data[e->current_buff];
-  char temp_buff[MAX_PASTE_LENGTH];
-  read_from_clipboard(temp_buff, sizeof(temp_buff));
-  String *clip_str = string(temp_buff);
+  char *clip_buff = read_from_clipboard();
+  if(!clip_buff) return;
+  String *clip_str = string(clip_buff);
+  free(clip_buff);
   bool has_text = curr_buff->s->len > 0;
   bool at_end = curr_buff->cursor.index >= curr_buff->s->len;
   size_t insert_index = curr_buff->cursor.index + has_text;
@@ -243,12 +245,15 @@ int copy_to_clipboard(const char *text){
   return status == 0;
 }
 
-void read_from_clipboard(char *buff, size_t max){
+char *read_from_clipboard(){
+  char *buff = NULL;
   FILE *pipe = popen("xclip -selection clipboard -o 2>/dev/null || wl-paste 2>/dev/null", "r");
-  if(!pipe) return;
-  size_t read = fread(buff, 1, max - 1, pipe);
+  if(!pipe) return buff;
+  buff = malloc(sizeof(char) * MAX_PASTE_LENGTH + 1);
+  size_t read = fread(buff, 1, MAX_PASTE_LENGTH, pipe);
   buff[read] = '\0';
   pclose(pipe);
+  return buff;
 }
 
 ConfigKey get_config_key(Editor *e, char *key){
