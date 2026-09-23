@@ -15,6 +15,7 @@ int is_g_clicked_before = false;
 Cmd default_cmds[NUM_COMMANDS] = {
   { NEW_FILE , "New file" },
   { OPEN_FILE , "Open file" },
+  { OPEN_DIR , "Open directory" },
   { HELP , "Help!" },
   { OPEN_CONFIG , "Open config" },
   { OPEN_MESSAGES , "Open log messages" },
@@ -931,6 +932,14 @@ void handle_open_file(Editor *e){
     update_scroll(e, true, true);
   }
   e->mode = NORMAL;
+
+void handle_open_directory(Editor *e){
+  char const * path = tinyfd_selectFolderDialog("Select File", "");
+  if(path != NULL){
+    snprintf(e->base_dir, sizeof(e->base_dir), "%s", path);
+    read_dir_files(e, e->base_dir);
+    e->exp->is_open = true;
+  }
 }
 
 void open_config_file(Editor *e){
@@ -961,6 +970,9 @@ void handle_command(Editor *e, Cmd cmd){
     case OPEN_FILE:
       handle_open_file(e);
       break;
+    case OPEN_DIR:
+      handle_open_directory(e);
+      break;
     case NEW_FILE:
       start_new_file(e);
       break;
@@ -979,9 +991,12 @@ void handle_command(Editor *e, Cmd cmd){
       open_messages_file(e);
       break;
   }
+  e->mode = NORMAL;
   e->conf.is_menu_open = false;
+  if(cmd.type != OPEN_DIR) e->exp->is_open = false;
   e->selected_cmd = 0;
   e->prompt->len= 0;
+  update_buf_state(e);
   filter_cmds_by_prompt(e);
 }
 

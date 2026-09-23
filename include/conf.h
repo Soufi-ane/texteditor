@@ -18,7 +18,7 @@
 #define LONG_PRESS_DELAY      0.3f
 #define REPEAT_RATE           0.015f
 #define MAX_PASTE_LENGTH      (1024 * 1024 * 100)
-#define NUM_COMMANDS          5
+#define NUM_COMMANDS          6
 #define CURSOR_BLINK_INTERVAL 0.5
 #define CURSOR_BLINK_DURATION 15
 #define TIME_BEFORE_BLINK     1

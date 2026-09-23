@@ -28,6 +28,7 @@ typedef enum {
 
 typedef enum{
   OPEN_FILE,
+  OPEN_DIR,
   NEW_FILE,
   HELP,
   OPEN_CONFIG,
