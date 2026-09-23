@@ -133,48 +133,34 @@ bool is_selecting_up(Editor *e){
 }
 
 void move_to_matching_pair(Editor *e, char c){
-/*   int pairs[PAIRS_COUNT] = { '{', '(', '[', '<', '>', ']', ')', '}' };
+  int pairs[PAIRS_COUNT] = { '{', '(', '[', '<', '>', ']', ')', '}' };
   int pair_index = 0;
   int i;
   for(i = 0; i < PAIRS_COUNT; i++) {
     if(pairs[i] == c){ pair_index = i; break; }
   }
   if(i >= PAIRS_COUNT) return;
-  int match = match = pairs[PAIRS_COUNT - pair_index - 1];
+  int match = pairs[PAIRS_COUNT - pair_index - 1];
   bool is_opening = pair_index < (PAIRS_COUNT / 2); 
   int num_opened = 1;
-  int line_index = cur_buf->cur_li;
   int char_index = cur_buf->cursor.index;
   int next = 0;
-  while(num_opened){ 
-    if(is_opening) {
-      char_index++;
-      if(char_index >= cur_buf->lines[line_index]->length) {
-        line_index++;
-        char_index = 0;
-      } 
-      if(line_index >= cur_buf->length) break;
-    }else {
-      char_index--;
-      if(char_index < 0){
-        line_index--;
-        if(line_index < 0) break;
-        char_index = MAX(cur_buf->lines[line_index]->length - 1, 0);
-      }
-    }
-    next = cur_buf->lines[line_index]->chars[char_index];
-    if(next == c) {
-     num_opened++;
-    }
-    else if(next == match) {
-      num_opened--;
-    }
+  while(num_opened && char_index < cur_buf->s->len){ 
+
+    if(is_opening) char_index++;
+    else char_index--;
+
+    next = cur_buf->s->data[char_index];
+
+    if(next == c) num_opened++;
+    else if(next == match) num_opened--;
   }
   if(next == match && num_opened == 0) {
-    cur_buf->cur_li = line_index;
     cur_buf->cursor.index = char_index;
   }
-  cur_buf->cursor.last_time_moved = GetTime(); */
+  update_lines(e);
+  update_scroll(e, false, false);
+  update_buf_state(e);
 }
 
 void filter_cmds_by_prompt(Editor *e){
