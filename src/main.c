@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
 
   filter_cmds_by_prompt(e);
 
-* SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+  SetConfigFlags(FLAG_WINDOW_RESIZABLE);
   InitWindow(e->s_width, e->s_height, "Text Editor");
   SetExitKey(KEY_NULL);
 
