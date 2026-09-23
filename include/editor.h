@@ -6,6 +6,25 @@
 #include "conf.h"
 #include "str.h"
 
+#define SHIFT_SIZE 20
+
+#define stack_pop(stack)                                         \
+  (stack)->top > -1 ?                                            \
+  &(stack)->actions[(stack)->top--] : NULL
+
+#define stack_push(stack, act)                                   \
+  do {                                                           \
+    if((stack)->top >= MAX_STACK_SIZE - 1) {                     \
+      for(int i = 0; i < MAX_STACK_SIZE - SHIFT_SIZE; i++){      \
+        (stack)->actions[i] = (stack)->actions[i + SHIFT_SIZE];  \
+      }                                                          \
+      (stack)->top = MAX_STACK_SIZE - SHIFT_SIZE + 1;            \
+    }                                                            \
+    (stack)->actions[++(stack)->top] = (act);                    \
+  }while(0)
+
+#define stack_flush(stack) ((stack)->top = -1)
+
 #define da_append(arr, i)                                                     \
   do {                                                                        \
     if((arr)->len >= (arr)->cap) {                                            \
@@ -51,16 +70,31 @@ typedef struct {
   size_t col;
 } RowCol;
 
+typedef enum {
+  TEXT_CHANGE,
+  FILE_CHANGE
+} ActionType;
+
 typedef struct {
   size_t index;
   String *new;
   String *old;
-} Action;
+} TextAction;
 
 typedef struct {
-  Action actions[MAX_STACK_SIZE];
+  String *new;
+  String *old;
+} FileAction;
+
+typedef struct {
+  TextAction actions[MAX_STACK_SIZE];
   ssize_t top;
-} ActionStack;
+} Text_AStack;
+
+typedef struct {
+  FileAction actions[MAX_STACK_SIZE];
+  ssize_t top;
+} File_AStack;
 
 typedef struct {
   CmdType type;
@@ -91,6 +125,24 @@ typedef struct {
   size_t cap;
 } Lines;
 
+typedef enum {
+  FT_REG,
+  FT_DIR,
+  FT_LNK
+} FileType;
+
+typedef struct {
+  String *name;
+  FileType type;
+} File;
+
+typedef struct {
+  File *data;
+  size_t len;
+  size_t cap;
+  size_t d_start;
+} Files;
+
 typedef struct {
   char *text;
   MessageType type;
@@ -110,9 +162,9 @@ typedef struct {
   String *s;
   Lines *lines;
   Cursor cursor;
-  ActionStack undo_stack;
-  ActionStack redo_stack;
-  Action *cur_act;
+  Text_AStack undo_stack;
+  Text_AStack redo_stack;
+  TextAction *cur_act;
   char const * file_path;
   bool is_saved;
   bool is_readonly;
@@ -174,6 +226,22 @@ typedef struct {
 } Config;
 
 typedef struct {
+  Files *files;
+  String *open_dir;
+  String *input;
+  String *label;
+  String *placeholder;
+  size_t input_i;
+  size_t curr_file;
+  size_t max_w;
+  bool is_open;
+  bool is_creating_file;
+  bool is_deleting;
+  File_AStack undo_stack;
+  File_AStack redo_stack;
+} Explorer;
+
+typedef struct {
   Mode mode;
   Buffers *buffs;
   size_t current_buff;
@@ -182,6 +250,8 @@ typedef struct {
   Vector2 mouse;
   Config conf;
   Messages msgs;
+  Explorer *exp;
+  char base_dir[1024];
   bool is_full_screen;
   bool should_quit;
   char* currentFileName;
@@ -254,29 +324,29 @@ void decrease_font_size(Editor *e);
 
 void move_to_matching_pair(Editor *e, char c);
 
-void action_stack_push(ActionStack *stack, Action action);
+TextAction* init_text_action(size_t index);
 
-Action *action_stack_pop(ActionStack *stack);
+FileAction* new_file_action();
 
-Action* init_action(size_t index);
+FileAction* init_file_action();
 
-void action_delete_new_str(Editor *e, Action *act);
+void action_delete_new_str(Editor *e, TextAction *act);
 
-void action_add_old_str(Editor *e, Action *act);
+void action_add_old_str(Editor *e, TextAction *act);
 
 void undo(Editor *e);
 
-void undo_action(Editor *e, Action *act);
+void undo_text_action(Editor *e, TextAction *act);
 
 void redo(Editor *e);
 
-void redo_action(Editor *e, Action *act);
+void redo_text_action(Editor *e, TextAction *act);
 
-void free_action(Action *action);
+void free_text_action(TextAction *action);
 
-void action_stack_flush(ActionStack *stack);
+// void action_stack_flush(ActionStack *stack);
 
-void update_action(Action **act, size_t index, String *str, bool is_new);
+void update_text_action(TextAction **act, size_t index, String *str, bool is_new);
 
 void update_lines(Editor *e);
 
@@ -301,5 +371,17 @@ size_t seek_back_by_lines(Buffer *buff, size_t from, size_t count);
 size_t seek_forward_by_lines(Buffer *buff, size_t from, size_t count);
 
 void update_line_number_padding(Editor *e);
+
+void move_up_explorer(Editor *e);
+
+void move_down_explorer(Editor *e);
+
+void move_right_explorer(Editor *e);
+
+void move_left_explorer(Editor *e);
+
+void handle_delete_file(Editor *e);
+
+void exit_exp_input(Editor * e);
 
 #endif

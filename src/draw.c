@@ -17,22 +17,20 @@ const char *get_mode_str(Mode mode, bool is_selecting){
   }
 }
 
-void DrawCmdCursor(Editor* e, int cursor_x, int cursor_y){
+void DrawCursor(Editor* e, int x, int y, unsigned int color, bool is_primary){
   RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   DrawRectangle(
-    cursor_x, cursor_y, char_size.col,
-    char_size.row, GetColor(e->buffs->data[e->current_buff]->cursor.color)
-  );
-}
-
-void DrawCursor(Editor* e, int x, int y, unsigned int color){
-  DrawRectangle(
-    x, y, e->buffs->data[e->current_buff]->cursor.width,
-    e->buffs->data[e->current_buff]->cursor.height, GetColor(color)
+    x, y, 
+    is_primary ? e->buffs->data[e->current_buff]->cursor.width
+    : char_size.col,
+    is_primary ? e->buffs->data[e->current_buff]->cursor.height
+    : char_size.row,
+    GetColor(color)
   );
 }
 
 void DrawMenu(Editor * e){
+  Buffer *buff = e->buffs->data[e->current_buff];
   RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   Padding pad = e->conf.padding;
     
@@ -76,7 +74,9 @@ void DrawMenu(Editor * e){
       e->conf.font_secondary_data.size, 0, GRAY
     );
   }
-  DrawCmdCursor(e, cursor_x, cursor_y);
+
+  DrawCursor(e, cursor_x, cursor_y, buff->cursor.color, false);
+  // DrawCmdCursor(e, cursor_x, cursor_y);
 
   for(
     int i = (e->prompt->len > max_displayed ? e->prompt->len - max_displayed : 0);
@@ -232,6 +232,172 @@ void DrawEditorLines(Editor *e){
   }
 }
 
+void udpate_explorer_size(Editor *e){
+  RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
+  size_t max_num_lines = get_max_num_lines(e);
+  e->exp->max_w = e->s_width / 3;
+  for(
+    size_t i = e->exp->files->d_start;
+    (i < e->exp->files->len) && (i - e->exp->files->d_start < max_num_lines);
+    i++
+  ){
+    File file = e->exp->files->data[i];
+    size_t text_w = file.name->len * char_size.col;
+    if(text_w > e->exp->max_w){
+      if(text_w < (2 * e->s_width / 3)){
+        e->exp->max_w = text_w + e->conf.padding.left * 2;
+      }else e->exp->max_w = 2 * e->s_width / 3;
+    }
+  }
+}
+
+void DrawFileInput(Editor *e, bool is_blinking){
+  Buffer *buff = e->buffs->data[e->current_buff];
+  RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
+  float input_w = e->s_width / 2;
+  float input_h = char_size.row * 2;
+  Rectangle input = {
+    e->s_width / 2 - input_w / 2,
+    e->s_height / 5, input_w, input_h
+  };
+  DrawRectangleRec(input, GetColor(e->conf.bg_color));
+  DrawRectangleLinesEx(input, 2, GetColor(e->conf.text_color));
+  size_t text_x = input.x + (e->exp->input->len + 1) * char_size.col;
+  size_t d_start = text_x >= (input.x + input.width) - char_size.col * 3 ?
+    (text_x - input.x - input_w + char_size.col * 3) / char_size.col : 0;
+
+  float label_w = MeasureTextEx(
+    e->conf.font_secondary_data.font, e->exp->label->data, 
+    e->conf.font_secondary_data.size, 0
+  ).x;
+
+  Rectangle label_box = {
+    input.x, input.y - char_size.row * 1.5,
+    input_w, char_size.row * 1.5
+  };
+
+  DrawRectangleRec(label_box, GetColor(e->conf.bg_color));
+  DrawTextEx(
+    e->conf.font_secondary_data.font, e->exp->label->data,
+    (Vector2){
+      e->s_width / 2 - label_w / 2,
+      input.y - char_size.row * 1.25
+    },
+    e->conf.font_secondary_data.size, 0,
+    GetColor(e->conf.text_color)
+  );
+
+  DrawCursor(
+    e, text_x - d_start * char_size.col,
+    input.y + char_size.row / 2,
+    is_blinking ? 0x00000000 : buff->cursor.color, false
+  );
+  if(e->exp->input->len){
+    DrawTextEx(
+      e->conf.font_secondary_data.font, &e->exp->input->data[d_start],
+      (Vector2){
+        input.x + char_size.col,
+        input.y + char_size.row / 2
+      },
+      e->conf.font_secondary_data.size, 0,
+      GetColor(e->conf.text_color)
+    );
+  }else {
+    DrawTextCodepoint(
+      e->conf.font_secondary_data.font, e->exp->placeholder->data[0],
+      (Vector2){
+        input.x + char_size.col,
+        input.y + char_size.row / 2
+      },
+      e->conf.font_secondary_data.size,
+      GetColor(is_blinking ? e->conf.line_numbers_color : e->conf.under_cursor_color)
+    );
+    DrawTextEx(
+      e->conf.font_secondary_data.font, &e->exp->placeholder->data[1],
+      (Vector2){
+        input.x + char_size.col * 2,
+        input.y + char_size.row / 2
+      },
+      e->conf.font_secondary_data.size, 0,
+      GetColor(e->conf.line_numbers_color)
+    );
+  }
+}
+
+const char *get_explorer_help_msg(Editor *e){
+  if(!e->exp->files->len) return "Empty directory";
+  if(e->conf.is_vim_mode) return "Use h,j,k,l to navigate";
+  else return "Use arrows to navigate";
+}
+
+void DrawExplorerHelp(Editor *e){
+  DrawTextEx(
+    e->conf.font_secondary_data.font,
+    get_explorer_help_msg(e) ,
+    (Vector2){ e->conf.padding.left, 3 },
+    e->conf.font_secondary_data.size, 0,
+    GetColor(e->conf.line_numbers_color)
+  );
+}
+
+void DrawExplorer(Editor *e, bool is_blinking){
+  Padding pad = e->conf.padding;
+  RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
+  Rectangle explorer = {
+    0, pad.top, e->s_width / 3, e->s_height - (char_size.row + pad.top)
+  };
+  Rectangle separator = {
+    e->exp->max_w, pad.top, 2, e->s_height - (char_size.row + pad.top)
+  };
+  DrawRectangleRec(explorer, GetColor(e->conf.bg_color));
+  DrawRectangleRec(separator, GetColor(e->conf.line_numbers_color));
+  size_t y_offset = 0;
+  size_t max_num_lines = get_max_num_lines(e);
+  for(
+    size_t i = e->exp->files->d_start;
+    (i < e->exp->files->len) && (i - e->exp->files->d_start < max_num_lines);
+    i++
+  ){
+    File file = e->exp->files->data[i];
+    String *dis_name = string(file.name->data);
+    size_t text_w = file.name->len * char_size.col;
+    bool is_too_long = text_w > e->exp->max_w;
+    if(is_too_long){
+      dis_name->len -= (pad.left * 2 + text_w - e->exp->max_w) / char_size.col + 4;
+      dis_name->data[dis_name->len] = 0;
+    }
+    Rectangle file_rec = {
+      0, y_offset * char_size.row + pad.top * 2,
+      e->exp->max_w, char_size.row
+    };
+    DrawRectangleRec(
+      file_rec,
+      GetColor(i == e->exp->curr_file ? e->conf.line_highlight_color : 0x00000000)
+    );
+
+    DrawTextEx(
+      e->conf.font_secondary_data.font,
+      TextFormat("%s%s", dis_name->data, is_too_long ? "..." : ""),
+      (Vector2){ pad.left, file_rec.y },
+      e->conf.font_secondary_data.size, 0, GetColor(e->conf.text_color));
+    y_offset++;
+  }
+  if(!e->exp->files->len){
+    Rectangle file_rec = {
+      0, pad.top * 2,
+      e->exp->max_w, char_size.row
+    };
+    DrawRectangleRec(
+      file_rec,
+      GetColor(e->conf.line_highlight_color)
+    );
+  }
+  if(e->exp->is_creating_file || e->exp->is_deleting){
+    DrawFileInput(e, is_blinking);
+  } 
+  DrawExplorerHelp(e);
+}
+
 void DrawLineNumber(Editor *e, size_t i, size_t y_offset){
   RowCol char_size = get_char_size(e->conf.font_data.size);
   Padding pad = e->conf.padding;
@@ -242,7 +408,7 @@ void DrawLineNumber(Editor *e, size_t i, size_t y_offset){
       (index < i ? i - index : index - i)
     ),
     (Vector2){
-      pad.left,
+      pad.left + (e->exp->is_open ? e->exp->max_w : 0),
       pad.top + (e->conf.line_height + char_size.row) * y_offset
      },
     e->conf.font_data.size, 0, GetColor(e->conf.line_numbers_color));
@@ -256,7 +422,7 @@ void DrawBufferText(Editor *e, bool is_blinking){
   size_t i, index = 0, x_offset = 0, y_offset = 0, num_cariages = 0;
   size_t total_char_w = e->conf.letter_spacing + char_size.col;
   size_t total_char_h = e->conf.line_height + char_size.row;
-  size_t total_pl = pad.left;
+  size_t total_pl = pad.left + (e->exp->is_open ? e->exp->max_w : 0);
   if(has_nums) total_pl += (e->conf.ln_padding + 1) * total_char_w;
   size_t total_pt = pad.top;
   size_t max_len = get_max_line_length(e);
@@ -288,8 +454,6 @@ void DrawBufferText(Editor *e, bool is_blinking){
     update_buf_state(e);
   } 
   
-  /* size_t total_wraps =
-    get_lines_wraps(e, 0, max_num_lines); */
   size_t cur_gui_index = 0;
   char *text = buff->s->data;
 
@@ -340,14 +504,17 @@ void DrawBufferText(Editor *e, bool is_blinking){
 
     if(char_index == buff->cursor.index){
       if(text[char_index] == '\n' || char_index == buff->s->len){
+        if(!e->exp->is_open)
         DrawCursor(
           e, char_pos.x, char_pos.y,
-          is_blinking ? 0x00000000 : buff->cursor.color
+          is_blinking ? 0x00000000 : buff->cursor.color,
+          true
         );
 
       }
     }else if(is_selected(e, char_index) && text[char_index - 1] == '\n') {
-      DrawCursor(e, char_pos.x, char_pos.y, e->conf.selection_color);
+      if(!e->exp->is_open)
+      DrawCursor(e, char_pos.x, char_pos.y, e->conf.selection_color, true);
     }
     if(i == buff->s->len) break;
 
@@ -446,7 +613,7 @@ void DrawBufferText(Editor *e, bool is_blinking){
       y_offset++;
       x_offset = 0;
     }
-    else if(isspace(text[i - 1]) || i == buff->d_start + 1){
+    else if(i > 0 && isspace(text[i - 1]) || i == buff->d_start + 1){
       int word_len = 0;
       while(
         word_len < max_len - 1 && 
@@ -466,14 +633,17 @@ void DrawBufferText(Editor *e, bool is_blinking){
 
     char_index = index + buff->d_start - 1;
     if(char_index == buff->cursor.index){
+      if(!e->exp->is_open)
       DrawCursor(
         e, char_pos.x, char_pos.y,
-        is_blinking ? 0x00000000 : buff->cursor.color
+        is_blinking ? 0x00000000 : buff->cursor.color,
+        true
       );
 
     }
     if(is_selected(e, char_index) && char_index != buff->cursor.index) {
-      DrawCursor(e, char_pos.x , char_pos.y, e->conf.selection_color);
+      if(!e->exp->is_open)
+      DrawCursor(e, char_pos.x , char_pos.y, e->conf.selection_color, true);
     }
 
     /* if(cur_line_index == buff->cur_li && e->conf.is_line_highlight) {
@@ -490,7 +660,10 @@ void DrawBufferText(Editor *e, bool is_blinking){
       char_pos, e->conf.font_data.size,
       0.0f,
       GetColor(
-        (char_index == buff->cursor.index && !is_blinking) ? 
+        (
+         char_index == buff->cursor.index && 
+         !is_blinking && !e->exp->is_open
+         ) ? 
         e->conf.under_cursor_color:
         e->conf.text_color
       )

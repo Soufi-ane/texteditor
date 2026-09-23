@@ -4,9 +4,7 @@
 #include <raylib.h>
 #include "editor.h"
 
-void DrawCursor(Editor* e, int x, int y, unsigned int color);
-
-void DrawCmdCursor(Editor* e, int cursor_x, int cursor_y);
+void DrawCursor(Editor* e, int x, int y, unsigned int color, bool is_primary);
 
 void DrawMenu(Editor * e);
 
@@ -25,5 +23,9 @@ void DrawLineChars(Editor *e, bool is_blinking, size_t x_offset, size_t y_offset
 void DrawEditorLines(Editor *e);
 
 void DrawBufferText(Editor *e, bool is_blinking);
+
+void DrawExplorer(Editor *e, bool is_blinking);
+
+void udpate_explorer_size(Editor *e);
 
 #endif

@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 #include "io.h"
 #include "tinyfiledialogs.h"
@@ -8,6 +9,7 @@
 #define PAIRS_COUNT 8
 #define cur_buf e->buffs->data[e->current_buff]
 #define cur_line cur_buf->lines->data[cur_buf->cur_li]
+#define cur_file e->exp->files->data[e->exp->curr_file]
 
 double long_press_time = 0.0f;
 int is_g_clicked_before = false;
@@ -34,20 +36,6 @@ void update_buf_state(Editor *e){
   bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
   if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
 }
-
-/* size_t get_num_gui_lines(Buffer *buff){
-  size_t num_gui_lines = buff->lines->len ;
-  for(size_t i = 0; i < buff->lines->len; i++){
-    num_gui_lines += buff->lines->data[i].wraps;
-  }
-  return num_gui_lines;
-} */
-
-/* size_t get_line_from_index(Lines *lines, size_t index){
-  for(size_t i = 0; i < lines->len; i++){
-    if(index >= lines->data[i].start && index <= lines->data[i].end) return i;
-  }
-} */
 
 void update_line_number_padding(Editor *e){
   if(!cur_buf->lines) return;
@@ -84,7 +72,7 @@ void update_lines(Editor *e){
       line.wraps++;
       total_wraps++;
     }
-    else if(isspace(cur_buf->s->data[i - 1]) || i == cur_buf->d_start + 1){
+    else if((i > 0 && isspace(cur_buf->s->data[i - 1])) || i == cur_buf->d_start + 1){
       int word_len = 0;
       while(
         word_len < max_len - 1 &&
@@ -119,7 +107,6 @@ void update_lines(Editor *e){
   }
   line.end = i - 1;
   da_append(cur_buf->lines, line);
-  // update_line_number_padding(e);
 }
 
 size_t get_max_num_lines(Editor *e){ 
@@ -297,19 +284,18 @@ void toggle_full_screen(Editor *e){
   SetWindowSize(e->s_width, e->s_height);
   e->is_full_screen = !e->is_full_screen;
   update_lines(e);
+  udpate_explorer_size(e);
 }
 
 void add_char_to_cur_buf(Editor *e, char c, size_t index){
-
   String *str = cur_buf->s;
   add_char_to_str(str, c, index);
 
   cur_buf->cursor.index = index + 1;
 
-  update_action(&cur_buf->cur_act, index, c_string(c), true);
+  update_text_action(&cur_buf->cur_act, index, c_string(c), true);
   update_lines(e);
   update_scroll(e, false, false);
-  update_buf_state(e);
   cur_buf->is_saved = false;
 }
 
@@ -320,11 +306,10 @@ void replace_char(String *str, size_t index, char new_char){
 
 void remove_chars_cur_buf(Editor *e, size_t index, size_t count){
   String *str = cur_buf->s;
-
   String *deleted = new_str(count + 1);
   memcpy(deleted->data, &cur_buf->s->data[index], count);
   deleted->len += count;
-  update_action(&cur_buf->cur_act, index, deleted, false);
+  update_text_action(&cur_buf->cur_act, index, deleted, false);
 
   str_remove_chars(str, index, count);
   cur_buf->is_saved = false;
@@ -377,6 +362,9 @@ void move_cursor_left(Editor* e, size_t count) {
 void handle_caps_lock_and_escape(Editor* e){
   if(e->conf.is_vim_mode){
     if(e->conf.is_selecting) e->conf.is_selecting = false;
+    if(e->exp->is_creating_file || e->exp->is_deleting){
+      exit_exp_input(e);
+    } 
     else if(e->mode == INSERT){
       e->mode = NORMAL;
       if(cur_buf->cursor.index != cur_line.start) move_cursor_left(e, 1);
@@ -392,8 +380,8 @@ void handle_caps_lock_and_escape(Editor* e){
     filter_cmds_by_prompt(e);
   }
   if(cur_buf->cur_act != NULL) {
-    action_stack_push(&cur_buf->undo_stack, *cur_buf->cur_act);
-    action_stack_flush(&cur_buf->redo_stack);
+    stack_push(&cur_buf->undo_stack, *cur_buf->cur_act);
+    stack_flush(&cur_buf->redo_stack);
     cur_buf->cur_act = NULL;
   } 
 }
@@ -454,7 +442,7 @@ void move_to_end_of_line(Editor* e) {
 void move_to_word_ending(Editor* e){
   size_t i = cur_buf->cursor.index; 
   char *text = cur_buf->s->data;
-  size_t last_index = cur_buf->s->len - 1;
+  size_t last_index = MIN(cur_buf->s->len - 1, 0);
   while(isspace(text[i + 1]) && i < last_index ){
     move_cursor_right(e, 1);
     i++;
@@ -467,7 +455,6 @@ void move_to_word_ending(Editor* e){
     move_cursor_right(e, 1);
     i++;
   }
-  // move_cursor_right(e, i - cur_buf->cursor.index);
   cur_buf->cursor.index = i;
   update_last_col(e);
   update_buf_state(e);
@@ -652,7 +639,10 @@ void handle_delete_selection(Editor *e){
 
 void handle_backspace(Editor* e) {
   if(e->mode == INSERT || !e->conf.is_vim_mode) {
-    if(e->conf.is_menu_open && e->prompt->len) {
+    if(e->exp->is_open){
+      str_remove_chars(e->exp->input, e->exp->input->len -1, 1);
+    }
+    else if(e->conf.is_menu_open && e->prompt->len) {
       str_remove_chars(e->prompt, e->prompt->len - 1, 1);
       filter_cmds_by_prompt(e);
     }else if(e->conf.is_selecting) {
@@ -668,6 +658,7 @@ void handle_backspace(Editor* e) {
   } else {
     move_cursor_left(e, 1);
   } 
+  update_buf_state(e);
 }
 
 void handle_normal_mode_keys(Editor* e, int c){
@@ -676,7 +667,15 @@ void handle_normal_mode_keys(Editor* e, int c){
       move_to_last_line(e);
       break;
     case 'a':
-      handle_append(e);
+      if(e->exp->is_open){
+        free_str(e->exp->label);
+        free_str(e->exp->placeholder);
+        e->exp->label = string("Directories end with '/'");
+        e->exp->placeholder = string("Name");
+        e->mode = INSERT;
+        e->exp->is_creating_file = true;
+      } 
+      else handle_append(e);
       break;
     case 'i':
       e->mode = INSERT;
@@ -685,6 +684,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'm':
       e->conf.is_menu_open = true;
+      e->exp->is_creating_file = false;
       e->conf.is_opening_file = false;
       e->mode = INSERT;
       break;
@@ -705,9 +705,18 @@ void handle_normal_mode_keys(Editor* e, int c){
     case 'e':
       move_to_word_ending(e);
       break;
-    case 'o':
-      if(e->conf.is_menu_open){
+    case 'E':
+      e->exp->is_open = !e->exp->is_open;
+      exit_exp_input(e);
+      if(e->exp->is_open){
+        read_dir_files(e, e->base_dir);
+        e->exp->curr_file = 0;
       }
+      update_buf_state(e);
+      break;
+    case 'o':
+      /* if(e->conf.is_menu_open){
+      } */
       break;
     case 's':
       try_saving_file(e);
@@ -717,19 +726,23 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'h':
       if(e->mode == NORMAL){
-        move_cursor_left(e, 1);
+        if(e->exp->is_open) move_left_explorer(e);
+        else move_cursor_left(e, 1);
       }
       break;
     case 'l':
       if(e->mode == NORMAL){
-        move_cursor_right(e, 1);
+        if(e->exp->is_open) move_right_explorer(e);
+        else move_cursor_right(e, 1);
       }
       break;
     case 'j':
-      move_cursor_down(e);
+      if(e->exp->is_open) move_down_explorer(e);
+      else move_cursor_down(e);
       break;
     case 'k':
-      move_cursor_up(e);
+      if(e->exp->is_open) move_up_explorer(e);
+      else move_cursor_up(e);
       break;
     case '+':
       increase_font_size(e);
@@ -757,7 +770,23 @@ void handle_normal_mode_keys(Editor* e, int c){
       e->conf.is_menu_open = false;
       break;
     case 'd':
-      if(e->conf.is_selecting && e->conf.is_vim_mode) handle_delete_selection(e);
+      if(e->exp->is_open && e->exp->files->len){
+        if(!e->exp->is_deleting){
+          free_str(e->exp->label);
+          free_str(e->exp->placeholder);
+          e->exp->label = string("Delete '' ?");
+          e->exp->placeholder = string("Yes or y to confirm");
+          add_str_to_str(e->exp->label, cur_file.name, e->exp->label->len - 3);
+          if(cur_file.type == FT_DIR) {
+            add_text_to_str(e->exp->label, "/", e->exp->label->len - 3);
+          }
+          e->exp->is_deleting = true;
+          e->mode = INSERT;
+        } 
+      }
+      else if(e->conf.is_selecting && e->conf.is_vim_mode) {
+        handle_delete_selection(e);
+      } 
       break;
     case 'q':
       try_closing_current_buffer(e);
@@ -765,9 +794,9 @@ void handle_normal_mode_keys(Editor* e, int c){
     case 'Q':
       force_close_current_buffer(e);
       break;
-    /* case '%':
-      move_to_matching_pair(e, cur_line->chars[cur_buf->cursor.index]);
-      break; */
+    case '%':
+      move_to_matching_pair(e, cur_buf->s->data[cur_buf->cursor.index]);
+      break;
     case 'u':
       undo(e);
       break;
@@ -783,6 +812,18 @@ void handle_normal_mode_keys(Editor* e, int c){
       //todo : move to line number
     } 
   }
+}
+
+void handle_delete_file(Editor *e){
+  String *path = string(e->exp->open_dir->data);
+  add_text_to_str(path, "/", path->len);
+  add_str_to_str(
+    path,
+    cur_file.name,
+    path->len
+  );
+  move_to_trash(e, path->data);
+  read_dir_files(e, e->exp->open_dir->data);
 }
 
 void decrease_font_size(Editor *e){
@@ -888,21 +929,86 @@ void handle_insert_mode_keys(Editor* e,int c){
     if(e->conf.is_menu_open) {
       add_char_to_str(e->prompt, c, e->prompt->len);
       filter_cmds_by_prompt(e);
-    }else {
-      add_char_to_cur_buf(e, c, cur_buf->cursor.index);
-      /*
-      update_action(
-        &cur_buf->cur_act, ADD_STR,
-        (RowCol){ cur_buf->cur_li, index }, c
-      );
-       if(cur_buf->cur_act == NULL){
-        cur_buf->cur_act = init_action(
-          ADD_STR, (RowCol){ cur_buf->cur_li, index }
-        );
-      }
-      add_char_to_line(cur_buf->cur_act->str, c, cur_buf->cur_act->str->length); */
     }
+    else if(e->exp->is_open){
+      if(e->exp->is_creating_file || e->exp->is_deleting){
+        add_char_to_str(e->exp->input, c, e->exp->input->len);
+        e->exp->input_i++;
+      }
+    } else {
+      add_char_to_cur_buf(e, c, cur_buf->cursor.index);
+    }
+    update_buf_state(e);
   }
+}
+
+void move_up_explorer(Editor *e){
+  size_t max_num_lines = get_max_num_lines(e);
+  size_t old_start = e->exp->files->d_start;
+  if(e->exp->curr_file > 0){
+    e->exp->curr_file--;
+    if(e->exp->curr_file - e->exp->files->d_start < e->conf.scroll_pad) {
+      if(e->exp->files->d_start) e->exp->files->d_start--;
+    } 
+  } 
+  else {
+    e->exp->curr_file = e->exp->files->len - 1;
+    if(e->exp->files->len > max_num_lines){
+      e->exp->files->d_start = e->exp->files->len - max_num_lines;
+      if(e->exp->files->d_start >= e->conf.scroll_pad){
+        e->exp->files->d_start += e->conf.scroll_pad;
+      }
+    }
+  } 
+  if(old_start != e->exp->files->d_start) udpate_explorer_size(e);
+  update_buf_state(e);
+}
+
+void move_right_explorer(Editor *e){
+  if(!e->exp->files->len) return;
+  String *path = string(e->exp->open_dir->data);
+  if(cur_file.type == FT_DIR){
+    add_text_to_str(path, "/", path->len);
+    add_str_to_str(path, cur_file.name, path->len);
+    read_dir_files(e, path->data);
+    e->exp->curr_file = 0;
+    e->exp->files->d_start = 0;
+  }else {
+    add_text_to_str(path, "/", path->len);
+    add_str_to_str(path, cur_file.name, path->len);
+    read_file(e, path->data);
+    e->exp->is_open = false;
+  }
+  update_buf_state(e);
+}
+
+void move_left_explorer(Editor *e){
+  String *path = string(e->exp->open_dir->data);
+  size_t last_slash_index = last_index_of(path, '/');
+  if(!last_slash_index) path->len = 1;
+  else path->len -= (path->len - last_slash_index);
+  path->data[path->len] = 0;
+  read_dir_files(e, path->data);
+  e->exp->curr_file = 0;
+  e->exp->files->d_start = 0;
+  update_buf_state(e);
+}
+
+void move_down_explorer(Editor *e){
+  size_t max_num_lines = get_max_num_lines(e);
+  size_t old_start = e->exp->files->d_start;
+  e->exp->curr_file++;
+  if(e->exp->curr_file > e->exp->files->len - 1) {
+    e->exp->curr_file = e->exp->files->d_start = 0;
+  } 
+  else if(
+    e->exp->curr_file >= 
+    (max_num_lines - e->conf.scroll_pad + e->exp->files->d_start - 1)
+  ) {
+    e->exp->files->d_start = e->exp->curr_file - max_num_lines + e->conf.scroll_pad + 1;
+  } 
+  if(old_start != e->exp->files->d_start) udpate_explorer_size(e);
+  update_buf_state(e);
 }
 
 void start_new_file(Editor *e){
@@ -917,7 +1023,7 @@ void handle_open_file(Editor *e){
     read_file(e, path);
     update_scroll(e, true, true);
   }
-  e->mode = NORMAL;
+}
 
 void handle_open_directory(Editor *e){
   char const * path = tinyfd_selectFolderDialog("Select File", "");
@@ -929,7 +1035,7 @@ void handle_open_directory(Editor *e){
 }
 
 void open_config_file(Editor *e){
-  char path[128];
+  char path[1024];
   #ifdef PROD
   sprintf(path, "%s/.config/texteditor/texteditor.conf", e->HOME_DIR);
   #else
@@ -987,22 +1093,49 @@ void handle_command(Editor *e, Cmd cmd){
 }
 
 void handle_enter(Editor* e){
-  if(e->mode == INSERT || !e->conf.is_vim_mode){
-    if(!e->conf.is_menu_open){
-
-      add_char_to_cur_buf(e, '\n', cur_buf->cursor.index);
-
-      /* if(cur_buf->cur_act == NULL){
-        cur_buf->cur_act = init_action(
-          ADD_STR, (RowCol){ cur_buf->cur_li - 1, index }
-        );
+  if(e->conf.is_menu_open){
+    handle_command(e, default_cmds[e->displayed_cmds[e->selected_cmd]]);
+  } else if(!e->exp->is_open) {
+    add_char_to_cur_buf(e, '\n', cur_buf->cursor.index);
+  }else {
+    if(e->exp->is_creating_file){
+      String *path = string(e->exp->open_dir->data);
+      add_text_to_str(path, "/", path->len);
+      add_str_to_str(path, e->exp->input, path->len);
+      if(path->data[path->len - 1] == '/'){
+        mkdir(path->data, 0755);
+      }else {
+        create_file(e, path->data);
       }
-      add_char_to_line(cur_buf->cur_act->str, '\n', cur_buf->cur_act->str->length); */
-      // cur_buf->cur_act->str->length--; // not counting new line character
-    }else {
-      handle_command(e, default_cmds[e->displayed_cmds[e->selected_cmd]]);
+      e->exp->input->len = 0;
+      e->exp->input->data[e->exp->input->len] = 0;
+      e->exp->is_creating_file = false;
+      read_dir_files(e, e->exp->open_dir->data);
+    }else if(e->exp->is_deleting){
+      if(
+        !strcasecmp(e->exp->input->data, "yes") ||
+        !strcmp(e->exp->input->data, "y")
+      ){
+        handle_delete_file(e);
+      }
+      e->exp->is_deleting = false;
     }
+    else{
+      move_right_explorer(e);
+    } 
+    exit_exp_input(e);
   }
+}
+
+void update_curr_file(Editor * e){
+}
+
+void exit_exp_input(Editor * e){
+  e->exp->is_creating_file = false;
+  e->exp->is_deleting = false;
+  e->exp->input->len = 0;
+  e->exp->input->data[e->exp->input->len] = 0;
+  e->mode = NORMAL;
 }
 
 void handle_mouse_click(Editor *e, size_t index, bool is_holding){
@@ -1144,7 +1277,7 @@ Buffer *new_buffer(){
   Buffer *buff = malloc(sizeof(Buffer));
   buff->s = new_str(DEFAULT_LINE_SIZE);
   buff->d_start = 0;
-  // buff->d_len= 1;
+  buff->num_prev_lines = 0;
   buff->num_chars = 0;
   buff->cur_li = 0;
   buff->msg_index = -1;
@@ -1158,7 +1291,7 @@ Buffer *new_buffer(){
   buff->redo_stack.top = -1;
   buff->cur_act = NULL;
   buff->lines = malloc(sizeof(Lines));
-  buff->lines->data = malloc(sizeof(Line*));
+  buff->lines->data = malloc(sizeof(Line));
   buff->lines->data[0] = (Line){0};
   buff->lines->cap = 1;
   buff->lines->len = 1;
@@ -1176,15 +1309,6 @@ void get_date_time(char *time_buff, size_t size){
   time(&current_time);
   struct tm *local_time = localtime(&current_time);
   strftime(time_buff, size, "%H:%M:%S", local_time);
-}
-
-void redo(Editor *e){
-  Action *last_action = action_stack_pop(&cur_buf->redo_stack);
-  if(last_action == NULL) return;
-  action_stack_push(&cur_buf->undo_stack, *last_action);
-  redo_action(e, last_action);
-  update_scroll(e, false, false);
-  cur_buf->cursor.last_time_moved = GetTime();
 }
 
 void new_message(Editor *e, const char *message, MessageType type){
@@ -1241,7 +1365,24 @@ Editor *init_editor(){
   e->buffs->data[0] = new_buffer();
   e->buffs->len = 1;
   e->buffs->cap = 1;
+  e->current_buff = 0;
 
+  e->exp = malloc(sizeof(Explorer));
+  e->exp->files = malloc(sizeof(Files));
+  e->exp->files->data = malloc(sizeof(File) * 10);
+  e->exp->input = new_str(100);
+  e->exp->label = NULL;
+  e->exp->placeholder = NULL;
+  e->exp->input_i = 0;
+  e->exp->files->cap = 10;
+  e->exp->files->len = 0;
+  e->exp->max_w = 0;
+  e->exp->curr_file = 0;
+  e->exp->is_open = false;
+  e->exp->is_creating_file = false;
+  e->exp->undo_stack.top = -1;
+  e->exp->redo_stack.top = -1;
+  e->exp->is_deleting = false;
   e->mode = NORMAL;
   e->s_width = SCREEN_WIDTH;
   e->s_height = SCREEN_HEIGHT;

@@ -25,4 +25,8 @@ String *c_string(char c);
 
 void add_str_to_str(String *dest, String *src, size_t index);
 
+void add_text_to_str(String *dest, const char *txt, size_t index);
+
+size_t last_index_of(String *str, char c);
+
 #endif

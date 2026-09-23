@@ -7,6 +7,7 @@ DATA_DIR     = /usr/local/share/texteditor
 APP_DIR      = /usr/local/share/applications
 HOME_DIR     = $(shell getent passwd $(SUDO_USER) | cut -d: -f6)
 CONFIG_DIR   = $(HOME_DIR)/.config/texteditor
+TRASH_DIR    = $(HOME_DIR)/.local/share/texteditor/trash
 ASSETS_DIR   = ./assets
 
 CC = gcc
@@ -21,19 +22,20 @@ run : $(OUT)
 	./$(OUT)
 
 install: $(OUT_PROD)
-	mkdir -p $(INSTALL_DIR) $(DATA_DIR) $(CONFIG_DIR) $(FONTS_DIR)
+	mkdir -p $(INSTALL_DIR) $(DATA_DIR) $(CONFIG_DIR) $(FONTS_DIR) $(TRASH_DIR)
 	cp $(ASSETS_DIR)/fonts/JetBrainsMono-Regular.ttf $(FONTS_DIR)
 	cp $(OUT_PROD) $(INSTALL_DIR)
 	cp $(ASSETS_DIR)/help.txt $(ASSETS_DIR)/messages.log $(ASSETS_DIR)/texteditor.png $(DATA_DIR)
 	cp $(ASSETS_DIR)/texteditor.conf $(CONFIG_DIR)
 	cp $(ASSETS_DIR)/texteditor.desktop $(APP_DIR)
 	update-desktop-database -q
-	chown -R $(SUDO_USER):$(SUDO_USER) $(CONFIG_DIR) $(DATA_DIR)
+	chown -R $(SUDO_USER):$(SUDO_USER) $(CONFIG_DIR) $(DATA_DIR) $(TRASH_DIR)
 
 $(OUT_PROD) : $(SRC) $(HEADERS)
 	$(CC) -o $(OUT_PROD) $(SRC) $(FLAGS) $(PROD_FLAGS)
 
 $(OUT): $(SRC) $(HEADERS)
+	mkdir -p build/ trash/
 	$(CC) -o $(OUT) $(SRC) $(FLAGS) 
 
 debug : $(SRC)

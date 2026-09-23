@@ -1,33 +1,31 @@
 #include <stdlib.h>
+#include "io.h"
 #include "editor.h"
 
-Action* init_action(size_t index){
-  Action *action = malloc(sizeof(Action));
-  action->index = index;
-  action->old = new_str(DEFAULT_LINE_SIZE);
-  action->new = new_str(DEFAULT_LINE_SIZE);
-  return action;
-}
-
-void action_stack_push(ActionStack *stack, Action action){
+void action_stack_push(Text_AStack *stack, TextAction action){
   if(stack->top >= MAX_STACK_SIZE - 1){
-    int shift_size = 20;
-    for(int i = 0; i < MAX_STACK_SIZE - shift_size; i++){
-      stack->actions[i] = stack->actions[i + shift_size];
+    for(int i = 0; i < MAX_STACK_SIZE - SHIFT_SIZE; i++){
+      stack->actions[i] = stack->actions[i + SHIFT_SIZE];
     }
-    stack->top = MAX_STACK_SIZE - shift_size + 1;
+    stack->top = MAX_STACK_SIZE - SHIFT_SIZE + 1;
   }
   stack->actions[++stack->top] = action;
 }
 
-Action *action_stack_pop(ActionStack *stack){
-  if(stack->top > -1) {
-    return &stack->actions[stack->top--];
-  } 
-  return NULL;
+FileAction* new_file_action(){
+  FileAction *act = malloc(sizeof(FileAction));
+  return act;
 }
 
-void undo_action(Editor *e, Action *act){
+TextAction* init_text_action(size_t index){
+  TextAction *act = malloc(sizeof(TextAction));
+  act->index = index;
+  act->old = new_str(DEFAULT_LINE_SIZE);
+  act->new = new_str(DEFAULT_LINE_SIZE);
+  return act;
+}
+
+void undo_text_action(Editor *e, TextAction *act){
   Buffer *buff = e->buffs->data[e->current_buff];
   bool is_left = buff->cursor.index >= (act->index + act->old->len);
   bool is_normal = e->conf.is_vim_mode && e->mode == NORMAL;
@@ -49,7 +47,7 @@ void undo_action(Editor *e, Action *act){
   update_lines(e);
 }
 
-void redo_action(Editor *e, Action *act){
+void redo_text_action(Editor *e, TextAction *act){
   Buffer *buff = e->buffs->data[e->current_buff];
   str_remove_chars(buff->s, act->index, act->old->len);
   buff->cursor.index = act->index;
@@ -59,28 +57,50 @@ void redo_action(Editor *e, Action *act){
 
 void undo(Editor *e){
   Buffer *buff = e->buffs->data[e->current_buff];
-  Action *last_action = action_stack_pop(&buff->undo_stack);
-  if(last_action == NULL) return;
-  action_stack_push(&buff->redo_stack, *last_action);
-  undo_action(e, last_action);
-  update_scroll(e, false, false);
-  buff->cursor.last_time_moved = GetTime();
+  if(e->exp->is_open) {
+    FileAction *act = stack_pop(&e->exp->undo_stack);
+    if(act == NULL) return;
+    move_file(act->new->data, act->old->data);
+    stack_push(&e->exp->redo_stack, *act);
+    read_dir_files(e, e->exp->open_dir->data);
+  }else {
+    TextAction *act = stack_pop(&buff->undo_stack);
+    if(act == NULL) return;
+    stack_push(&buff->redo_stack, *act);
+    undo_text_action(e, act);
+    update_scroll(e, false, false);
+  }
+  update_buf_state(e);
 }
 
-void action_stack_flush(ActionStack *stack){
-  stack->top = -1;
+void redo(Editor *e){
+  Buffer *buff = e->buffs->data[e->current_buff];
+  if(e->exp->is_open){
+    FileAction *act = stack_pop(&e->exp->redo_stack);
+    if(act == NULL) return;
+    move_file(act->old->data, act->new->data);
+    stack_push(&e->exp->undo_stack, *act);
+    read_dir_files(e, e->exp->open_dir->data);
+  }else {
+    TextAction *last_action = stack_pop(&buff->redo_stack);
+    if(last_action == NULL) return;
+    stack_push(&buff->undo_stack, *last_action);
+    redo_text_action(e, last_action);
+    update_scroll(e, false, false);
+  }
+  update_buf_state(e);
 }
 
-void free_action(Action *action){
-  free_str(action->new);
-  free_str(action->old);
-  free(action);
-  action = NULL;
+void free_text_action(TextAction *act){
+  free_str(act->new);
+  free_str(act->old);
+  free(act);
+  act= NULL;
 }
 
-void update_action(Action **act, size_t index, String *str, bool is_new){
+void update_text_action(TextAction **act, size_t index, String *str, bool is_new){
  if(*act == NULL){
-   *act = init_action(index);
+   *act = init_text_action(index);
  }
  if(is_new) {
    add_str_to_str((*act)->new, str, (*act)->new->len);

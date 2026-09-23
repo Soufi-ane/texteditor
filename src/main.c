@@ -1,13 +1,17 @@
+#include <unistd.h>
 #include "io.h"
 
 int main(int argc, char **argv) {
 
   Editor *e = init_editor();
+  getcwd(e->base_dir, sizeof(e->base_dir));
+  e->exp->open_dir = string(e->base_dir);
+
   handle_cmd_args(e, argc, argv);
 
   filter_cmds_by_prompt(e);
 
-  /* SetConfigFlags(FLAG_WINDOW_RESIZABLE); */
+* SetConfigFlags(FLAG_WINDOW_RESIZABLE);
   InitWindow(e->s_width, e->s_height, "Text Editor");
   SetExitKey(KEY_NULL);
 
@@ -62,6 +66,7 @@ int main(int argc, char **argv) {
 
     DrawStatusLine(e);
     if(buff->msg_index > -1) DrawCurrentMessage(e);
+    if(e->exp->is_open) DrawExplorer(e, is_blinking);
     if(e->conf.is_menu_open) DrawMenu(e);
     handle_keys(e);
 
@@ -72,5 +77,8 @@ int main(int argc, char **argv) {
   UnloadFontData(e->conf.font_secondary_data.font.glyphs, e->conf.font_secondary_data.font.glyphCount);
   UnloadFileData(e->conf.font_data.font_file);
   UnloadFileData(e->conf.font_secondary_data.font_file);
+
+  clear_trash(e);
+
   return 0;
 }

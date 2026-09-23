@@ -27,4 +27,16 @@ void write_new_message(Editor *e, Message *msg);
 
 void handle_cmd_args(Editor *e, int argc, char **argv);
 
+void read_dir_files(Editor *e, char *dir_path);
+
+bool create_file(Editor *e, char *path);
+
+void remove_file(Editor *e, char *path);
+
+void move_to_trash(Editor *e, char *path);
+
+bool move_file(char *src, char *dest);
+
+void clear_trash(Editor *e);
+
 #endif

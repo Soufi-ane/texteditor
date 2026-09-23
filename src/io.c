@@ -1,4 +1,6 @@
 #include <ctype.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -48,7 +50,105 @@ int write_file(Editor* e){
   return 0;
 }
 
+bool create_file(Editor *e, char *path){
+  FILE* file = fopen(path , "r");
+  if(file != NULL) {
+    new_message(e, "File already exists", ERROR);
+    return false;
+  }
+  file = fopen(path , "w");
+  if(file == NULL) {
+    new_message(e, "Failed to create file", ERROR);
+    return false;
+  }
+  // fputc('\n', file);
+  fclose(file);
+  return true;
+}
+
+void clear_trash(Editor *e) {
+  String *trash_path;
+  #ifdef PROD
+  trash_path = string("/.local/share/texteditor/trash/");
+  add_text_to_str(trash_path, e->HOME_DIR, 0);
+  #else
+  trash_path = string("trash/");
+  #endif
+  DIR *dir;
+  struct dirent *entry;
+  dir = opendir(trash_path->data);
+  if(dir == NULL){
+    printf("Coundn't open trash directory\n");
+    return;
+  }
+  while((entry = readdir(dir)) != NULL){
+    String *path = string(trash_path->data);
+    if(strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")){
+      add_text_to_str(path, "/", path->len);
+      add_text_to_str(path, entry->d_name, path->len);
+      remove_file(e, path->data);
+    }
+  }
+}
+
+void remove_file(Editor *e, char *path){
+  struct stat st;
+  if(stat(path, &st) != 0) return;
+  bool is_dir = S_ISDIR(st.st_mode);
+  if(is_dir){
+    DIR *d = opendir(path);
+    if(!d) return;
+    struct dirent *entry;
+    while((entry = readdir(d)) != NULL){
+      if(strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")){
+        String *child_path = string(path);
+        add_text_to_str(child_path, "/", child_path->len);
+        add_text_to_str(child_path, entry->d_name, child_path->len);
+        remove_file(e, child_path->data);
+      }
+    }
+  }
+  if(remove(path) != 0) {
+    new_message(e, "Failed to delete file", ERROR);
+  }
+}
+
+bool move_file(char *src, char *dest){
+  return rename(src, dest) == 0;
+}
+
+void move_to_trash(Editor *e, char *path){
+  String *trash_path;
+  #ifdef PROD
+  trash_path = string("/.local/share/texteditor/trash/");
+  add_text_to_str(trash_path, e->HOME_DIR, 0);
+  #else
+  trash_path = string("trash/");
+  #endif
+  const char *file_name = get_file_name_from_path(path);
+  add_text_to_str(trash_path, file_name, trash_path->len);
+  if(move_file(path, trash_path->data)){
+    FileAction *act = new_file_action();
+    act->old = string(path);
+    act->new = trash_path;
+    stack_push(&e->exp->undo_stack, *act);
+    stack_flush(&e->exp->redo_stack);
+  }else {
+    new_message(e, "Failed to delete file", ERROR);
+  }
+}
+
+
 void read_file(Editor* e, char const * file_path){
+	FILE* f = fopen(file_path, "r+");
+  if(f == NULL) {
+    printf("Coudn't open the file %s path, creating file...\n", file_path);
+    f = fopen(file_path, "w+");
+  } 
+  if(f == NULL) {
+    printf("Coudn't create the file %s path\n", file_path);
+    return;
+  }
   Buffer *buff = e->buffs->data[e->current_buff];
   bool file_buf_exists = false;
   for(size_t i = 0; i < e->buffs->len; i++){
@@ -65,14 +165,6 @@ void read_file(Editor* e, char const * file_path){
     da_append(e->buffs, buff);
     e->current_buff = e->buffs->len - 1;
   }
-	FILE* f = fopen(file_path,"r+");
-  if(f == NULL) {
-    f = fopen(file_path, "w+");
-    if(f == NULL) {
-      printf("Coudn't create the file %s path\n",file_path);
-      return;
-    }
-  } 
   fseek(f, 0, SEEK_END);
   long file_size = ftell(f);
   rewind(f);
@@ -81,10 +173,6 @@ void read_file(Editor* e, char const * file_path){
 
   if(e->buffs->len > e->buffs->cap - 1) realloc_editor_buffers(e);
 
-  /* if(!e->buffs->data[0]->is_saved || e->buffs->data[0]->num_chars != 0){
-    e->current_buff = e->buffs->len++;
-  } */
-
   if(access(file_path, W_OK) != 0) buff->is_readonly = true;
   buff->file_path = strdup(file_path);
   size_t bytes_read = fread(buff->s->data, 1, file_size, f);
@@ -92,12 +180,12 @@ void read_file(Editor* e, char const * file_path){
     //todo: error
     return;
   }
-  buff->s->data[file_size - 1] = '\0';
-  buff->s->len = bytes_read - 1;
+  fclose(f);
+  buff->s->data[file_size ? (file_size - 1) : 0] = 0;
+  buff->s->len = bytes_read ? (bytes_read - 1) : 0;
   buff->is_saved = true;
   update_lines(e);
   update_line_number_padding(e);
-  fclose(f);
 }
 
 void try_saving_file(Editor* e){
@@ -214,7 +302,7 @@ void copy_selection_to_clipboard(Editor *e){
   String *selected = new_str(selection_size + 1);
   memcpy(selected->data, &buff->s->data[start], selection_size);
   selected->len = selection_size;
-  add_char_to_str(selected, '\0', selection_size);
+  add_char_to_str(selected, 0, selection_size);
   int success = copy_to_clipboard(selected->data);
   if(success) new_message(e, "Copied", GOOD);
   else new_message(e, "Failed to copy", ERROR);
@@ -230,7 +318,7 @@ void paste_from_clipboard(Editor *e){
   bool at_end = curr_buff->cursor.index >= curr_buff->s->len;
   size_t insert_index = curr_buff->cursor.index + has_text;
   if(has_text) insert_index -= at_end;
-  update_action(&curr_buff->cur_act, insert_index, clip_str, true);
+  update_text_action(&curr_buff->cur_act, insert_index, clip_str, true);
   add_str_to_str(curr_buff->s, clip_str, insert_index);
   move_cursor_right(e, clip_str->len - !has_text - (at_end && has_text));
   update_lines(e);
@@ -251,7 +339,7 @@ char *read_from_clipboard(){
   if(!pipe) return buff;
   buff = malloc(sizeof(char) * MAX_PASTE_LENGTH + 1);
   size_t read = fread(buff, 1, MAX_PASTE_LENGTH, pipe);
-  buff[read] = '\0';
+  buff[read] = 0;
   pclose(pipe);
   return buff;
 }
@@ -293,7 +381,7 @@ void try_setting_conf_color_value(Editor *e, ConfigKey key_type, char *hex, size
   unsigned int color;
   bool is_color_valid = try_getting_color_from_hex(++hex, &color);
   if(!is_color_valid){
-    new_message( e, TextFormat("Error in value [%s] at: %zu", hex, line_number), ERROR);
+    new_message(e, TextFormat("Error in value [%s] at: %zu", hex, line_number), ERROR);
     return;
   }
   switch (key_type) {
@@ -324,7 +412,7 @@ void try_setting_conf_color_value(Editor *e, ConfigKey key_type, char *hex, size
 void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, size_t line_number){
   char *endpoint;
   int number = strtoul(value, &endpoint, 10);
-  if(endpoint == value || *endpoint != '\0' || number < 0) {
+  if(endpoint == value || *endpoint != 0 || number < 0) {
     new_message(e, TextFormat("Invalid value [%s] at: %zu", value, line_number), ERROR);
     return;
   }
@@ -453,11 +541,11 @@ void read_config_line(Editor *e, char *line, size_t len, size_t line_number){
   size_t i = 0 , j = 0;
   while(isspace(line[i])) i++;
   while(i < len && line[i] != '=' && !isspace(line[i])) key[j++] = line[i++];
-  key[j] = '\0'; 
+  key[j] = 0; 
   while(i < len && (line[i] == '=' || isspace(line[i]) )) i++;
   j = 0;
   while(i < len && !isspace(line[i])) value[j++] = line[i++];
-  value[j] = '\0'; 
+  value[j] = 0; 
   ConfigKey key_type = get_config_key(e, key);
   if(key_type == UNKOWN_KEY){
     new_message(e, TextFormat("Unknown key [%s] at config: %d", key, line_number), ERROR);
@@ -523,4 +611,61 @@ void handle_cmd_args(Editor *e, int argc, char **argv){
   }else if(argc == 2){
     read_file(e, argv[1]);
   }
+}
+
+FileType reduce_type(unsigned char d_type){
+  switch(d_type){
+    case DT_DIR:
+       return FT_DIR;
+    case DT_LNK:
+       return FT_LNK;
+    default:
+      return FT_REG;
+  }
+}
+
+void sort_file_list(Files *files){
+  if(!files->len) return;
+  bool sorted = false;
+  while(!sorted){
+    sorted = true;
+    File temp = {0};
+    for(size_t i = 0; i < files->len - 1; i++){
+      if(
+        files->data[i].type != FT_DIR &&
+        files->data[i + 1].type == FT_DIR
+      ){
+        sorted = false;
+        temp = (File) {
+          .name = files->data[i].name,
+          .type = files->data[i].type
+        };
+        files->data[i] = files->data[i + 1];
+        files->data[i + 1] = temp;
+      }
+    }
+  }
+}
+
+void read_dir_files(Editor *e, char *dir_path){
+  DIR *dir;
+  struct dirent *entry;
+  dir = opendir(dir_path);
+  if(dir == NULL){
+    printf("Coundn't open dir %s\n", dir_path);
+    return;
+  }
+  e->exp->files->len = 0;
+  while((entry = readdir(dir)) != NULL){
+    if(!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) continue;
+    File file = {
+      .name = string(entry->d_name),
+      .type = reduce_type(entry->d_type)
+    };
+    da_append(e->exp->files, file);
+  }
+  udpate_explorer_size(e);
+  sort_file_list(e->exp->files);
+  closedir(dir);
+  e->exp->open_dir = string(dir_path);
 }
