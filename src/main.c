@@ -9,6 +9,10 @@ int main(int argc, char **argv) {
 
   handle_cmd_args(e, argc, argv);
 
+  if(!e->buffs->data[e->current_buff]->file_path){
+    toggle_explorer(e);
+  }
+
   filter_cmds_by_prompt(e);
 
   SetConfigFlags(FLAG_WINDOW_RESIZABLE);

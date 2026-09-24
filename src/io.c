@@ -608,8 +608,16 @@ void handle_cmd_args(Editor *e, int argc, char **argv){
     exit(0);
   }else if(argc > 2 && !strcmp(argv[1], "-f")){
     read_file(e, argv[2]);
-  }else if(argc == 2){
-    read_file(e, argv[1]);
+  }else if(argc > 2 && !strcmp(argv[1], "-d")){
+    snprintf(e->base_dir, sizeof(e->base_dir), "%s", argv[2]);
+  }
+  else if(argc == 2){
+    String *path = string(argv[1]);
+    if(path->data[path->len - 1] == '/'){
+      snprintf(e->base_dir, sizeof(e->base_dir), "%s", path->data);
+    }else {
+      read_file(e, path->data);
+    }
   }
 }
 

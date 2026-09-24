@@ -384,4 +384,6 @@ void handle_delete_file(Editor *e);
 
 void exit_exp_input(Editor * e);
 
+void toggle_explorer(Editor *e);
+
 #endif
