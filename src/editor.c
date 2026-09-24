@@ -181,11 +181,13 @@ void scroll_up(Editor *e, size_t count){
   size_t max_num_lines = get_max_num_lines(e);
   if(cur_buf->lines->len - 1 <= max_num_lines - e->conf.scroll_pad) return;
   cur_buf->d_start = seek_forward_by_lines(cur_buf, cur_buf->d_start, 1);
+  cur_buf->num_prev_lines = get_count_prev_lines(cur_buf->s, cur_buf->d_start);
 }
 
 void scroll_down(Editor *e, size_t count){
   size_t new_start = seek_back_by_lines(cur_buf, cur_buf->d_start, 1);
   cur_buf->d_start = new_start;
+  cur_buf->num_prev_lines = get_count_prev_lines(cur_buf->s, new_start);
 }
 
 size_t get_next_line_start(String *str, size_t index){
@@ -197,6 +199,7 @@ size_t get_next_line_start(String *str, size_t index){
 }
 
 size_t seek_forward_by_lines(Buffer *buff, size_t from, size_t count){
+  if(!count) return from;
   size_t i;
   for(i = from; i < buff->s->len && count > 0; i++){
     if(buff->s->data[i] == '\n') count--;
@@ -206,12 +209,13 @@ size_t seek_forward_by_lines(Buffer *buff, size_t from, size_t count){
 }
 
 size_t seek_back_by_lines(Buffer *buff, size_t from, size_t count){
+  if(!count || from < 1) return from;
   size_t i;
-  for(i = from; i > 0 && count + 1 > 0; i--){
+  for(i = from - 1; i > 0 && count + 1 > 0; i--){
     if(buff->s->data[i] == '\n') count--;
   }
   if(i > 0) i++;
-  return i + (i > 0 && buff->s->data[i + 1] != '\n');
+  return i + (i > 0 /* && buff->s->data[i + 1] != '\n' */);
 }
 
 size_t get_prev_line_start(String *str, size_t index){
@@ -241,7 +245,13 @@ size_t get_prev_line_start(String *str, size_t index){
     new_first = seek_back_by_lines(cur_buf, index, e->conf.scroll_pad);
   }
   else if(index > bot_pad_start){
-    new_first = seek_back_by_lines(cur_buf, index, max - e->conf.scroll_pad);
+    size_t gui_end = cur_buf->lines->data[cur_buf->lines->len - 1].end;
+    if(index < gui_end){
+      size_t offset = get_num_lines(cur_buf->s, bot_pad_start, index);
+      new_first = seek_forward_by_lines(cur_buf, cur_buf->d_start, offset);
+    }else {
+      new_first = seek_back_by_lines(cur_buf, index, max - e->conf.scroll_pad);
+    }
   } else {
   } 
   if(new_first != cur_buf->d_start) {
@@ -326,9 +336,17 @@ size_t get_lines_wraps(Editor *e, size_t from, size_t to){
   }
   return wraps;
 }
+
+size_t get_num_lines(String *str, size_t from, size_t to){
+  size_t lines = 0;
+  for(size_t i = from; i < to; i++){
+    if(str->data[i] == '\n') lines++;
+  }
+  return lines;
+}
   
 void update_last_col(Editor* e){
-  cur_buf->cursor.last_col = cur_buf->cursor.pos.col;
+  cur_buf->cursor.last_col = cur_buf->cursor.index - cur_line.start;
 }
 
 void move_cursor_right(Editor* e, size_t count) {
@@ -402,7 +420,6 @@ void move_cursor_down(Editor* e){
   if(cur_buf->cur_li < cur_buf->lines->len - 1){
     size_t max_lines = get_max_num_lines(e);
     size_t wraps = get_lines_wraps(e, 0, cur_buf->cur_li);
-    Line curr_line = cur_buf->lines->data[cur_buf->cur_li];
     Line next_line = cur_buf->lines->data[cur_buf->cur_li + 1];
     cur_buf->cursor.index = next_line.start;
     update_lines(e);
@@ -609,17 +626,17 @@ void move_to_last_line(Editor* e){
     if(cur_buf->s->data[i] == '\n') break;
   }
   cur_buf->cursor.index = i + 1;
+  update_scroll(e, true, false);
   update_lines(e);
   adapte_col_to_cur_line(e);
-  update_scroll(e, true, false);
   update_buf_state(e);
 }
 
 void move_to_first_line(Editor *e){
   cur_buf->cursor.index = 0;
+  update_scroll(e, false, true);
   update_lines(e);
   adapte_col_to_cur_line(e);
-  update_scroll(e, false, true);
   update_buf_state(e);
 }
 
@@ -706,13 +723,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       move_to_word_ending(e);
       break;
     case 'E':
-      e->exp->is_open = !e->exp->is_open;
-      exit_exp_input(e);
-      if(e->exp->is_open){
-        read_dir_files(e, e->base_dir);
-        e->exp->curr_file = 0;
-      }
-      update_buf_state(e);
+      toggle_explorer(e);
       break;
     case 'o':
       /* if(e->conf.is_menu_open){
@@ -801,6 +812,17 @@ void handle_normal_mode_keys(Editor* e, int c){
       undo(e);
       break;
     case '?':
+      for(size_t i = 0 ; i < cur_buf->lines->len; i++){
+        Line line = cur_buf->lines->data[i];
+        printf(
+          "Line of %zu [%c ... %c]\n",
+          line.end - line.start, 
+          cur_buf->s->data[line.start],
+          cur_buf->s->data[line.end - 1]
+        );
+      }
+      printf("got %zu lines\n", cur_buf->lines->len);
+      printf("d_start at %zu\n", cur_buf->d_start);
       break;
   }
   if(c == 'g'){
@@ -812,6 +834,16 @@ void handle_normal_mode_keys(Editor* e, int c){
       //todo : move to line number
     } 
   }
+}
+
+void toggle_explorer(Editor *e){
+  e->exp->is_open = !e->exp->is_open;
+  exit_exp_input(e);
+  if(e->exp->is_open){
+    read_dir_files(e, e->base_dir);
+    e->exp->curr_file = 0;
+  }
+  update_buf_state(e);
 }
 
 void handle_delete_file(Editor *e){

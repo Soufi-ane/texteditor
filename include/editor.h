@@ -386,4 +386,6 @@ void exit_exp_input(Editor * e);
 
 void toggle_explorer(Editor *e);
 
+size_t get_num_lines(String *str, size_t from, size_t to);
+
 #endif
