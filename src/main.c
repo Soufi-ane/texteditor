@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 
     DrawBufferText(e, is_blinking);
 
-    DrawStatusLine(e);
+    DrawStatusLine(e, is_blinking);
     if(buff->msg_index > -1) DrawCurrentMessage(e);
     if(e->exp->is_open) DrawExplorer(e, is_blinking);
     if(e->conf.is_menu_open) DrawMenu(e);

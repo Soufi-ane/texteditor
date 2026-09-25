@@ -322,7 +322,7 @@ void paste_from_clipboard(Editor *e){
   add_str_to_str(curr_buff->s, clip_str, insert_index);
   move_cursor_right(e, clip_str->len - !has_text - (at_end && has_text));
   update_lines(e);
-  update_scroll(e, false, false);
+  update_scroll(e, curr_buff->cursor.index, false, false);
 }
 
 int copy_to_clipboard(const char *text){

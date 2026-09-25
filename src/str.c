@@ -104,3 +104,11 @@ size_t last_index_of(String *str, char c){
   }
   return 0;
 }
+
+Ranges *new_ranges(size_t cap){
+  Ranges *rs = malloc(sizeof(Ranges));
+  rs->data = malloc(sizeof(Range) * cap);
+  rs->cap = cap;
+  rs->len = 0;
+  return rs;
+}

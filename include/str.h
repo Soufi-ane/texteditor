@@ -7,6 +7,16 @@ typedef struct {
   size_t cap;
 } String;
 
+typedef struct {
+  size_t start, end;
+} Range;
+
+typedef struct {
+  Range *data;
+  size_t cap;
+  size_t len;
+} Ranges;
+
 String *new_str(size_t capacity);
 
 void free_str(String *str);
@@ -28,5 +38,7 @@ void add_str_to_str(String *dest, String *src, size_t index);
 void add_text_to_str(String *dest, const char *txt, size_t index);
 
 size_t last_index_of(String *str, char c);
+
+Ranges *new_ranges(size_t cap);
 
 #endif

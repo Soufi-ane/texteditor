@@ -146,8 +146,57 @@ void move_to_matching_pair(Editor *e, char c){
     cur_buf->cursor.index = char_index;
   }
   update_lines(e);
-  update_scroll(e, false, false);
+  update_scroll(e, cur_buf->cursor.index, false, false);
   update_buf_state(e);
+}
+
+void cur_buf_str_search(Editor *e, String *str, String *query){
+  e->s_ranges->len = 0;
+  e->cur_range = 0;
+  if(!query->len || !str->len) return;
+  char *text = str->data;
+  Range r = {0};
+  size_t i, j;
+  for(i = 0; i < str->len; i++){
+    if(text[i] == query->data[0]){
+      r.start = i;
+      for(j = 1; j < query->len; j++){
+        if(text[i + j] != query->data[j]){
+          break;
+        }
+      }
+      if(j == query->len){
+        i += j - 1;
+        r.end = i;
+        da_append(e->s_ranges, r);
+      }
+    }
+  }
+}
+
+void go_to_next_match(Editor *e){
+  if(e->cur_range >= e->s_ranges->len - 1){
+    e->cur_range = 0;
+  }else e->cur_range++;
+  cur_buf->cursor.index = e->s_ranges->data[e->cur_range].start;
+  update_scroll(e, cur_buf->cursor.index, false, true);
+  update_lines(e);
+  update_buf_state(e);
+}
+
+void go_to_prev_match(Editor *e){
+  if(e->cur_range < 1){
+    e->cur_range = e->s_ranges->len - 1;
+  }else e->cur_range--;
+  cur_buf->cursor.index = e->s_ranges->data[e->cur_range].start;
+  update_scroll(e, cur_buf->cursor.index, false, true);
+  update_lines(e);
+  update_buf_state(e);
+}
+
+void update_search_view(Editor *e){
+  size_t match_start = e->s_ranges->data[e->cur_range].start;
+  update_scroll(e, match_start, false, true);
 }
 
 void filter_cmds_by_prompt(Editor *e){
@@ -233,9 +282,8 @@ size_t get_prev_line_start(String *str, size_t index){
   return i;
 }
 
- void update_scroll(Editor *e, bool center_line, bool is_up){
+ void update_scroll(Editor *e, size_t index, bool center_line, bool is_up){
   size_t max = get_max_num_lines(e);
-  size_t index = cur_buf->cursor.index;
   size_t wraps = get_lines_wraps(e, 0, max);
   size_t max_lines = max - wraps;
   size_t top_pad_start = seek_forward_by_lines(cur_buf, cur_buf->d_start, e->conf.scroll_pad);
@@ -305,7 +353,7 @@ void add_char_to_cur_buf(Editor *e, char c, size_t index){
 
   update_text_action(&cur_buf->cur_act, index, c_string(c), true);
   update_lines(e);
-  update_scroll(e, false, false);
+  update_scroll(e, cur_buf->cursor.index, false, false);
   cur_buf->is_saved = false;
 }
 
@@ -358,7 +406,7 @@ void move_cursor_right(Editor* e, size_t count) {
     cur_buf->cursor.index += count;
   }
   update_lines(e);
-  update_scroll(e, false, false);
+  update_scroll(e, cur_buf->cursor.index, false, false);
   update_last_col(e);
   update_buf_state(e);
 }
@@ -372,7 +420,7 @@ void move_cursor_left(Editor* e, size_t count) {
     cur_buf->cursor.index -= count;
   } else cur_buf->cursor.index = 0; 
   update_lines(e);
-  update_scroll(e, false, true);
+  update_scroll(e, cur_buf->cursor.index, false, true);
   update_last_col(e);
   update_buf_state(e);
 }
@@ -387,6 +435,7 @@ void handle_caps_lock_and_escape(Editor* e){
       e->mode = NORMAL;
       if(cur_buf->cursor.index != cur_line.start) move_cursor_left(e, 1);
       e->conf.is_menu_open = false;
+      e->is_searching = false;
       e->prompt->len = 0;
       filter_cmds_by_prompt(e);
       e->conf.is_opening_file = false;
@@ -411,7 +460,7 @@ void move_cursor_up(Editor* e){
     cur_buf->cursor.index = prev_line.start;
     update_lines(e);
     adapte_col_to_cur_line(e);
-    update_scroll(e, false, true);
+    update_scroll(e, cur_buf->cursor.index, false, true);
   }
   update_buf_state(e);
 }
@@ -424,7 +473,7 @@ void move_cursor_down(Editor* e){
     cur_buf->cursor.index = next_line.start;
     update_lines(e);
     adapte_col_to_cur_line(e);
-    update_scroll(e, false, false);
+    update_scroll(e, cur_buf->cursor.index, false, false);
   }
   update_buf_state(e);
 }
@@ -442,7 +491,7 @@ void move_to_beginning_of_line(Editor* e) {
   cur_buf->cursor.index = line.start;
   update_lines(e);
   update_last_col(e);
-  if(line.end - line.start > max) update_scroll(e, false, true);
+  if(line.end - line.start > max) update_scroll(e, cur_buf->cursor.index, false, true);
   update_buf_state(e);
 }
 
@@ -452,15 +501,16 @@ void move_to_end_of_line(Editor* e) {
   cur_buf->cursor.index = line.end - 1;
   update_lines(e);
   update_last_col(e);
-  if(line.end - line.start > max) update_scroll(e, false, false);
+  if(line.end - line.start > max) update_scroll(e, cur_buf->cursor.index, false, false);
   update_buf_state(e);
 }
 
 void move_to_word_ending(Editor* e){
+  if(!cur_buf->s->len) return;
   size_t i = cur_buf->cursor.index; 
   char *text = cur_buf->s->data;
-  size_t last_index = MIN(cur_buf->s->len - 1, 0);
-  while(isspace(text[i + 1]) && i < last_index ){
+  size_t last_index = cur_buf->s->len - 1;
+  while(isspace(text[i + 1]) && i < last_index){
     move_cursor_right(e, 1);
     i++;
   }
@@ -475,7 +525,6 @@ void move_to_word_ending(Editor* e){
   cur_buf->cursor.index = i;
   update_last_col(e);
   update_buf_state(e);
-
   // update_scroll(e, false);
 }
 
@@ -497,11 +546,8 @@ void move_to_word_beginning(Editor* e){
   }
   cur_buf->cursor.index = i;
   update_last_col(e);
-
-  bool is_shift_down = IsKeyDown(KEY_RIGHT_SHIFT) || IsKeyDown(KEY_LEFT_SHIFT);
-  if(!e->conf.is_vim_mode && e->conf.is_selecting && !is_shift_down) e->conf.is_selecting = false;
+  update_buf_state(e);
   // update_scroll(e, true);
-  cur_buf->cursor.last_time_moved = GetTime(); 
 }
 
 void go_to_next_buffer(Editor *e){
@@ -626,7 +672,7 @@ void move_to_last_line(Editor* e){
     if(cur_buf->s->data[i] == '\n') break;
   }
   cur_buf->cursor.index = i + 1;
-  update_scroll(e, true, false);
+  update_scroll(e, cur_buf->cursor.index, true, false);
   update_lines(e);
   adapte_col_to_cur_line(e);
   update_buf_state(e);
@@ -634,7 +680,7 @@ void move_to_last_line(Editor* e){
 
 void move_to_first_line(Editor *e){
   cur_buf->cursor.index = 0;
-  update_scroll(e, false, true);
+  update_scroll(e, cur_buf->cursor.index, false, true);
   update_lines(e);
   adapte_col_to_cur_line(e);
   update_buf_state(e);
@@ -650,7 +696,7 @@ void handle_delete_selection(Editor *e){
   cur_buf->cursor.index = start;
 
   update_buf_state(e);
-  update_scroll(e, false, true);
+  update_scroll(e, cur_buf->cursor.index, false, true);
   // update_line_number_padding(e);
 }
 
@@ -658,8 +704,16 @@ void handle_backspace(Editor* e) {
   if(e->mode == INSERT || !e->conf.is_vim_mode) {
     if(e->exp->is_open){
       str_remove_chars(e->exp->input, e->exp->input->len -1, 1);
-    }
-    else if(e->conf.is_menu_open && e->prompt->len) {
+    }else if(e->is_searching){
+      if(e->query->len) { 
+        str_remove_chars(e->query, e->query->len - 1, 1);
+        cur_buf_str_search(e, cur_buf->s, e->query);
+      }
+      else{
+        e->is_searching = false;
+        e->mode = NORMAL;
+      } 
+    } else if(e->conf.is_menu_open && e->prompt->len) {
       str_remove_chars(e->prompt, e->prompt->len - 1, 1);
       filter_cmds_by_prompt(e);
     }else if(e->conf.is_selecting) {
@@ -669,7 +723,7 @@ void handle_backspace(Editor* e) {
       remove_chars_cur_buf(e, cur_buf->cursor.index - 1, 1);
       cur_buf->cursor.index--;
       update_lines(e);
-      update_scroll(e, false, true);
+      update_scroll(e, cur_buf->cursor.index, false, true);
       update_buf_state(e);
     } 
   } else {
@@ -731,9 +785,6 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 's':
       try_saving_file(e);
-      break;
-    case '/':
-      e->mode = INSERT;
       break;
     case 'h':
       if(e->mode == NORMAL){
@@ -811,6 +862,20 @@ void handle_normal_mode_keys(Editor* e, int c){
     case 'u':
       undo(e);
       break;
+    case '/':
+      e->s_ranges->len = 0;
+      e->is_searching = true;
+      e->mode = INSERT;
+      free_str(e->query);
+      e->query = new_str(128);
+      update_buf_state(e);
+      break;
+    case 'n':
+      go_to_next_match(e);
+      break;
+    case 'N':
+      go_to_prev_match(e);
+      break;
     case '?':
       for(size_t i = 0 ; i < cur_buf->lines->len; i++){
         Line line = cur_buf->lines->data[i];
@@ -833,7 +898,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       is_g_clicked_before = true;
       //todo : move to line number
     } 
-  }
+  }else is_g_clicked_before = false; 
 }
 
 void toggle_explorer(Editor *e){
@@ -967,6 +1032,10 @@ void handle_insert_mode_keys(Editor* e,int c){
         add_char_to_str(e->exp->input, c, e->exp->input->len);
         e->exp->input_i++;
       }
+    } else if(e->is_searching) {
+      add_char_to_str(e->query, c, e->query->len);
+      cur_buf_str_search(e, cur_buf->s, e->query);
+      update_search_view(e);
     } else {
       add_char_to_cur_buf(e, c, cur_buf->cursor.index);
     }
@@ -1053,7 +1122,7 @@ void handle_open_file(Editor *e){
   char const * path = tinyfd_openFileDialog("Select File", "", 0, NULL, NULL, 0);
   if(path != NULL){
     read_file(e, path);
-    update_scroll(e, true, true);
+    update_scroll(e, cur_buf->cursor.index, true, true);
   }
 }
 
@@ -1074,7 +1143,7 @@ void open_config_file(Editor *e){
   sprintf(path, "assets/texteditor.conf");
   #endif
   read_file(e, path);
-  update_scroll(e, false, true);
+  update_scroll(e, cur_buf->cursor.index, false, true);
   e->mode = NORMAL;
 }
 
@@ -1128,7 +1197,16 @@ void handle_enter(Editor* e){
   if(e->conf.is_menu_open){
     handle_command(e, default_cmds[e->displayed_cmds[e->selected_cmd]]);
   } else if(!e->exp->is_open) {
-    add_char_to_cur_buf(e, '\n', cur_buf->cursor.index);
+    if(e->is_searching){
+      e->is_searching = false;
+      e->mode = NORMAL;
+      cur_buf->cursor.index = e->s_ranges->data[e->cur_range].start;
+      update_scroll(e, cur_buf->cursor.index, false, true);
+      update_lines(e);
+    }else{
+      if(e->mode == INSERT)
+      add_char_to_cur_buf(e, '\n', cur_buf->cursor.index);
+    }
   }else {
     if(e->exp->is_creating_file){
       String *path = string(e->exp->open_dir->data);
@@ -1389,77 +1467,77 @@ void realloc_editor_buffers(Editor *e){
 }
 
 Editor *init_editor(){
-  Editor *e = malloc(sizeof(Editor));
-  e->prompt = new_str(DEFAULT_LINE_SIZE);
-
-  e->buffs = malloc(sizeof(Buffers));
-  e->buffs->data = malloc(sizeof(Buffer*));
-  e->buffs->data[0] = new_buffer();
-  e->buffs->len = 1;
-  e->buffs->cap = 1;
-  e->current_buff = 0;
-
-  e->exp = malloc(sizeof(Explorer));
-  e->exp->files = malloc(sizeof(Files));
-  e->exp->files->data = malloc(sizeof(File) * 10);
-  e->exp->input = new_str(100);
-  e->exp->label = NULL;
-  e->exp->placeholder = NULL;
-  e->exp->input_i = 0;
-  e->exp->files->cap = 10;
-  e->exp->files->len = 0;
-  e->exp->max_w = 0;
-  e->exp->curr_file = 0;
-  e->exp->is_open = false;
+  Editor *e                = malloc(sizeof(Editor));
+  e->prompt                = new_str(DEFAULT_LINE_SIZE);
+  e->buffs                 = malloc(sizeof(Buffers));
+  e->buffs->data           = malloc(sizeof(Buffer*));
+  e->buffs->data[0]        = new_buffer();
+  e->buffs->len            = 1;
+  e->buffs->cap            = 1;
+  e->current_buff          = 0;
+  e->exp                   = malloc(sizeof(Explorer));
+  e->exp->files            = malloc(sizeof(Files));
+  e->exp->files->data      = malloc(sizeof(File) * 10);
+  e->exp->input            = new_str(100);
+  e->exp->label            = NULL;
+  e->exp->placeholder      = NULL;
+  e->exp->input_i          = 0;
+  e->exp->files->cap       = 10;
+  e->exp->files->len       = 0;
+  e->exp->max_w            = 0;
+  e->exp->curr_file        = 0;
+  e->exp->is_open          = false;
   e->exp->is_creating_file = false;
-  e->exp->undo_stack.top = -1;
-  e->exp->redo_stack.top = -1;
-  e->exp->is_deleting = false;
-  e->mode = NORMAL;
-  e->s_width = SCREEN_WIDTH;
-  e->s_height = SCREEN_HEIGHT;
-  e->num_cmds_displayed = NUM_COMMANDS;
+  e->exp->undo_stack.top   = -1;
+  e->exp->redo_stack.top   = -1;
+  e->exp->is_deleting      = false;
+  e->mode                  = NORMAL;
+  e->s_width               = SCREEN_WIDTH;
+  e->s_height              = SCREEN_HEIGHT;
+  e->num_cmds_displayed    = NUM_COMMANDS;
+  e->is_searching          = false;
+  e->HOME_DIR              = getenv("HOME");
+  e->s_ranges              = new_ranges(10);
+  e->cur_range             = 0;
   e->conf = (Config) {
     .font_data = {
       .size = 42,
       .path = FONT_PATH
     },
-    .font_secondary_data= {
+    .font_secondary_data = {
       .size = 36,
       .path = SECONDARY_FONT_PATH
     },
-    .bg_color = 0x141415FF,
-    .text_color = 0xFFFFFFFF,
-    .under_cursor_color = 0X000000FF,
-    .lines_color = 0x545454FF,
-    .line_numbers_color = 0x828282FF,
-    .file_name_color = 0x828282FF,
-    .status_line_color = 0x000000FF,
-    .error_color = 0xFF4C24FF,
-    .success_color = 0x00B014FF,
-    .selected_char_color = 0xE8E8E8FF,
-    .selection_color = 0x383838FF,
-    .line_highlight_color = 0x383737FF,
-    .is_menu_open = false,
-    .is_vim_mode = true,
-    .is_line_highlight = true,
-    .is_spaces_for_tabs = true,
-    .caps_lock_as_escape = true,
-    .tab_size = 2,
-    .is_showing_lines = false,
-    .ln_mode = NONE,
-    .ln_padding = 1,
+    .bg_color              = 0x141415FF,
+    .text_color            = 0xFFFFFFFF,
+    .under_cursor_color    = 0X000000FF,
+    .lines_color           = 0x545454FF,
+    .line_numbers_color    = 0x828282FF,
+    .file_name_color       = 0x828282FF,
+    .status_line_color     = 0x000000FF,
+    .error_color           = 0xFF4C24FF,
+    .success_color         = 0x00B014FF,
+    .selected_char_color   = 0xE8E8E8FF,
+    .selection_color       = 0x383838FF,
+    .line_highlight_color  = 0x383737FF,
+    .is_menu_open          = false,
+    .is_vim_mode           = true,
+    .is_line_highlight     = true,
+    .is_spaces_for_tabs    = true,
+    .caps_lock_as_escape   = true,
+    .tab_size              = 2,
+    .is_showing_lines      = false,
+    .ln_mode               = NONE,
+    .ln_padding            = 1,
     // .line_height = 0,
     // .letter_spacing = 0,
     .padding = {
-      .top = 45,
-      .bottom = 45,
-      .right = 70,
-      .left = 10
+      .top      = 45,
+      .bottom   = 45,
+      .right    = 70,
+      .left     = 10
     },
     .scroll_pad = 4
-  },
-  e->HOME_DIR  = getenv("HOME");
-
+  };
   return e;
 }

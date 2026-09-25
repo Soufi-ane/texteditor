@@ -254,6 +254,10 @@ typedef struct {
   char base_dir[1024];
   bool is_full_screen;
   bool should_quit;
+  bool is_searching;
+  String *query;
+  Ranges *s_ranges;
+  size_t cur_range;
   char* currentFileName;
   char* searchQuery;
   int numResults;
@@ -290,7 +294,7 @@ void move_to_word_beginning(Editor* e);
 
 void move_to_word_ending(Editor* e);
 
-void update_scroll(Editor *e, bool center_line, bool is_up);
+ void update_scroll(Editor *e, size_t index, bool center_line, bool is_up);
 
 void new_message(Editor *e, const char *message, MessageType type);
 
@@ -387,5 +391,7 @@ void exit_exp_input(Editor * e);
 void toggle_explorer(Editor *e);
 
 size_t get_num_lines(String *str, size_t from, size_t to);
+
+void cur_buf_str_search(Editor *e, String *str, String *query);
 
 #endif

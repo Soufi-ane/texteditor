@@ -10,7 +10,7 @@ void DrawMenu(Editor * e);
 
 void DrawCurrentMessage(Editor *e);
 
-void DrawStatusLine(Editor *e);
+void DrawStatusLine(Editor *e, bool is_blinking);
 
 void DrawChar(Editor *e, int c, int x_pos, int y_pos, unsigned int color, float font_size);
 

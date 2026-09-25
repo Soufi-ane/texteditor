@@ -68,7 +68,7 @@ void undo(Editor *e){
     if(act == NULL) return;
     stack_push(&buff->redo_stack, *act);
     undo_text_action(e, act);
-    update_scroll(e, false, false);
+    update_scroll(e, buff->cursor.index, false, false);
   }
   update_buf_state(e);
 }
@@ -86,7 +86,7 @@ void redo(Editor *e){
     if(last_action == NULL) return;
     stack_push(&buff->undo_stack, *last_action);
     redo_text_action(e, last_action);
-    update_scroll(e, false, false);
+    update_scroll(e, buff->cursor.index, false, false);
   }
   update_buf_state(e);
 }

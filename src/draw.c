@@ -151,10 +151,10 @@ void DrawCurrentMessage(Editor *e) {
   ); 
 }
 
-void DrawStatusLine(Editor *e){
+void DrawStatusLine(Editor *e, bool is_blinking){
   Buffer *buff = e->buffs->data[e->current_buff];
   RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
-
+  Padding pad = e->conf.padding;
   Rectangle status_line = {
     0, e->s_height - char_size.row, e->s_width, char_size.row
   };
@@ -174,34 +174,51 @@ void DrawStatusLine(Editor *e){
     );
   }
 
-  // Line cur_line = buff->lines->data[buff->cur_li];
-  int row_span = get_digit_count(buff->cur_li + 1);
-  // int col_span = get_digit_count(buff->cursor.index - cur_line.start + 1);
-  // int row_col_span = row_span + col_span + 1;
+  Line cur_line = buff->lines->data[buff->cur_li];
+  int row_span = get_digit_count(buff->num_prev_lines + buff->cur_li + 1);
+  int col_span = get_digit_count(buff->cursor.index - cur_line.start + 1);
+  int row_col_span = row_span + col_span + 1;
+  float row_col_x = e->s_width - (e->conf.letter_spacing + char_size.col) * (8 + row_col_span);
 
-  /* DrawTextEx(
+  DrawTextEx(
     e->conf.font_secondary_data.font,
     TextFormat(
       "%d:%d", 
-      buff->cur_li + 1,
+      buff->num_prev_lines + buff->cur_li + 1,
       buff->cursor.index - cur_line.start + 1
     ),
-    (Vector2){
-      e->s_width - (e->conf.letter_spacing + char_size.col) * (8 + row_col_span),
-      status_line.y
-    },
+    (Vector2){ row_col_x, status_line.y },
     e->conf.font_secondary_data.size, 0, GRAY
-  ); */
-
-  DrawTextEx(
-    e->conf.font_secondary_data.font, e->buffs->data[e->current_buff]->file_path ? 
-    get_file_name_from_path(e->buffs->data[e->current_buff]->file_path) : "Untitled",
-    (Vector2){
-      e->conf.padding.left,
-      status_line.y
-    },
-    e->conf.font_secondary_data.size, 0, GetColor(e->conf.file_name_color)
   );
+
+  if(e->is_searching){
+    size_t text_end = pad.left + (e->query->len + 1) * char_size.col;
+    size_t search_d_start = text_end >= (row_col_x - char_size.col) ? 
+      (text_end - row_col_x) / char_size.col + 1 : 0;
+    DrawTextCodepoint(
+      e->conf.font_data.font, '/',
+      (Vector2){pad.left, status_line.y}, e->conf.font_data.size,
+      GetColor(e->conf.text_color)
+    );
+    DrawCursor(
+      e, text_end - search_d_start * char_size.col,
+      status_line.y,
+      is_blinking ? 0x00000000 : buff->cursor.color, false
+    );
+    DrawTextEx(
+      e->conf.font_secondary_data.font, &e->query->data[search_d_start],
+      (Vector2){ pad.left + char_size.col , status_line.y },
+      e->conf.font_secondary_data.size, 0, GetColor(e->conf.text_color)
+    );
+  }else {
+    DrawTextEx(
+      e->conf.font_secondary_data.font, e->buffs->data[e->current_buff]->file_path ? 
+      get_file_name_from_path(e->buffs->data[e->current_buff]->file_path) : "Untitled",
+      (Vector2){ pad.left, status_line.y },
+      e->conf.font_secondary_data.size, 0, GetColor(e->conf.file_name_color)
+    );
+  }
+
 }
 
 RowCol get_char_size(float font_size){
@@ -398,15 +415,11 @@ void DrawExplorer(Editor *e, bool is_blinking){
   DrawExplorerHelp(e);
 }
 
-void DrawLineNumber(Editor *e, size_t i, size_t y_offset){
+void DrawLineNumber(Editor *e, size_t n, size_t y_offset){
   RowCol char_size = get_char_size(e->conf.font_data.size);
   Padding pad = e->conf.padding;
-  size_t index = e->buffs->data[e->current_buff]->cur_li;
   DrawTextEx(e->conf.font_data.font,
-    TextFormat( "%zu", 
-      (e->conf.ln_mode == ABSOLUTE || index == i) ?  i + 1 :
-      (index < i ? i - index : index - i)
-    ),
+    TextFormat("%zu", n),
     (Vector2){
       pad.left + (e->exp->is_open ? e->exp->max_w : 0),
       pad.top + (e->conf.line_height + char_size.row) * y_offset
@@ -485,7 +498,15 @@ void DrawBufferText(Editor *e, bool is_blinking){
 
   size_t char_index;
 
-  if(e->conf.ln_mode != NONE) DrawLineNumber(e, buff->num_prev_lines, y_offset);
+  if(e->conf.ln_mode != NONE){
+    DrawLineNumber(
+      e, cur_gui_index == buff->cur_li ? 1 
+      : e->conf.ln_mode == RELATIVE
+      ? buff->cur_li
+      : buff->num_prev_lines,
+      y_offset
+    );
+  } 
   for (
     i = buff->d_start;
     (i <= buff->s->len) && (cur_gui_index <= max_num_lines) ;
@@ -504,7 +525,7 @@ void DrawBufferText(Editor *e, bool is_blinking){
 
     if(char_index == buff->cursor.index){
       if(text[char_index] == '\n' || char_index == buff->s->len){
-        if(!e->exp->is_open)
+        if(!e->exp->is_open && !e->is_searching)
         DrawCursor(
           e, char_pos.x, char_pos.y,
           is_blinking ? 0x00000000 : buff->cursor.color,
@@ -513,7 +534,7 @@ void DrawBufferText(Editor *e, bool is_blinking){
 
       }
     }else if(is_selected(e, char_index) && text[char_index - 1] == '\n') {
-      if(!e->exp->is_open)
+      if(!e->exp->is_open && !e->is_searching)
       DrawCursor(e, char_pos.x, char_pos.y, e->conf.selection_color, true);
     }
     if(i == buff->s->len) break;
@@ -598,7 +619,20 @@ void DrawBufferText(Editor *e, bool is_blinking){
       y_offset++;
       x_offset = 0;
       index++;
-      if(e->conf.ln_mode != NONE) DrawLineNumber(e, ++cur_gui_index + buff->num_prev_lines, y_offset);
+      if(e->conf.ln_mode != NONE) {
+        bool is_after = ++cur_gui_index > buff->cur_li;
+        size_t line_number = e->conf.ln_mode == RELATIVE 
+          ? (
+             is_after 
+             ? (cur_gui_index - buff->cur_li)
+             : (buff->cur_li - cur_gui_index)
+            )
+          : cur_gui_index + buff->num_prev_lines;
+        if(buff->cur_li == cur_gui_index){
+          line_number = buff->num_prev_lines + buff->cur_li + 1;
+        } 
+        DrawLineNumber(e, line_number, y_offset);
+      } 
       continue;
     }
     if(c == '\r') {
@@ -633,7 +667,7 @@ void DrawBufferText(Editor *e, bool is_blinking){
 
     char_index = index + buff->d_start - 1;
     if(char_index == buff->cursor.index){
-      if(!e->exp->is_open)
+      if(!e->exp->is_open && !e->is_searching)
       DrawCursor(
         e, char_pos.x, char_pos.y,
         is_blinking ? 0x00000000 : buff->cursor.color,
@@ -641,8 +675,15 @@ void DrawBufferText(Editor *e, bool is_blinking){
       );
 
     }
+    if(e->is_searching){
+      for(size_t x = 0; x < e->s_ranges->len; x++){
+        Range r = e->s_ranges->data[x];
+        if(char_index >= r.start && char_index <= r.end)
+        DrawCursor(e, char_pos.x, char_pos.y, 0xFF0000FF, true);
+      }
+    }
     if(is_selected(e, char_index) && char_index != buff->cursor.index) {
-      if(!e->exp->is_open)
+      if(!e->exp->is_open && !e->is_searching)
       DrawCursor(e, char_pos.x , char_pos.y, e->conf.selection_color, true);
     }
 
@@ -660,9 +701,8 @@ void DrawBufferText(Editor *e, bool is_blinking){
       char_pos, e->conf.font_data.size,
       0.0f,
       GetColor(
-        (
-         char_index == buff->cursor.index && 
-         !is_blinking && !e->exp->is_open
+        ( char_index == buff->cursor.index && 
+         !is_blinking && !e->exp->is_open && !e->is_searching
          ) ? 
         e->conf.under_cursor_color:
         e->conf.text_color
