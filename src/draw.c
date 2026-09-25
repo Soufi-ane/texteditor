@@ -500,10 +500,10 @@ void DrawBufferText(Editor *e, bool is_blinking){
 
   if(e->conf.ln_mode != NONE){
     DrawLineNumber(
-      e, cur_gui_index == buff->cur_li ? 1 
-      : e->conf.ln_mode == RELATIVE
-      ? buff->cur_li
-      : buff->num_prev_lines,
+      e, e->conf.ln_mode == RELATIVE ? 
+       cur_gui_index == buff->cur_li ? 1
+      : buff->cur_li
+      : buff->num_prev_lines + 1,
       y_offset
     );
   } 
@@ -627,8 +627,8 @@ void DrawBufferText(Editor *e, bool is_blinking){
              ? (cur_gui_index - buff->cur_li)
              : (buff->cur_li - cur_gui_index)
             )
-          : cur_gui_index + buff->num_prev_lines;
-        if(buff->cur_li == cur_gui_index){
+          : cur_gui_index + buff->num_prev_lines + 1;
+        if(buff->cur_li == cur_gui_index && e->conf.ln_mode == RELATIVE){
           line_number = buff->num_prev_lines + buff->cur_li + 1;
         } 
         DrawLineNumber(e, line_number, y_offset);
