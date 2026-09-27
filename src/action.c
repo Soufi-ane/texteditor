@@ -45,6 +45,7 @@ void undo_text_action(Editor *e, TextAction *act){
    );
   } 
   update_lines(e);
+  buff->is_saved = false;
 }
 
 void redo_text_action(Editor *e, TextAction *act){
@@ -53,6 +54,7 @@ void redo_text_action(Editor *e, TextAction *act){
   buff->cursor.index = act->index;
   add_str_to_str(buff->s, act->new, act->index);
   move_cursor_right(e, act->new->len - 1);
+  buff->is_saved = false;
 }
 
 void undo(Editor *e){
