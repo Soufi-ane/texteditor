@@ -112,3 +112,8 @@ Ranges *new_ranges(size_t cap){
   rs->len = 0;
   return rs;
 }
+
+void replace_char(String *str, size_t index, char new_char){
+  if(index < 0 || index > str->len - 1 || str == NULL) return;
+  str->data[index] = new_char;
+}
