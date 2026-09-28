@@ -504,8 +504,16 @@ void DrawBufferText(Editor *e, bool is_blinking){
   size_t closest_char_index = 0;
   float closest_y = 10000.0f;
   size_t closest_x = 10000.0f;
-
   size_t char_index;
+
+  if(e->conf.is_line_highlight) {
+    Rectangle line_bg = { 
+      total_pl, total_pt + total_char_h * buff->cursor.pos.row,
+      e->s_width - (total_pl + pad.right),
+      total_char_h
+    };
+    DrawRectangleRec(line_bg, GetColor(e->conf.line_highlight_color));
+  }
 
   if(e->conf.ln_mode != NONE){
     DrawLineNumber(
@@ -548,7 +556,6 @@ void DrawBufferText(Editor *e, bool is_blinking){
       DrawCursor(e, char_pos.x, char_pos.y, e->conf.selection_bg, true);
     }
     if(i == buff->s->len) break;
-
     if((mouse_clicked || mouse_down) && !matched_char){
       if(mouse_clicked) {
         e->conf.is_selecting = false;
@@ -696,15 +703,6 @@ void DrawBufferText(Editor *e, bool is_blinking){
       if(!e->exp->is_open && !e->is_searching)
       DrawCursor(e, char_pos.x , char_pos.y, e->conf.selection_bg, true);
     }
-
-    /* if(cur_line_index == buff->cur_li && e->conf.is_line_highlight) {
-      Rectangle line_bg = { 
-        total_pl, total_pt + total_char_h * y_offset ,
-        e->s_width - (total_pl + pad.right),
-        total_char_h
-      };
-      DrawRectangleRec(line_bg, GetColor(e->conf.line_highlight_color));
-    } */
 
     DrawTextEx(
       e->conf.font_data.font, TextFormat("%c", c),
