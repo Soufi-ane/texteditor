@@ -9,8 +9,11 @@
 #define PAIRS_COUNT 8
 #define cur_buf e->buffs->data[e->current_buff]
 #define cur_line cur_buf->lines->data[cur_buf->cur_li]
-#define cur_file e->exp->files->data[e->exp->curr_file]
-
+#define cur_file                                         \
+  ( e->is_searching ?                                    \
+    e->exp->s_matches->data[e->exp->curr_file] :         \
+    e->exp->files->data[e->exp->curr_file]               \
+  )
 double long_press_time = 0.0f;
 int is_g_clicked_before = false;
 
@@ -357,11 +360,6 @@ void add_char_to_cur_buf(Editor *e, char c, size_t index){
   cur_buf->is_saved = false;
 }
 
-void replace_char(String *str, size_t index, char new_char){
-  /* if(index < 0 || index > line->buffs->len - 1 || line == NULL) return;
-  line->chars[index] = new_char; */
-}
-
 void remove_chars_cur_buf(Editor *e, size_t index, size_t count){
   String *str = cur_buf->s;
   String *deleted = new_str(count + 1);
@@ -531,7 +529,6 @@ void move_to_word_ending(Editor* e){
 void move_to_word_beginning(Editor* e){
   size_t i = cur_buf->cursor.index; 
   char *text = cur_buf->s->data;
-  // todo move_cursor with count
   while(isspace(text[i - 1]) && i > 0){
     move_cursor_left(e, 1);
     i--;
@@ -556,6 +553,7 @@ void go_to_next_buffer(Editor *e){
   else e->current_buff++;
   e->conf.is_selecting = false;
   update_lines(e);
+  update_buf_state(e);
   // update_line_number_padding(e);
 }
 
@@ -565,27 +563,22 @@ void go_to_prev_buffer(Editor *e){
   else e->current_buff--;
   e->conf.is_selecting = false;
   update_lines(e);
+  update_buf_state(e);
   // update_line_number_padding(e);
 }
 
 void handle_tab(Editor* e, bool is_shift_down) {
   if(!e->conf.is_menu_open){
     if(e->mode == INSERT || !e->conf.is_vim_mode){
-      if(e->conf.is_spaces_for_tabs) {
-        for(int i = 0; i < e->conf.tab_size; ++i)  {
-          add_char_to_cur_buf(e, ' ', cur_buf->cursor.index);
-          /* update_action(
-            &cur_buf->cur_act, ADD_STR,
-            (RowCol){ cur_buf->cur_li, index }, ' '
-          ); */
+      if(e->is_searching && e->exp->is_open){
+        move_down_explorer(e);
+      }else {
+        if(e->conf.is_spaces_for_tabs) {
+          for(int i = 0; i < e->conf.tab_size; ++i)  {
+            add_char_to_cur_buf(e, ' ', cur_buf->cursor.index);
+          }
         }
-      }
-      else {
-        add_char_to_cur_buf(e, '\t', cur_buf->cursor.index);
-        /* update_action(
-          &cur_buf->cur_act, ADD_STR,
-          (RowCol){ cur_buf->cur_li, index }, '\t'
-        ); */
+        else add_char_to_cur_buf(e, '\t', cur_buf->cursor.index);
       }
     }else if(e->conf.is_vim_mode){
       if(is_shift_down) go_to_prev_buffer(e);
@@ -702,18 +695,23 @@ void handle_delete_selection(Editor *e){
 
 void handle_backspace(Editor* e) {
   if(e->mode == INSERT || !e->conf.is_vim_mode) {
-    if(e->exp->is_open){
-      str_remove_chars(e->exp->input, e->exp->input->len -1, 1);
-    }else if(e->is_searching){
+    if(e->is_searching){
       if(e->query->len) { 
         str_remove_chars(e->query, e->query->len - 1, 1);
-        cur_buf_str_search(e, cur_buf->s, e->query);
+        if(e->exp->is_open){
+          search_files_in_dir(e, e->exp->open_dir, true);
+        }else {
+          cur_buf_str_search(e, cur_buf->s, e->query);
+        }
       }
       else{
         e->is_searching = false;
         e->mode = NORMAL;
       } 
-    } else if(e->conf.is_menu_open && e->prompt->len) {
+    } else if(e->exp->is_open){
+        str_remove_chars(e->exp->input, e->exp->input->len -1, 1);
+    } 
+    else if(e->conf.is_menu_open && e->prompt->len) {
       str_remove_chars(e->prompt, e->prompt->len - 1, 1);
       filter_cmds_by_prompt(e);
     }else if(e->conf.is_selecting) {
@@ -833,18 +831,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'd':
       if(e->exp->is_open && e->exp->files->len){
-        if(!e->exp->is_deleting){
-          free_str(e->exp->label);
-          free_str(e->exp->placeholder);
-          e->exp->label = string("Delete '' ?");
-          e->exp->placeholder = string("Yes or y to confirm");
-          add_str_to_str(e->exp->label, cur_file.name, e->exp->label->len - 3);
-          if(cur_file.type == FT_DIR) {
-            add_text_to_str(e->exp->label, "/", e->exp->label->len - 3);
-          }
-          e->exp->is_deleting = true;
-          e->mode = INSERT;
-        } 
+        handle_explorer_delete(e);
       }
       else if(e->conf.is_selecting && e->conf.is_vim_mode) {
         handle_delete_selection(e);
@@ -911,16 +898,18 @@ void toggle_explorer(Editor *e){
   update_buf_state(e);
 }
 
-void handle_delete_file(Editor *e){
-  String *path = string(e->exp->open_dir->data);
-  add_text_to_str(path, "/", path->len);
-  add_str_to_str(
-    path,
-    cur_file.name,
-    path->len
-  );
-  move_to_trash(e, path->data);
-  read_dir_files(e, e->exp->open_dir->data);
+void handle_explorer_delete(Editor *e){
+  const char *file_name = get_file_name_from_path(cur_file.path->data);
+  free_str(e->exp->label);
+  free_str(e->exp->placeholder);
+  e->exp->label = string("Delete '' ?");
+  e->exp->placeholder = string("Yes or y to confirm");
+  add_text_to_str(e->exp->label, file_name, e->exp->label->len - 3);
+  if(cur_file.type == FT_DIR) {
+    add_text_to_str(e->exp->label, "/", e->exp->label->len - 3);
+  }
+  e->exp->is_deleting = true;
+  e->mode = INSERT;
 }
 
 void decrease_font_size(Editor *e){
@@ -983,7 +972,7 @@ void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
 
   if(IsKeyPressed(KEY_U)){
     if(e->mode == INSERT || !e->conf.is_vim_mode){
-      delete_to_beginning_of_line(cur_buf);
+      delete_to_beginning_of_line(e);
       update_last_col(e);
     }
   }
@@ -1018,7 +1007,17 @@ void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
 
 void handle_insert_mode_keys(Editor* e,int c){
   if (c >= 32) {
-    if(e->conf.is_menu_open) {
+    if(e->is_searching) {
+      add_char_to_str(e->query, c, e->query->len);
+      if(e->exp->is_open){
+        search_files_in_dir(e, e->exp->open_dir, true);
+        e->exp->curr_file = 0;
+      }else {
+        cur_buf_str_search(e, cur_buf->s, e->query);
+        update_search_view(e);
+      }
+    }
+    else if(e->conf.is_menu_open) {
       add_char_to_str(e->prompt, c, e->prompt->len);
       filter_cmds_by_prompt(e);
     }
@@ -1027,11 +1026,8 @@ void handle_insert_mode_keys(Editor* e,int c){
         add_char_to_str(e->exp->input, c, e->exp->input->len);
         e->exp->input_i++;
       }
-    } else if(e->is_searching) {
-      add_char_to_str(e->query, c, e->query->len);
-      cur_buf_str_search(e, cur_buf->s, e->query);
-      update_search_view(e);
-    } else {
+    } 
+    else {
       add_char_to_cur_buf(e, c, cur_buf->cursor.index);
     }
     update_buf_state(e);
@@ -1039,40 +1035,38 @@ void handle_insert_mode_keys(Editor* e,int c){
 }
 
 void move_up_explorer(Editor *e){
+  Files *d_files = e->is_searching ? e->exp->s_matches : e->exp->files;
   size_t max_num_lines = get_max_num_lines(e);
-  size_t old_start = e->exp->files->d_start;
+  size_t old_start = d_files->d_start;
   if(e->exp->curr_file > 0){
     e->exp->curr_file--;
-    if(e->exp->curr_file - e->exp->files->d_start < e->conf.scroll_pad) {
-      if(e->exp->files->d_start) e->exp->files->d_start--;
+    if(e->exp->curr_file - d_files->d_start < e->conf.scroll_pad) {
+      if(d_files->d_start) d_files->d_start--;
     } 
   } 
   else {
-    e->exp->curr_file = e->exp->files->len - 1;
-    if(e->exp->files->len > max_num_lines){
-      e->exp->files->d_start = e->exp->files->len - max_num_lines;
-      if(e->exp->files->d_start >= e->conf.scroll_pad){
-        e->exp->files->d_start += e->conf.scroll_pad;
+    e->exp->curr_file = d_files->len - 1;
+    if(d_files->len > max_num_lines){
+      d_files->d_start = d_files->len - max_num_lines;
+      if(d_files->d_start >= e->conf.scroll_pad){
+        d_files->d_start += e->conf.scroll_pad;
       }
     }
   } 
-  if(old_start != e->exp->files->d_start) udpate_explorer_size(e);
+  if(old_start != d_files->d_start) udpate_explorer_size(e);
   update_buf_state(e);
 }
 
 void move_right_explorer(Editor *e){
-  if(!e->exp->files->len) return;
-  String *path = string(e->exp->open_dir->data);
+  Files *d_files = e->is_searching ? e->exp->s_matches : e->exp->files;
+  if(!d_files->len) return;
   if(cur_file.type == FT_DIR){
-    add_text_to_str(path, "/", path->len);
-    add_str_to_str(path, cur_file.name, path->len);
-    read_dir_files(e, path->data);
+    read_dir_files(e, cur_file.path->data);
     e->exp->curr_file = 0;
-    e->exp->files->d_start = 0;
+    d_files->d_start = 0;
   }else {
-    add_text_to_str(path, "/", path->len);
-    add_str_to_str(path, cur_file.name, path->len);
-    read_file(e, path->data);
+    printf("move_right_explorer(%s)\n",cur_file.path->data);
+    read_file(e, cur_file.path->data);
     e->exp->is_open = false;
   }
   update_buf_state(e);
@@ -1091,19 +1085,20 @@ void move_left_explorer(Editor *e){
 }
 
 void move_down_explorer(Editor *e){
+  Files *d_files = e->is_searching ? e->exp->s_matches : e->exp->files;
   size_t max_num_lines = get_max_num_lines(e);
-  size_t old_start = e->exp->files->d_start;
+  size_t old_start = d_files->d_start;
   e->exp->curr_file++;
-  if(e->exp->curr_file > e->exp->files->len - 1) {
-    e->exp->curr_file = e->exp->files->d_start = 0;
+  if(e->exp->curr_file > d_files->len - 1) {
+    e->exp->curr_file = d_files->d_start = 0;
   } 
   else if(
     e->exp->curr_file >= 
-    (max_num_lines - e->conf.scroll_pad + e->exp->files->d_start - 1)
+    (max_num_lines - e->conf.scroll_pad + d_files->d_start - 1)
   ) {
-    e->exp->files->d_start = e->exp->curr_file - max_num_lines + e->conf.scroll_pad + 1;
+    d_files->d_start = e->exp->curr_file - max_num_lines + e->conf.scroll_pad + 1;
   } 
-  if(old_start != e->exp->files->d_start) udpate_explorer_size(e);
+  if(old_start != d_files->d_start) udpate_explorer_size(e);
   update_buf_state(e);
 }
 
@@ -1221,18 +1216,28 @@ void handle_enter(Editor* e){
         !strcasecmp(e->exp->input->data, "yes") ||
         !strcmp(e->exp->input->data, "y")
       ){
-        handle_delete_file(e);
+        move_to_trash(e, cur_file.path->data);
+        read_dir_files(e, e->exp->open_dir->data);
+        update_curr_file(e);
       }
       e->exp->is_deleting = false;
     }
     else{
       move_right_explorer(e);
+      if(e->is_searching) {
+        e->is_searching = false;
+        e->query->len = 0;
+      } 
     } 
     exit_exp_input(e);
   }
 }
 
 void update_curr_file(Editor * e){
+  Files *d_files = e->is_searching ? e->exp->s_matches : e->exp->files;
+  if(e->exp->curr_file > d_files->len - 1){
+    e->exp->curr_file = d_files->len - 1;
+  }
 }
 
 void exit_exp_input(Editor * e){
@@ -1473,12 +1478,16 @@ Editor *init_editor(){
   e->exp                   = malloc(sizeof(Explorer));
   e->exp->files            = malloc(sizeof(Files));
   e->exp->files->data      = malloc(sizeof(File) * 10);
+  e->exp->files->cap       = 10;
+  e->exp->files->len       = 0;
+  e->exp->s_matches        = malloc(sizeof(Files));
+  e->exp->s_matches->data  = malloc(sizeof(File) * 100);
+  e->exp->s_matches->cap   = 100;
+  e->exp->s_matches->len   = 0;
   e->exp->input            = new_str(100);
   e->exp->label            = NULL;
   e->exp->placeholder      = NULL;
   e->exp->input_i          = 0;
-  e->exp->files->cap       = 10;
-  e->exp->files->len       = 0;
   e->exp->max_w            = 0;
   e->exp->curr_file        = 0;
   e->exp->is_open          = false;
@@ -1508,8 +1517,8 @@ Editor *init_editor(){
     .under_cursor_color    = 0X000000FF,
     .lines_color           = 0x545454FF,
     .line_numbers_color    = 0x828282FF,
-    .file_name_color       = 0x828282FF,
-    .status_line_color     = 0x000000FF,
+    .status_line_fg        = 0xFFFFFFFF,
+    .status_line_bg        = 0x000000FF,
     .error_color           = 0xFF4C24FF,
     .success_color         = 0x00B014FF,
     .selected_char_color   = 0xE8E8E8FF,

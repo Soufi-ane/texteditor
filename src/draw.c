@@ -260,7 +260,8 @@ void udpate_explorer_size(Editor *e){
     i++
   ){
     File file = e->exp->files->data[i];
-    size_t text_w = file.name->len * char_size.col;
+    const char *file_name = get_file_name_from_path(file.path->data);
+    size_t text_w = strlen(file_name) * char_size.col;
     if(text_w > e->exp->max_w){
       if(text_w < (2 * e->s_width / 3)){
         e->exp->max_w = text_w + e->conf.padding.left * 2;
@@ -343,7 +344,10 @@ void DrawFileInput(Editor *e, bool is_blinking){
 }
 
 const char *get_explorer_help_msg(Editor *e){
-  if(!e->exp->files->len) return "Empty directory";
+  if(!e->exp->files->len && !e->is_searching) return "Empty directory";
+  if(!e->exp->s_matches->len && e->is_searching && e->query->len) {
+    return "No matches";
+  }
   if(e->conf.is_vim_mode) return "Use h,j,k,l to navigate";
   else return "Use arrows to navigate";
 }
@@ -359,6 +363,8 @@ void DrawExplorerHelp(Editor *e){
 }
 
 void DrawExplorer(Editor *e, bool is_blinking){
+  Files *d_files = (e->is_searching && e->query->len) ?
+      e->exp->s_matches : e->exp->files;
   Padding pad = e->conf.padding;
   RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   Rectangle explorer = {
@@ -373,12 +379,14 @@ void DrawExplorer(Editor *e, bool is_blinking){
   size_t max_num_lines = get_max_num_lines(e);
   for(
     size_t i = e->exp->files->d_start;
-    (i < e->exp->files->len) && (i - e->exp->files->d_start < max_num_lines);
+    (i < d_files->len) && (i - e->exp->files->d_start < max_num_lines);
     i++
   ){
-    File file = e->exp->files->data[i];
-    String *dis_name = string(file.name->data);
-    size_t text_w = file.name->len * char_size.col;
+    File file = d_files->data[i];
+    const char *file_name = get_file_name_from_path(file.path->data);
+    String *dis_name = string(file_name);
+    size_t file_name_len = strlen(file_name);
+    size_t text_w = file_name_len * char_size.col;
     bool is_too_long = text_w > e->exp->max_w;
     if(is_too_long){
       dis_name->len -= (pad.left * 2 + text_w - e->exp->max_w) / char_size.col + 4;
@@ -400,7 +408,7 @@ void DrawExplorer(Editor *e, bool is_blinking){
       e->conf.font_secondary_data.size, 0, GetColor(e->conf.text_color));
     y_offset++;
   }
-  if(!e->exp->files->len){
+  if(!d_files->len){
     Rectangle file_rec = {
       0, pad.top * 2,
       e->exp->max_w, char_size.row

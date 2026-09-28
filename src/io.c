@@ -18,6 +18,12 @@ const char *get_file_name_from_path(const char *path){
   return file_name;
 }
 
+bool is_dir(char *path){
+  struct stat st;
+  stat(path, &st); 
+  return S_ISDIR(st.st_mode);
+}
+
 bool key_in(ConfigKey key, ConfigKey *choices, size_t len){
   for(size_t i = 0; i < len; i++){
     if(key == choices[i]) return true;
@@ -99,10 +105,7 @@ void clear_trash(Editor *e) {
 }
 
 void remove_file(Editor *e, char *path){
-  struct stat st;
-  if(stat(path, &st) != 0) return;
-  bool is_dir = S_ISDIR(st.st_mode);
-  if(is_dir){
+  if(is_dir(path)){
     DIR *d = opendir(path);
     if(!d) return;
     struct dirent *entry;
@@ -662,11 +665,41 @@ void sort_file_list(Files *files){
       ){
         sorted = false;
         temp = (File) {
-          .name = files->data[i].name,
-          .type = files->data[i].type
+          files->data[i].path,
+          files->data[i].type
         };
         files->data[i] = files->data[i + 1];
         files->data[i + 1] = temp;
+      }
+    }
+  }
+}
+
+void search_files_in_dir(Editor *e, String *dir_path, bool reset){
+  const char *dir_name = get_file_name_from_path(dir_path->data);
+  if(dir_name[0] == '.') return;
+  printf("search_files_in_dir(%s)\n", dir_path->data);
+  DIR *dir;
+  struct dirent *entry;
+  dir = opendir(dir_path->data);
+  if(dir == NULL){
+    printf("Coundn't open dir %s\n", dir_path);
+    return;
+  }
+  if(reset) e->exp->s_matches->len = 0;
+  while((entry = readdir(dir)) != NULL){
+    if(!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) continue;
+    String *path = string(dir_path->data);
+    add_text_to_str(path, "/", path->len);
+    add_text_to_str(path, entry->d_name, path->len);
+    File file = {
+      path, reduce_type(entry->d_type)
+    };
+    if(file.type == FT_DIR){
+      search_files_in_dir(e, path, false);
+    }else {
+      if(str_includes(string(entry->d_name), e->query)){
+        da_append(e->exp->s_matches, file);
       }
     }
   }
@@ -683,9 +716,11 @@ void read_dir_files(Editor *e, char *dir_path){
   e->exp->files->len = 0;
   while((entry = readdir(dir)) != NULL){
     if(!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) continue;
+    String *path = string(dir_path);
+    add_text_to_str(path, "/", path->len);
+    add_text_to_str(path, entry->d_name, path->len);
     File file = {
-      .name = string(entry->d_name),
-      .type = reduce_type(entry->d_type)
+      path, reduce_type(entry->d_type)
     };
     da_append(e->exp->files, file);
   }

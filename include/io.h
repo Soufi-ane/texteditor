@@ -39,4 +39,6 @@ bool move_file(char *src, char *dest);
 
 void clear_trash(Editor *e);
 
+void search_files_in_dir(Editor *e, String *dir_path, bool reset);
+
 #endif

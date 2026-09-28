@@ -126,7 +126,7 @@ typedef enum {
 } FileType;
 
 typedef struct {
-  String *name;
+  String *path;
   FileType type;
 } File;
 
@@ -172,6 +172,7 @@ typedef struct {
 
 typedef struct {
   Files *files;
+  Files *s_matches;
   String *open_dir;
   String *input;
   String *label;
@@ -338,5 +339,9 @@ void toggle_explorer(Editor *e);
 size_t get_num_lines(String *str, size_t from, size_t to);
 
 void cur_buf_str_search(Editor *e, String *str, String *query);
+
+void handle_explorer_delete(Editor *e);
+
+void update_curr_file(Editor * e);
 
 #endif
