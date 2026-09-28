@@ -59,12 +59,6 @@ typedef enum {
   INSERT,
 } Mode ;
 
-typedef enum {
-  NONE,
-  RELATIVE,
-  ABSOLUTE
-} LineNumbers;
-
 typedef struct {
   size_t row;
   size_t col;
@@ -175,55 +169,6 @@ typedef struct {
   size_t len;
   size_t cap;
 } Buffers;
-
-typedef struct {
-  size_t top;
-  size_t right;
-  size_t bottom;
-  size_t left;
-} Padding;
-
-typedef struct {
-  Font font;
-  const char *path;
-  float size;
-  bool is_file_loaded;
-  unsigned char* font_file;
-  int file_size;
-} FontData ;
-
-typedef struct {
-  bool is_opening_file;
-  bool is_menu_open;
-  bool is_showing_lines ;
-  bool is_spaces_for_tabs;
-  bool is_selecting;
-  bool is_vim_mode;
-  bool caps_lock_as_escape;
-  bool is_line_highlight;
-  size_t selection_start;
-  size_t tab_size;
-  LineNumbers ln_mode;
-  size_t ln_padding;
-  Padding padding;
-  FontData font_data;
-  FontData font_secondary_data;
-  unsigned int bg_color;
-  unsigned int text_color;
-  unsigned int under_cursor_color;
-  unsigned int lines_color;
-  unsigned int line_numbers_color;
-  unsigned int file_name_color;
-  unsigned int status_line_color;
-  unsigned int error_color;
-  unsigned int success_color;
-  unsigned int selection_color;
-  unsigned int selected_char_color;
-  unsigned int line_highlight_color;
-  size_t line_height;
-  size_t letter_spacing;
-  size_t scroll_pad;
-} Config;
 
 typedef struct {
   Files *files;
