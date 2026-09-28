@@ -945,18 +945,13 @@ void increase_font_size(Editor *e){
   }
 }
 
-void delete_to_beginning_of_line(Buffer *buff){
-  /*
-  String *chars = buff->lines[buff->cur_li];
-  update_action(
-    &buff->cur_act, DELETE_STR, 
-    (RowCol){}, 
-  );
-  line->buffs->len -= buff->cursor.index;
-  memmove(&line->chars[0], &line->chars[buff->cursor.index], (size_t) line->buffs->len);
-  buff->cursor.index = 0;
-  buff->cursor.last_time_moved = GetTime();
-  */
+void delete_to_beginning_of_line(Editor *e){
+  size_t index = cur_buf->cursor.index;
+  remove_chars_cur_buf(e, cur_line.start, index - cur_line.start);
+  cur_buf->cursor.index = cur_line.start;
+  update_lines(e);
+  update_buf_state(e);
+  cur_buf->is_saved = false;
 }
 
 void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
