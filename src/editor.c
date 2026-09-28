@@ -1428,16 +1428,16 @@ void new_message(Editor *e, const char *message, MessageType type){
       e->msgs.len--;
     }
   }
-  char display_msg[1024];
+  char log_msg[1024];
   char time_buff[128];
   get_date_time(time_buff, sizeof(time_buff));
 
-  snprintf(display_msg, sizeof(display_msg), "%s - %s", message, time_buff);
+  snprintf(log_msg, sizeof(log_msg), "%s - '%s': %s",time_buff, cur_buf->file_path, message);
   Message msg = {
     .type = type,
     .text = strdup(message)
   };
-  write_new_message(e, &msg);
+  write_new_message(e, log_msg);
   e->msgs.data[e->msgs.len] = msg;
   e->buffs->data[e->current_buff]->msg_index = e->msgs.len++;
 }

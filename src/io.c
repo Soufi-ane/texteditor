@@ -31,7 +31,7 @@ bool key_in(ConfigKey key, ConfigKey *choices, size_t len){
   return false;
 }
 
-void write_new_message(Editor *e, Message *msg){
+void write_new_message(Editor *e, char *msg){
   #ifdef PROD
   char *file_path = "/usr/local/share/texteditor/messages.log";
   #else
@@ -44,7 +44,7 @@ void write_new_message(Editor *e, Message *msg){
   size_t size = 0, line_index = 0;
   size_t read;
 
-  fwrite(msg->text, sizeof(char), sizeof(char) * strlen(msg->text), file);
+  fwrite(msg, sizeof(char), sizeof(char) * strlen(msg), file);
   fputc('\n', file);
 	fclose(file);
 }

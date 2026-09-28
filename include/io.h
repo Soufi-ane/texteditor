@@ -23,7 +23,7 @@ void paste_from_clipboard(Editor *e);
 
 int try_loading_config(Editor *e);
 
-void write_new_message(Editor *e, Message *msg);
+void write_new_message(Editor *e, char *msg);
 
 void handle_cmd_args(Editor *e, int argc, char **argv);
 
