@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include "io.h"
+#include "conf.h"
 
 int main(int argc, char **argv) {
 

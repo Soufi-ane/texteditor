@@ -18,6 +18,13 @@ const char *get_file_name_from_path(const char *path){
   return file_name;
 }
 
+bool key_in(ConfigKey key, ConfigKey *choices, size_t len){
+  for(size_t i = 0; i < len; i++){
+    if(key == choices[i]) return true;
+  }
+  return false;
+}
+
 void write_new_message(Editor *e, Message *msg){
   #ifdef PROD
   char *file_path = "/usr/local/share/texteditor/messages.log";
@@ -367,6 +374,8 @@ ConfigKey get_config_key(Editor *e, char *key){
   if(!strcmp(key, "secondary_font"))         return FONT_SECONDARY;
   if(!strcmp(key, "highlight_active_line"))  return LINE_HIGHLIGHT;
   if(!strcmp(key, "active_line_color"))      return LINE_HIGHLIGHT_COL;
+  if(!strcmp(key, "status_line_fg"))         return STATUS_LINE_FG;
+  if(!strcmp(key, "status_line_bg"))         return STATUS_LINE_BG;
   return UNKOWN_KEY;
 }
 
@@ -406,6 +415,12 @@ void try_setting_conf_color_value(Editor *e, ConfigKey key_type, char *hex, size
     case LINE_HIGHLIGHT_COL:
       e->conf.line_highlight_color = color;
       break;
+    case STATUS_LINE_FG:
+      e->conf.status_line_fg = color;
+      break;
+    case STATUS_LINE_BG:
+      e->conf.status_line_bg = color;
+      break;
   }
 }
 
@@ -420,7 +435,6 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
     case TAB_S:
       e->conf.tab_size = number;
       break;
-
     case P_TOP:
       e->conf.padding.top = number;
       break;
@@ -550,19 +564,22 @@ void read_config_line(Editor *e, char *line, size_t len, size_t line_number){
   if(key_type == UNKOWN_KEY){
     new_message(e, TextFormat("Unknown key [%s] at config: %d", key, line_number), ERROR);
   }
-  if(
-    key_type == BG_COL || key_type == TXT_COL || key_type == CURSOR_COL ||
-    key_type == UNDER_CURSOR_COL || key_type == LN_COL || key_type == LINES_COL ||
-    key_type == LINE_HIGHLIGHT_COL
-    ){
+  ConfigKey col_keys[] =  {
+    BG_COL, TXT_COL, CURSOR_COL, UNDER_CURSOR_COL, LN_COL,
+    LINES_COL, LINE_HIGHLIGHT_COL, STATUS_LINE_FG, STATUS_LINE_BG
+  };
+  ConfigKey num_keys[] =  {
+    TAB_S, P_RIGHT, P_LEFT, P_BOTTOM, P_TOP, FONT_SIZE,
+    SECONDARY_FONT_SIZE
+  };
+  ConfigKey font_keys[] =  {
+    FONT_PRIMARY, FONT_SECONDARY
+  };
+  if(key_in(key_type, col_keys, sizeof(col_keys) / sizeof(ConfigKey))){
     try_setting_conf_color_value(e, key_type, value, line_number);
-  }else if(
-    key_type == TAB_S || key_type == P_RIGHT || key_type == P_LEFT ||
-    key_type == P_BOTTOM || key_type == P_TOP || key_type == FONT_SIZE ||
-    key_type == SECONDARY_FONT_SIZE
-    ){
+  }else if(key_in(key_type, num_keys, sizeof(num_keys) / sizeof(ConfigKey))){
     try_setting_conf_number_value(e, key_type, value, line_number);
-  }else if(key_type == FONT_PRIMARY || key_type == FONT_SECONDARY) {
+  }else if(key_in(key_type, font_keys, sizeof(font_keys) / sizeof(ConfigKey))) {
     try_reading_conf_path(e, key_type, value, line_number);
   }
   else try_setting_conf_value(e, key_type, value, line_number);

@@ -130,7 +130,7 @@ unsigned int get_msg_color(Editor *e, MessageType type){
     case GOOD:
       return e->conf.success_color;
     case INFO:
-      return e->conf.file_name_color;
+      return e->conf.status_line_fg;
   }
 }
 
@@ -159,7 +159,7 @@ void DrawStatusLine(Editor *e, bool is_blinking){
     0, e->s_height - char_size.row, e->s_width, char_size.row
   };
 
-  DrawRectangleRec(status_line, GetColor(e->conf.status_line_color));
+  DrawRectangleRec(status_line, GetColor(e->conf.status_line_bg));
 
   if(buff->msg_index > -1) return;
 
@@ -170,7 +170,8 @@ void DrawStatusLine(Editor *e, bool is_blinking){
         e->s_width - (e->conf.letter_spacing + char_size.col) * 7,
         status_line.y
       },
-      e->conf.font_secondary_data.size, 0, GRAY
+      e->conf.font_secondary_data.size, 
+      0, GetColor(e->conf.status_line_fg)
     );
   }
 
@@ -188,7 +189,8 @@ void DrawStatusLine(Editor *e, bool is_blinking){
       buff->cursor.index - cur_line.start + 1
     ),
     (Vector2){ row_col_x, status_line.y },
-    e->conf.font_secondary_data.size, 0, GRAY
+    e->conf.font_secondary_data.size, 
+    0, GetColor(e->conf.status_line_fg)
   );
 
   if(e->is_searching){
@@ -198,7 +200,7 @@ void DrawStatusLine(Editor *e, bool is_blinking){
     DrawTextCodepoint(
       e->conf.font_data.font, '/',
       (Vector2){pad.left, status_line.y}, e->conf.font_data.size,
-      GetColor(e->conf.text_color)
+      GetColor(e->conf.status_line_fg)
     );
     DrawCursor(
       e, text_end - search_d_start * char_size.col,
@@ -208,17 +210,16 @@ void DrawStatusLine(Editor *e, bool is_blinking){
     DrawTextEx(
       e->conf.font_secondary_data.font, &e->query->data[search_d_start],
       (Vector2){ pad.left + char_size.col , status_line.y },
-      e->conf.font_secondary_data.size, 0, GetColor(e->conf.text_color)
+      e->conf.font_secondary_data.size, 0, GetColor(e->conf.status_line_fg)
     );
   }else {
     DrawTextEx(
       e->conf.font_secondary_data.font, e->buffs->data[e->current_buff]->file_path ? 
       get_file_name_from_path(e->buffs->data[e->current_buff]->file_path) : "Untitled",
       (Vector2){ pad.left, status_line.y },
-      e->conf.font_secondary_data.size, 0, GetColor(e->conf.file_name_color)
+      e->conf.font_secondary_data.size, 0, GetColor(e->conf.status_line_fg)
     );
   }
-
 }
 
 RowCol get_char_size(float font_size){

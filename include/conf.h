@@ -48,7 +48,9 @@ typedef enum {
   CAPS_AS_ESCAPE,
   P_TOP, P_BOTTOM,
   P_LEFT, P_RIGHT,
-  VIM_M
+  VIM_M,
+  STATUS_LINE_FG,
+  STATUS_LINE_BG
 } ConfigKey;
 
 typedef struct {
