@@ -531,6 +531,7 @@ void DrawBufferText(Editor *e, bool is_blinking){
       total_pl + x_offset * total_char_w,
       total_pt + y_offset * total_char_h,
     };
+    bool c_selected = is_selected(e, char_index);
 
     if(char_index == buff->cursor.index){
       if(text[char_index] == '\n' || char_index == buff->s->len){
@@ -542,9 +543,9 @@ void DrawBufferText(Editor *e, bool is_blinking){
         );
 
       }
-    }else if(is_selected(e, char_index) && text[char_index - 1] == '\n') {
+    }else if(c_selected && text[char_index - 1] == '\n') {
       if(!e->exp->is_open && !e->is_searching)
-      DrawCursor(e, char_pos.x, char_pos.y, e->conf.selection_color, true);
+      DrawCursor(e, char_pos.x, char_pos.y, e->conf.selection_bg, true);
     }
     if(i == buff->s->len) break;
 
@@ -691,9 +692,9 @@ void DrawBufferText(Editor *e, bool is_blinking){
         DrawCursor(e, char_pos.x, char_pos.y, 0xFF0000FF, true);
       }
     }
-    if(is_selected(e, char_index) && char_index != buff->cursor.index) {
+    if(c_selected && char_index != buff->cursor.index) {
       if(!e->exp->is_open && !e->is_searching)
-      DrawCursor(e, char_pos.x , char_pos.y, e->conf.selection_color, true);
+      DrawCursor(e, char_pos.x , char_pos.y, e->conf.selection_bg, true);
     }
 
     /* if(cur_line_index == buff->cur_li && e->conf.is_line_highlight) {
@@ -710,11 +711,13 @@ void DrawBufferText(Editor *e, bool is_blinking){
       char_pos, e->conf.font_data.size,
       0.0f,
       GetColor(
-        ( char_index == buff->cursor.index && 
-         !is_blinking && !e->exp->is_open && !e->is_searching
-         ) ? 
-        e->conf.under_cursor_color:
-        e->conf.text_color
+        c_selected ? e->conf.selection_fg :
+        (
+          (char_index == buff->cursor.index && 
+          !is_blinking && !e->exp->is_open && !e->is_searching) ? 
+          e->conf.under_cursor_color:
+          e->conf.text_color
+        )
       )
     );
 

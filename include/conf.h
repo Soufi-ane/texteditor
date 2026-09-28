@@ -49,8 +49,8 @@ typedef enum {
   P_TOP, P_BOTTOM,
   P_LEFT, P_RIGHT,
   VIM_M,
-  STATUS_LINE_FG,
-  STATUS_LINE_BG
+  STATUS_LINE_FG, STATUS_LINE_BG,
+  SELECTION_BG, SELECTION_FG
 } ConfigKey;
 
 typedef struct {
@@ -101,7 +101,8 @@ typedef struct {
   unsigned int status_line_fg;
   unsigned int error_color;
   unsigned int success_color;
-  unsigned int selection_color;
+  unsigned int selection_bg;
+  unsigned int selection_fg;
   unsigned int selected_char_color;
   unsigned int line_highlight_color;
   size_t line_height;
