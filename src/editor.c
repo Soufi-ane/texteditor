@@ -83,7 +83,6 @@ void update_lines(Editor *e){
         !isspace(cur_buf->s->data[i + word_len++])
       );
       if((x_offset + word_len) > max_len + 1){
-        printf("%zu :: x_offset + word_len =  %zu, max = %zu\n", y_offset, x_offset + word_len, max_len);
         x_offset = 0;
         y_offset++;
         line.wraps++;
@@ -1496,6 +1495,7 @@ Editor *init_editor(){
   e->exp->undo_stack.top   = -1;
   e->exp->redo_stack.top   = -1;
   e->exp->is_deleting      = false;
+  e->query                 = NULL;
   e->mode                  = NORMAL;
   e->s_width               = SCREEN_WIDTH;
   e->s_height              = SCREEN_HEIGHT;
@@ -1537,8 +1537,8 @@ Editor *init_editor(){
     .is_showing_lines      = false,
     .ln_mode               = NONE,
     .ln_padding            = 1,
-    // .line_height = 0,
-    // .letter_spacing = 0,
+    .line_height = 0,
+    .letter_spacing = 0,
     .padding = {
       .top      = 45,
       .bottom   = 45,

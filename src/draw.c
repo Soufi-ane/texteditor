@@ -151,12 +151,24 @@ void DrawCurrentMessage(Editor *e) {
   ); 
 }
 
+int get_max_char_w(Font font){
+  int max = 0;
+  for(int i = 0; i < font.glyphCount; i++){
+    if(font.recs[i].width > max) max = font.recs[i].width;
+  }
+  return max;
+}
+
 void DrawStatusLine(Editor *e, bool is_blinking){
+  Font font = e->conf.font_secondary_data.font;
+  int font_size = e->conf.font_secondary_data.size;
+  float max_char_w = get_max_char_w(font);
   Buffer *buff = e->buffs->data[e->current_buff];
-  RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
+  // RowCol char_size = get_char_size(font.size);
   Padding pad = e->conf.padding;
   Rectangle status_line = {
-    0, e->s_height - char_size.row, e->s_width, char_size.row
+    0, e->s_height - font_size, 
+    e->s_width, font_size
   };
 
   DrawRectangleRec(status_line, GetColor(e->conf.status_line_bg));
@@ -165,12 +177,12 @@ void DrawStatusLine(Editor *e, bool is_blinking){
 
   if(e->conf.is_vim_mode){
     DrawTextEx(
-      e->conf.font_secondary_data.font, get_mode_str(e->mode, e->conf.is_selecting),
+      font, get_mode_str(e->mode, e->conf.is_selecting),
       (Vector2){
-        e->s_width - (e->conf.letter_spacing + char_size.col) * 7,
+        e->s_width - (e->conf.letter_spacing + max_char_w) * 7,
         status_line.y
       },
-      e->conf.font_secondary_data.size, 
+      font_size, 
       0, GetColor(e->conf.status_line_fg)
     );
   }
@@ -179,53 +191,60 @@ void DrawStatusLine(Editor *e, bool is_blinking){
   int row_span = get_digit_count(buff->num_prev_lines + buff->cur_li + 1);
   int col_span = get_digit_count(buff->cursor.index - cur_line.start + 1);
   int row_col_span = row_span + col_span + 1;
-  float row_col_x = e->s_width - (e->conf.letter_spacing + char_size.col) * (8 + row_col_span);
+  float row_col_x = e->s_width - (e->conf.letter_spacing + max_char_w) * (8 + row_col_span);
 
   DrawTextEx(
-    e->conf.font_secondary_data.font,
+    font,
     TextFormat(
       "%d:%d", 
       buff->num_prev_lines + buff->cur_li + 1,
       buff->cursor.index - cur_line.start + 1
     ),
     (Vector2){ row_col_x, status_line.y },
-    e->conf.font_secondary_data.size, 
+    font_size, 
     0, GetColor(e->conf.status_line_fg)
   );
 
   if(e->is_searching){
-    size_t text_end = pad.left + (e->query->len + 1) * char_size.col;
-    size_t search_d_start = text_end >= (row_col_x - char_size.col) ? 
-      (text_end - row_col_x) / char_size.col + 1 : 0;
+    float slash_w = font.glyphs[GetGlyphIndex(font, '/')].advanceX;
+    float text_end = MeasureTextEx(font, e->query->data, font_size, 0).x
+     + slash_w + pad.left ;
+
+    size_t search_d_start = 0;
+    while(text_end >= (row_col_x - max_char_w)){
+      search_d_start++;
+      text_end = MeasureTextEx(font, &e->query->data[search_d_start], font_size, 0).x
+       + slash_w + pad.left;
+    } 
     DrawTextCodepoint(
       e->conf.font_data.font, '/',
       (Vector2){pad.left, status_line.y}, e->conf.font_data.size,
       GetColor(e->conf.status_line_fg)
     );
     DrawCursor(
-      e, text_end - search_d_start * char_size.col,
+      e, text_end,
       status_line.y,
       is_blinking ? 0x00000000 : buff->cursor.color, false
     );
     DrawTextEx(
-      e->conf.font_secondary_data.font, &e->query->data[search_d_start],
-      (Vector2){ pad.left + char_size.col , status_line.y },
-      e->conf.font_secondary_data.size, 0, GetColor(e->conf.status_line_fg)
+      font, &e->query->data[search_d_start],
+      (Vector2){ pad.left + max_char_w , status_line.y },
+      font_size, 0, GetColor(e->conf.status_line_fg)
     );
   }else {
     DrawTextEx(
-      e->conf.font_secondary_data.font, e->buffs->data[e->current_buff]->file_path ? 
+      font, e->buffs->data[e->current_buff]->file_path ? 
       get_file_name_from_path(e->buffs->data[e->current_buff]->file_path) : "Untitled",
       (Vector2){ pad.left, status_line.y },
-      e->conf.font_secondary_data.size, 0, GetColor(e->conf.status_line_fg)
+      font_size, 0, GetColor(e->conf.status_line_fg)
     );
   }
 }
 
 RowCol get_char_size(float font_size){
-  float char_base_widh = 0.453125;
+  float char_base_width = 0.453125;
   return (RowCol) {
-    .col = char_base_widh * font_size,
+    .col = char_base_width * font_size,
     .row = font_size
   };
 }
