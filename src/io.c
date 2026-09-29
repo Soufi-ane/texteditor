@@ -702,12 +702,11 @@ void search_files_in_dir(Editor *e, String *dir_path, bool reset){
     dir_name[0] == '.' || !strcmp(dir_name, "node_modules") ||
     !strcmp(dir_name, "target") || !strcmp(dir_name, "build")
   ) return;
-  printf("search_files_in_dir(%s)\n", dir_path->data);
   DIR *dir;
   struct dirent *entry;
   dir = opendir(dir_path->data);
   if(dir == NULL){
-    printf("Coundn't open dir %s\n", dir_path);
+    printf("Coundn't open dir %s\n", dir_path->data);
     return;
   }
   if(reset) e->exp->s_matches->len = 0;
@@ -727,6 +726,7 @@ void search_files_in_dir(Editor *e, String *dir_path, bool reset){
       }
     }
   }
+  closedir(dir);
 }
 
 void read_dir_files(Editor *e, char *dir_path){
