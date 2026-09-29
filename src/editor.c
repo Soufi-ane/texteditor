@@ -211,7 +211,7 @@ void filter_cmds_by_prompt(Editor *e){
       continue;
     }
 
-    bool is_match = str_includes(string(default_cmds[i].text), e->prompt);
+    bool is_match = str_includes(string(default_cmds[i].text), e->prompt, false);
     if(is_match){
       e->displayed_cmds[index++] = i;
     }

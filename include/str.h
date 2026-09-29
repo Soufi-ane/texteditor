@@ -41,4 +41,6 @@ size_t last_index_of(String *str, char c);
 
 Ranges *new_ranges(size_t cap);
 
+bool str_includes(String *str, String *sub_str, bool check_case);
+
 #endif

@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "str.h"
 
 String *new_str(size_t cap){
@@ -116,4 +117,21 @@ Ranges *new_ranges(size_t cap){
 void replace_char(String *str, size_t index, char new_char){
   if(index < 0 || index > str->len - 1 || str == NULL) return;
   str->data[index] = new_char;
+}
+
+bool str_includes(String *str, String *sub_str, bool check_case){
+  if(!check_case){
+    str = lower_case(str);
+    sub_str = lower_case(sub_str);
+  }
+  size_t i, j;
+  for(i = 0; i < str->len; i++) {
+    if(str->data[i] == sub_str->data[0]) {
+      for(j = 1; (j < sub_str->len && i < str->len - 1); j++, i++){
+        if(sub_str->data[j] != str->data[i + 1]) break;
+      }
+      if(j >= sub_str->len) return true;
+    }
+  }
+  return false;
 }

@@ -7,8 +7,6 @@ bool load_font_default(Editor *e, FontData *font_data);
 
 void read_file(Editor* e, char const * file_path);
 
-bool str_includes(String *str, String *sub_str);
-
 void try_saving_file(Editor* e);
 
 const char *get_file_name_from_path(const char *path);

@@ -289,21 +289,6 @@ bool load_font_default(Editor *e, FontData *font_data){
   return true;
 }
 
-bool str_includes(String *str, String *sub_str){
-  str = lower_case(str);
-  sub_str = lower_case(sub_str);
-  size_t i, j;
-  for(i = 0; i < str->len; i++) {
-    if(str->data[i] == sub_str->data[0]) {
-      for(j = 1; (j < sub_str->len && i < str->len - 1); j++, i++){
-        if(sub_str->data[j] != str->data[i + 1]) break;
-      }
-      if(j >= sub_str->len) return true;
-    }
-  }
-  return false;
-}
-
 void copy_selection_to_clipboard(Editor *e){
   if(!e->conf.is_selecting) return;
   Buffer *buff = e->buffs->data[e->current_buff];
@@ -721,7 +706,7 @@ void search_files_in_dir(Editor *e, String *dir_path, bool reset){
     if(file.type == FT_DIR){
       search_files_in_dir(e, path, false);
     }else {
-      if(str_includes(string(entry->d_name), e->query)){
+      if(str_includes(string(entry->d_name), e->query, false)){
         da_append(e->exp->s_matches, file);
       }
     }
