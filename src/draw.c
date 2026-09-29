@@ -291,72 +291,76 @@ void udpate_explorer_size(Editor *e){
 
 void DrawFileInput(Editor *e, bool is_blinking){
   Buffer *buff = e->buffs->data[e->current_buff];
-  RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
+  Font font = e->conf.font_secondary_data.font;
+  int font_size = e->conf.font_secondary_data.size;
+  float max_char_w = get_max_char_w(font);
+  // RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   float input_w = e->s_width / 2;
-  float input_h = char_size.row * 2;
+  float input_h = font_size * 2;
   Rectangle input = {
     e->s_width / 2 - input_w / 2,
     e->s_height / 5, input_w, input_h
   };
   DrawRectangleRec(input, GetColor(e->conf.bg_color));
   DrawRectangleLinesEx(input, 2, GetColor(e->conf.text_color));
-  size_t text_x = input.x + (e->exp->input->len + 1) * char_size.col;
-  size_t d_start = text_x >= (input.x + input.width) - char_size.col * 3 ?
-    (text_x - input.x - input_w + char_size.col * 3) / char_size.col : 0;
+  size_t text_end = input.x + max_char_w
+    + MeasureTextEx(font, e->exp->input->data, font_size, 0).x;
+  size_t d_start = 0;
+  while(text_end >= (input.x + input.width) - max_char_w * 2){
+    d_start++;
+    text_end = input.x + max_char_w 
+      + MeasureTextEx(font, &e->exp->input->data[d_start], font_size, 0).x;
+  } 
 
-  float label_w = MeasureTextEx(
-    e->conf.font_secondary_data.font, e->exp->label->data, 
-    e->conf.font_secondary_data.size, 0
-  ).x;
+  float label_w = MeasureTextEx(font, e->exp->label->data, font_size, 0).x;
 
   Rectangle label_box = {
-    input.x, input.y - char_size.row * 1.5,
-    input_w, char_size.row * 1.5
+    input.x, input.y - font_size * 1.5,
+    input_w, font_size * 1.5
   };
 
   DrawRectangleRec(label_box, GetColor(e->conf.bg_color));
   DrawTextEx(
-    e->conf.font_secondary_data.font, e->exp->label->data,
+    font, e->exp->label->data,
     (Vector2){
       e->s_width / 2 - label_w / 2,
-      input.y - char_size.row * 1.25
+      input.y - font_size * 1.25
     },
-    e->conf.font_secondary_data.size, 0,
+    font_size, 0,
     GetColor(e->conf.text_color)
   );
-
   DrawCursor(
-    e, text_x - d_start * char_size.col,
-    input.y + char_size.row / 2,
+    e, text_end,
+    input.y + font_size / 2,
     is_blinking ? 0x00000000 : buff->cursor.color, false
   );
   if(e->exp->input->len){
     DrawTextEx(
-      e->conf.font_secondary_data.font, &e->exp->input->data[d_start],
+      font, &e->exp->input->data[d_start],
       (Vector2){
-        input.x + char_size.col,
-        input.y + char_size.row / 2
+        input.x + max_char_w,
+        input.y + font_size / 2
       },
-      e->conf.font_secondary_data.size, 0,
+      font_size, 0,
       GetColor(e->conf.text_color)
     );
   }else {
     DrawTextCodepoint(
-      e->conf.font_secondary_data.font, e->exp->placeholder->data[0],
+      font, e->exp->placeholder->data[0],
       (Vector2){
-        input.x + char_size.col,
-        input.y + char_size.row / 2
+        input.x + max_char_w,
+        input.y + font_size / 2
       },
-      e->conf.font_secondary_data.size,
+      font_size,
       GetColor(is_blinking ? e->conf.line_numbers_color : e->conf.under_cursor_color)
     );
     DrawTextEx(
-      e->conf.font_secondary_data.font, &e->exp->placeholder->data[1],
+      font, &e->exp->placeholder->data[1],
       (Vector2){
-        input.x + char_size.col * 2,
-        input.y + char_size.row / 2
+        input.x + max_char_w * 2,
+        input.y + font_size / 2
       },
-      e->conf.font_secondary_data.size, 0,
+      font_size, 0,
       GetColor(e->conf.line_numbers_color)
     );
   }
@@ -397,8 +401,8 @@ void DrawExplorer(Editor *e, bool is_blinking){
   size_t y_offset = 0;
   size_t max_num_lines = get_max_num_lines(e);
   for(
-    size_t i = e->exp->files->d_start;
-    (i < d_files->len) && (i - e->exp->files->d_start < max_num_lines);
+    size_t i = d_files->d_start;
+    (i < d_files->len) && (i - d_files->d_start < max_num_lines);
     i++
   ){
     File file = d_files->data[i];
@@ -546,11 +550,9 @@ void DrawBufferText(Editor *e, bool is_blinking){
   for (
     i = buff->d_start;
     (i <= buff->s->len) && (cur_gui_index <= max_num_lines) ;
-    // && (cur_line_index < max_num_lines + 1);
     i++
   ) { 
 
-    // buff = e->buffs->data[e->current_buff];
     char c = text[i];
 
     char_index = index + buff->d_start;
