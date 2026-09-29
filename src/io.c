@@ -694,7 +694,10 @@ void sort_file_list(Files *files){
 
 void search_files_in_dir(Editor *e, String *dir_path, bool reset){
   const char *dir_name = get_file_name_from_path(dir_path->data);
-  if(dir_name[0] == '.') return;
+  if(
+    dir_name[0] == '.' || !strcmp(dir_name, "node_modules") ||
+    !strcmp(dir_name, "target") || !strcmp(dir_name, "build")
+  ) return;
   printf("search_files_in_dir(%s)\n", dir_path->data);
   DIR *dir;
   struct dirent *entry;
