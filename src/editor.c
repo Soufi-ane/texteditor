@@ -1432,7 +1432,7 @@ void new_message(Editor *e, const char *message, MessageType type){
   char time_buff[128];
   get_date_time(time_buff, sizeof(time_buff));
 
-  snprintf(log_msg, sizeof(log_msg), "%s - '%s': %s",time_buff, cur_buf->file_path, message);
+  snprintf(log_msg, sizeof(log_msg), "%s - '%s': %s", time_buff, cur_buf->file_path, message);
   Message msg = {
     .type = type,
     .text = strdup(message)
