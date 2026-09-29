@@ -229,9 +229,18 @@ bool is_selected(Editor *e, size_t index){
   }
 }
 
+size_t get_scroll_pad(Editor *e){
+  size_t max_lines = get_max_num_lines(e);
+  if(e->conf.scroll_pad > max_lines / 2){
+    return max_lines / 2;
+  }
+  return e->conf.scroll_pad;
+}
+
 void scroll_up(Editor *e, size_t count){
+  size_t scroll_pad = get_scroll_pad(e);
   size_t max_num_lines = get_max_num_lines(e);
-  if(cur_buf->lines->len - 1 <= max_num_lines - e->conf.scroll_pad) return;
+  if(cur_buf->lines->len - 1 <= max_num_lines - scroll_pad) return;
   cur_buf->d_start = seek_forward_by_lines(cur_buf, cur_buf->d_start, 1);
   cur_buf->num_prev_lines = get_count_prev_lines(cur_buf->s, cur_buf->d_start);
 }
@@ -286,14 +295,15 @@ size_t get_prev_line_start(String *str, size_t index){
 }
 
  void update_scroll(Editor *e, size_t index, bool center_line, bool is_up){
+  size_t scroll_pad = get_scroll_pad(e);
   size_t max = get_max_num_lines(e);
   size_t wraps = get_lines_wraps(e, 0, max);
   size_t max_lines = max - wraps;
-  size_t top_pad_start = seek_forward_by_lines(cur_buf, cur_buf->d_start, e->conf.scroll_pad);
-  size_t bot_pad_start = seek_forward_by_lines(cur_buf, cur_buf->d_start, max - wraps - e->conf.scroll_pad);
+  size_t top_pad_start = seek_forward_by_lines(cur_buf, cur_buf->d_start, scroll_pad);
+  size_t bot_pad_start = seek_forward_by_lines(cur_buf, cur_buf->d_start, max - wraps - scroll_pad);
   size_t new_first = cur_buf->d_start;
   if(index < top_pad_start){
-    new_first = seek_back_by_lines(cur_buf, index, e->conf.scroll_pad);
+    new_first = seek_back_by_lines(cur_buf, index, scroll_pad);
   }
   else if(index > bot_pad_start){
     size_t gui_end = cur_buf->lines->data[cur_buf->lines->len - 1].end;
@@ -301,7 +311,7 @@ size_t get_prev_line_start(String *str, size_t index){
       size_t offset = get_num_lines(cur_buf->s, bot_pad_start, index);
       new_first = seek_forward_by_lines(cur_buf, cur_buf->d_start, offset);
     }else {
-      new_first = seek_back_by_lines(cur_buf, index, max - e->conf.scroll_pad);
+      new_first = seek_back_by_lines(cur_buf, index, max - scroll_pad);
     }
   } else {
   } 
@@ -452,14 +462,16 @@ void handle_caps_lock_and_escape(Editor* e){
 }
 
 void move_cursor_up(Editor* e){
-  if(cur_buf->cursor.pos.row > 0){
+  if(cur_buf->cur_li > 0){
     size_t max_lines = get_max_num_lines(e);
     Line prev_line = cur_buf->lines->data[cur_buf->cur_li - 1];
     cur_buf->cursor.index = prev_line.start;
-    update_lines(e);
-    adapte_col_to_cur_line(e);
-    update_scroll(e, cur_buf->cursor.index, false, true);
+  }else {
+    cur_buf->cursor.index = seek_back_by_lines(cur_buf, cur_buf->cursor.index, 1);
   }
+  update_lines(e);
+  adapte_col_to_cur_line(e);
+  update_scroll(e, cur_buf->cursor.index, false, true);
   update_buf_state(e);
 }
 
@@ -1035,12 +1047,13 @@ void handle_insert_mode_keys(Editor* e,int c){
 }
 
 void move_up_explorer(Editor *e){
+  size_t scroll_pad = get_scroll_pad(e);
   Files *d_files = e->is_searching ? e->exp->s_matches : e->exp->files;
   size_t max_num_lines = get_max_num_lines(e);
   size_t old_start = d_files->d_start;
   if(e->exp->curr_file > 0){
     e->exp->curr_file--;
-    if(e->exp->curr_file - d_files->d_start < e->conf.scroll_pad) {
+    if(e->exp->curr_file - d_files->d_start < scroll_pad) {
       if(d_files->d_start) d_files->d_start--;
     } 
   } 
@@ -1048,8 +1061,8 @@ void move_up_explorer(Editor *e){
     e->exp->curr_file = d_files->len - 1;
     if(d_files->len > max_num_lines){
       d_files->d_start = d_files->len - max_num_lines;
-      if(d_files->d_start >= e->conf.scroll_pad){
-        d_files->d_start += e->conf.scroll_pad;
+      if(d_files->d_start >= scroll_pad){
+        d_files->d_start += scroll_pad;
       }
     }
   } 
@@ -1065,7 +1078,6 @@ void move_right_explorer(Editor *e){
     e->exp->curr_file = 0;
     d_files->d_start = 0;
   }else {
-    printf("move_right_explorer(%s)\n",cur_file.path->data);
     read_file(e, cur_file.path->data);
     e->exp->is_open = false;
   }
@@ -1085,6 +1097,7 @@ void move_left_explorer(Editor *e){
 }
 
 void move_down_explorer(Editor *e){
+  size_t scroll_pad = get_scroll_pad(e);
   Files *d_files = e->is_searching ? e->exp->s_matches : e->exp->files;
   size_t max_num_lines = get_max_num_lines(e);
   size_t old_start = d_files->d_start;
@@ -1094,9 +1107,9 @@ void move_down_explorer(Editor *e){
   } 
   else if(
     e->exp->curr_file >= 
-    (max_num_lines - e->conf.scroll_pad + d_files->d_start - 1)
+    (max_num_lines - scroll_pad + d_files->d_start - 1)
   ) {
-    d_files->d_start = e->exp->curr_file - max_num_lines + e->conf.scroll_pad + 1;
+    d_files->d_start = e->exp->curr_file - max_num_lines + scroll_pad + 1;
   } 
   if(old_start != d_files->d_start) udpate_explorer_size(e);
   update_buf_state(e);

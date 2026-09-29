@@ -383,6 +383,7 @@ ConfigKey get_config_key(Editor *e, char *key){
   if(!strcmp(key, "selection_fg"))           return SELECTION_FG;
   if(!strcmp(key, "search_bg"))              return SEARCH_BG;
   if(!strcmp(key, "search_fg"))              return SEARCH_FG;
+  if(!strcmp(key, "scroll_padding"))         return SCROLL_PAD;
   return UNKOWN_KEY;
 }
 
@@ -492,6 +493,9 @@ void try_setting_conf_number_value(Editor *e, ConfigKey key_type, char *value, s
         }
       }
       break;
+    case SCROLL_PAD:
+      e->conf.scroll_pad = number;
+      break;
   }
 }
 
@@ -590,7 +594,7 @@ void read_config_line(Editor *e, char *line, size_t len, size_t line_number){
   };
   ConfigKey num_keys[] =  {
     TAB_S, P_RIGHT, P_LEFT, P_BOTTOM, P_TOP, FONT_SIZE,
-    SECONDARY_FONT_SIZE
+    SECONDARY_FONT_SIZE, SCROLL_PAD
   };
   ConfigKey font_keys[] =  {
     FONT_PRIMARY, FONT_SECONDARY
