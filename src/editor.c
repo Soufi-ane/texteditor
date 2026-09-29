@@ -583,7 +583,8 @@ void handle_tab(Editor* e, bool is_shift_down) {
   if(!e->conf.is_menu_open){
     if(e->mode == INSERT || !e->conf.is_vim_mode){
       if(e->is_searching && e->exp->is_open){
-        move_down_explorer(e);
+        if(is_shift_down) move_up_explorer(e);
+        else move_down_explorer(e);
       }else {
         if(e->conf.is_spaces_for_tabs) {
           for(int i = 0; i < e->conf.tab_size; ++i)  {
@@ -863,6 +864,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case '/':
       e->s_ranges->len = 0;
+      e->exp->curr_file = 0;
       e->is_searching = true;
       e->mode = INSERT;
       free_str(e->query);
