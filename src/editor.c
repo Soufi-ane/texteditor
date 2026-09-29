@@ -69,7 +69,7 @@ void update_lines(Editor *e){
   ){
     char c = cur_buf->s->data[i];
     
-    if((x_offset) >= max_len) {
+    if((x_offset) > max_len) {
       y_offset++;
       x_offset = 0;
       line.wraps++;
@@ -82,7 +82,8 @@ void update_lines(Editor *e){
         i + word_len < cur_buf->s->len &&
         !isspace(cur_buf->s->data[i + word_len++])
       );
-      if((x_offset + word_len - 1) > max_len){
+      if((x_offset + word_len) > max_len + 1){
+        printf("%zu :: x_offset + word_len =  %zu, max = %zu\n", y_offset, x_offset + word_len, max_len);
         x_offset = 0;
         y_offset++;
         line.wraps++;
