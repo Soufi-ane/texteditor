@@ -381,6 +381,8 @@ ConfigKey get_config_key(Editor *e, char *key){
   if(!strcmp(key, "status_line_bg"))         return STATUS_LINE_BG;
   if(!strcmp(key, "selection_bg"))           return SELECTION_BG;
   if(!strcmp(key, "selection_fg"))           return SELECTION_FG;
+  if(!strcmp(key, "search_bg"))              return SEARCH_BG;
+  if(!strcmp(key, "search_fg"))              return SEARCH_FG;
   return UNKOWN_KEY;
 }
 
@@ -431,6 +433,12 @@ void try_setting_conf_color_value(Editor *e, ConfigKey key_type, char *hex, size
       break;
     case SELECTION_FG:
       e->conf.selection_fg = color;
+      break;
+    case SEARCH_BG:
+      e->conf.search_bg = color;
+      break;
+    case SEARCH_FG:
+      e->conf.search_fg = color;
       break;
   }
 }
@@ -578,7 +586,7 @@ void read_config_line(Editor *e, char *line, size_t len, size_t line_number){
   ConfigKey col_keys[] =  {
     BG_COL, TXT_COL, CURSOR_COL, UNDER_CURSOR_COL, LN_COL,
     LINES_COL, LINE_HIGHLIGHT_COL, STATUS_LINE_FG, STATUS_LINE_BG,
-    SELECTION_BG, SELECTION_FG
+    SELECTION_BG, SELECTION_FG, SEARCH_BG, SEARCH_FG
   };
   ConfigKey num_keys[] =  {
     TAB_S, P_RIGHT, P_LEFT, P_BOTTOM, P_TOP, FONT_SIZE,

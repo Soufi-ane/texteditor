@@ -1525,6 +1525,8 @@ Editor *init_editor(){
     .selection_bg          = 0x383838FF,
     .selection_fg          = 0xE8E8E8FF,
     .line_highlight_color  = 0x383737FF,
+    .search_bg             = 0xFF0000FF,
+    .search_fg             = 0X000000FF,
     .is_menu_open          = false,
     .is_vim_mode           = true,
     .is_line_highlight     = true,

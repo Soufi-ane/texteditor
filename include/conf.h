@@ -50,7 +50,8 @@ typedef enum {
   P_LEFT, P_RIGHT,
   VIM_M,
   STATUS_LINE_FG, STATUS_LINE_BG,
-  SELECTION_BG, SELECTION_FG
+  SELECTION_BG, SELECTION_FG,
+  SEARCH_BG, SEARCH_FG
 } ConfigKey;
 
 typedef struct {
@@ -74,7 +75,6 @@ typedef struct {
   unsigned char* font_file;
   int file_size;
 } FontData ;
-
 
 typedef struct {
   bool is_opening_file;
@@ -105,6 +105,8 @@ typedef struct {
   unsigned int selection_fg;
   unsigned int selected_char_color;
   unsigned int line_highlight_color;
+  unsigned int search_bg;
+  unsigned int search_fg;
   size_t line_height;
   size_t letter_spacing;
   size_t scroll_pad;

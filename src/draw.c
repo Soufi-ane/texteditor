@@ -692,30 +692,33 @@ void DrawBufferText(Editor *e, bool is_blinking){
       );
 
     }
-    if(e->is_searching){
-      for(size_t x = 0; x < e->s_ranges->len; x++){
-        Range r = e->s_ranges->data[x];
-        if(char_index >= r.start && char_index <= r.end)
-        DrawCursor(e, char_pos.x, char_pos.y, 0xFF0000FF, true);
-      }
-    }
     if(c_selected && char_index != buff->cursor.index) {
       if(!e->exp->is_open && !e->is_searching)
       DrawCursor(e, char_pos.x , char_pos.y, e->conf.selection_bg, true);
     }
 
+    bool is_match = false;
+    if(e->is_searching){
+      for(size_t x = 0; x < e->s_ranges->len; x++){
+        Range r = e->s_ranges->data[x];
+        if(char_index >= r.start && char_index <= r.end){
+          is_match = true;
+          DrawCursor(e, char_pos.x, char_pos.y, e->conf.search_bg, true);
+        }
+      }
+    }
     DrawTextEx(
       e->conf.font_data.font, TextFormat("%c", c),
       char_pos, e->conf.font_data.size,
       0.0f,
       GetColor(
-        c_selected ? e->conf.selection_fg :
-        (
-          (char_index == buff->cursor.index && 
+        is_match ? e->conf.search_fg : 
+        ( c_selected ? e->conf.selection_fg :
+        ((char_index == buff->cursor.index && 
           !is_blinking && !e->exp->is_open && !e->is_searching) ? 
           e->conf.under_cursor_color:
           e->conf.text_color
-        )
+        ))
       )
     );
 
