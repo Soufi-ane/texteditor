@@ -1212,7 +1212,6 @@ void handle_enter(Editor* e){
       update_scroll(e, cur_buf->cursor.index, false, true);
       update_lines(e);
     }else{
-      if(e->mode == INSERT)
       add_char_to_cur_buf(e, '\n', cur_buf->cursor.index);
     }
   }else {
