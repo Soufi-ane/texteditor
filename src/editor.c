@@ -1017,6 +1017,9 @@ void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
   if(IsKeyPressed(KEY_R)){
     redo(e);
   }
+  if(IsKeyPressed(KEY_B)) {
+    toggle_explorer(e);
+  }
 }
 
 void handle_insert_mode_keys(Editor* e,int c){

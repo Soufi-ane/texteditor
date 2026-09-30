@@ -276,7 +276,6 @@ bool is_font_mono(Font font){
   for(int i = first_valid_index + 1; i < font.glyphCount; i++){
     if(abs(font.glyphs[i].advanceX - first) > 1) return false;
   }
-  printf("mono\n");
   return true;
 }
 
