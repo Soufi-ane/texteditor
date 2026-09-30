@@ -183,11 +183,14 @@ void DrawStatusLine(Editor *e, bool is_blinking){
 
   if(buff->msg_index > -1) return;
 
+  const char *mode_str = get_mode_str(e->mode, e->conf.is_selecting);
+  float mode_str_x = e->s_width - max_char_w - MeasureTextEx(font, mode_str, font_size, 0).x;
+
   if(e->conf.is_vim_mode){
     DrawTextEx(
-      font, get_mode_str(e->mode, e->conf.is_selecting),
+      font, mode_str,
       (Vector2){
-        e->s_width - (e->conf.letter_spacing + max_char_w) * 7,
+        mode_str_x,
         status_line.y
       },
       font_size, 
@@ -199,7 +202,9 @@ void DrawStatusLine(Editor *e, bool is_blinking){
   int row_span = get_digit_count(buff->num_prev_lines + buff->cur_li + 1);
   int col_span = get_digit_count(buff->cursor.index - cur_line.start + 1);
   int row_col_span = row_span + col_span + 1;
-  float row_col_x = e->s_width - (e->conf.letter_spacing + max_char_w) * (8 + row_col_span);
+  float row_col_x = 
+    (e->conf.is_vim_mode ? mode_str_x : e->s_width) 
+    - (row_col_span + 1) * max_char_w;
 
   DrawTextEx(
     font,
