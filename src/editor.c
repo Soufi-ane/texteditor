@@ -492,7 +492,8 @@ void adapte_col_to_cur_line(Editor *e){
   size_t len = cur_line.end - cur_line.start;
   if(len >= cur_buf->cursor.last_col + 1){
     cur_buf->cursor.index += cur_buf->cursor.last_col;
-  } else cur_buf->cursor.index = cur_line.end - (len ? 1 : 0);
+  } else cur_buf->cursor.index = 
+    cur_line.end - ((len && e->conf.is_vim_mode) ? 1 : 0);
 }
 
 void move_to_beginning_of_line(Editor* e) {
