@@ -744,20 +744,22 @@ void handle_backspace(Editor* e) {
   update_buf_state(e);
 }
 
+void handle_create_new_file(Editor *e){
+  free_str(e->exp->label);
+  free_str(e->exp->placeholder);
+  e->exp->label = string("Directories end with '/'");
+  e->exp->placeholder = string("Name");
+  e->mode = INSERT;
+  e->exp->is_creating_file = true;
+}
+
 void handle_normal_mode_keys(Editor* e, int c){
   switch(c){
     case 'G':
       move_to_last_line(e);
       break;
     case 'a':
-      if(e->exp->is_open){
-        free_str(e->exp->label);
-        free_str(e->exp->placeholder);
-        e->exp->label = string("Directories end with '/'");
-        e->exp->placeholder = string("Name");
-        e->mode = INSERT;
-        e->exp->is_creating_file = true;
-      } 
+      if(e->exp->is_open) handle_create_new_file(e);
       else handle_append(e);
       break;
     case 'i':
@@ -998,7 +1000,13 @@ void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
     move_to_last_line(e);
   }
   if(IsKeyPressed(KEY_N)){
-    go_to_next_buffer(e);
+    if(e->exp->is_open) handle_create_new_file(e);
+    else go_to_next_buffer(e);
+  }
+  if(IsKeyPressed(KEY_D)){
+    if(e->exp->is_open && e->exp->files->len){
+      handle_explorer_delete(e);
+    }
   }
   if(IsKeyPressed(KEY_P)){
     go_to_prev_buffer(e);
@@ -1341,6 +1349,16 @@ void handle_keys(Editor* e){
 
 // enter 
   else if (IsKeyPressed(KEY_ENTER)) handle_enter(e);
+
+// del
+  else if(IsKeyPressed(KEY_DELETE)){
+    if(e->exp->is_open && e->exp->files->len){
+      handle_explorer_delete(e);
+    }
+    else if(e->conf.is_selecting && !e->conf.is_vim_mode) {
+      handle_delete_selection(e);
+    } 
+  }
 
 //escape & capslock
   else if (IsKeyPressed(KEY_ESCAPE) || (IsKeyPressed(KEY_CAPS_LOCK) && e->conf.caps_lock_as_escape)) {
