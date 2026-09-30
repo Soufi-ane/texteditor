@@ -32,9 +32,14 @@ Configuration:
   in the file!
   Comments starting with '#' are ignored
 
-Command line:
-  -v                  : Show the version
-  <file> / -f <file>  : open a file
+Command line 
+
+  Arguments:
+    <file>       : open a file
+    <directory>  : open a directory
+
+  Options:
+    -v           : Show the version
 
 Bugs:
 
