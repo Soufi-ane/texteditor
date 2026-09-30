@@ -253,6 +253,33 @@ void try_saving_file(Editor* e){
   }
 }
 
+bool is_font_mono(Font font){
+  if(font.glyphCount < 95) return false;
+  int first = 0, first_valid_index = 0;
+  int idx_A = 'A' - 32;
+  int idx_Q = '?' - 32;
+  if(
+    font.glyphs[idx_A].image.width == font.glyphs[idx_Q].image.width &&
+    font.glyphs[idx_A].image.height == font.glyphs[idx_Q].image.height &&
+    font.glyphs[idx_A].advanceX == font.glyphs[idx_Q].advanceX
+  ){
+    return false;
+  }
+  for(int i = 0; i < font.glyphCount; i++){
+    if(font.glyphs[i].advanceX != 0) {
+      first = font.glyphs[i].advanceX;
+      first_valid_index = i;
+      break;
+    };
+  }
+  if(first == 0) return false;
+  for(int i = first_valid_index + 1; i < font.glyphCount; i++){
+    if(abs(font.glyphs[i].advanceX - first) > 1) return false;
+  }
+  printf("mono\n");
+  return true;
+}
+
 bool load_font_default(Editor *e, FontData *font_data){
   if(!font_data) return false;
   if(!font_data->is_file_loaded){
@@ -267,6 +294,10 @@ bool load_font_default(Editor *e, FontData *font_data){
 	font.baseSize = (int) font_data->size;
 	font.glyphCount = 95;
 	font.glyphs = LoadFontData(font_data->font_file, font_data->file_size, (int) font_data->size, 0, 95, FONT_DEFAULT);
+  if(!is_font_mono(font)) {
+    printf("Font is not monospaced\n");
+    return false;
+  } 
   if (font.glyphs == NULL) return false;
 	Image atlas = GenImageFontAtlas(font.glyphs, &font.recs, 95, (int) font_data->size, 0, 1);
   if (font.recs == NULL || atlas.data == NULL || atlas.width <= 0 || atlas.height <= 0) {
@@ -498,6 +529,7 @@ void try_loading_new_font(Editor *e, char *path, size_t n_line, bool is_primary)
     if(is_primary) e->conf.font_data = old;
     else e->conf.font_secondary_data = old;
     new_message( e, TextFormat("Failed to load font at config: %zu", n_line), ERROR);
+    exit(1);
   }
 }
 

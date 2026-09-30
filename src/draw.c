@@ -7,6 +7,14 @@
 Vector2 press_start_pos = {0};
 double last_press_time = 0.0f;
 
+int get_max_char_w(Font font){
+  int max = 0;
+  for(int i = 0; i < font.glyphCount; i++){
+    if(font.recs[i].width > max) max = font.recs[i].width;
+  }
+  return max;
+}
+
 const char *get_mode_str(Mode mode, bool is_selecting){
   switch (mode) {
     case NORMAL :
@@ -18,20 +26,26 @@ const char *get_mode_str(Mode mode, bool is_selecting){
 }
 
 void DrawCursor(Editor* e, int x, int y, unsigned int color, bool is_primary){
-  RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
+  Font font = is_primary ? e->conf.font_data.font : e->conf.font_secondary_data.font;
+  int font_size = is_primary ? e->conf.font_data.size : e->conf.font_secondary_data.size;
+  int max_w = get_max_char_w(font);
+  // RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   DrawRectangle(
-    x, y, 
-    is_primary ? e->buffs->data[e->current_buff]->cursor.width
+    x, y, max_w, font_size,
+    /* is_primary ? e->buffs->data[e->current_buff]->cursor.width
     : char_size.col,
     is_primary ? e->buffs->data[e->current_buff]->cursor.height
-    : char_size.row,
+    : char_size.row, */
     GetColor(color)
   );
 }
 
 void DrawMenu(Editor * e){
+  Font font = e->conf.font_secondary_data.font;
+  int font_size = e->conf.font_secondary_data.size;
+  int max_char_w = get_max_char_w(font);
   Buffer *buff = e->buffs->data[e->current_buff];
-  RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
+  // RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   Padding pad = e->conf.padding;
     
   float menu_w = (float) e->s_width / 2;
@@ -42,7 +56,7 @@ void DrawMenu(Editor * e){
     menu_w, menu_h
   };
   Rectangle search_underline = {
-    menu_rec.x, menu_rec.y + 2 * char_size.row,
+    menu_rec.x, menu_rec.y + 2 * font_size,
     menu_rec.width, 2
   };
 
@@ -53,25 +67,25 @@ void DrawMenu(Editor * e){
   DrawRectangleRec(search_underline, GRAY);
 
 
-  float char_w = MeasureTextEx(e->conf.font_data.font, "c", e->conf.font_secondary_data.size, 0).x;
-  int text_end_x = (float) e->s_width / 4 + 2 * (e->conf.letter_spacing + char_size.col)
-  + ((e->conf.letter_spacing + char_size.col) * e->prompt->len);
-  int cursor_x = (float) e->s_width / 4 + (2 + e->prompt->len) * (e->conf.letter_spacing + char_size.col);
-  if(cursor_x > menu_rec.x + menu_rec.width - 2 * (e->conf.letter_spacing + char_size.col)){
-    cursor_x = menu_rec.x + menu_rec.width - 2 * (e->conf.letter_spacing + char_size.col);
+  float char_w = MeasureTextEx(font, "c", font_size, 0).x;
+  int text_end_x = (float) e->s_width / 4 + 2 * (e->conf.letter_spacing + max_char_w)
+  + ((e->conf.letter_spacing + max_char_w) * e->prompt->len);
+  int cursor_x = (float) e->s_width / 4 + (2 + e->prompt->len) * (e->conf.letter_spacing + max_char_w);
+  if(cursor_x > menu_rec.x + menu_rec.width - 2 * (e->conf.letter_spacing + max_char_w)){
+    cursor_x = menu_rec.x + menu_rec.width - 2 * (e->conf.letter_spacing + max_char_w);
   }
-  int cursor_y = (float) (e->s_height + 2 * char_size.row) / 4;
-  int max_displayed = (menu_rec.width - 4 * (e->conf.letter_spacing + char_size.col))
-    / (e->conf.letter_spacing + char_size.col);
+  int cursor_y = (float) (e->s_height + 2 * font_size) / 4;
+  int max_displayed = (menu_rec.width - 4 * (e->conf.letter_spacing + max_char_w))
+    / (e->conf.letter_spacing + max_char_w);
 
   if(!e->prompt->len) {
     DrawTextEx(
-      e->conf.font_secondary_data.font, "...",
+      font, "...",
       (Vector2){
-        (float) e->s_width / 4 + 3 * char_size.col,
+        (float) e->s_width / 4 + 3 * max_char_w,
         cursor_y
       },
-      e->conf.font_secondary_data.size, 0, GRAY
+      font_size, 0, GRAY
     );
   }
 
@@ -86,9 +100,9 @@ void DrawMenu(Editor * e){
     DrawTextCodepoint(
       e->conf.font_secondary_data.font, e->prompt->data[i],
       (Vector2){
-        e->s_width / 4 + 2 * (e->conf.letter_spacing + char_size.col) +
+        e->s_width / 4 + 2 * (e->conf.letter_spacing + max_char_w) +
         (e->prompt->len > max_displayed ? i - e->prompt->len + max_displayed : i)
-        * (e->conf.letter_spacing + char_size.col),
+        * (e->conf.letter_spacing + max_char_w),
         cursor_y,
       },
       e->conf.font_secondary_data.size,
@@ -101,24 +115,24 @@ void DrawMenu(Editor * e){
     float text_width = MeasureTextEx(e->conf.font_data.font, current_cmd.text, e->conf.font_secondary_data.size, 0).x;
 
     Rectangle cmd_box = {
-      menu_rec.x + 2, search_underline.y + i * (char_size.row * 1.7) + 2,
-      menu_rec.width - 4, char_size.row * 1.7
+      menu_rec.x + 2, search_underline.y + i * (font_size * 1.7) + 2,
+      menu_rec.width - 4, font_size * 1.7
     };
     if(cmd_box.y + cmd_box.height < menu_rec.y + menu_rec.height){
-      size_t max = (menu_rec.height - (search_underline.y - menu_rec.y)) / (char_size.row * 1.7);
+      size_t max = (menu_rec.height - (search_underline.y - menu_rec.y)) / (font_size * 1.7);
       if(max < e->num_cmds_displayed) e->num_cmds_displayed = max;
     }
     if(i == e->selected_cmd)
       DrawRectangleRec(cmd_box, GetColor(0x333738FF));
 
     Color txt_color = i == e->selected_cmd ? WHITE : GRAY;
-    float txt_y_pos = search_underline.y + 15 + i * (char_size.row * 1.7);
+    float txt_y_pos = search_underline.y + 15 + i * (font_size * 1.7);
 
 
     DrawTextEx(
-      e->conf.font_secondary_data.font, current_cmd.text,
-      (Vector2){ menu_rec.x + 2 * char_size.col, txt_y_pos }, 
-      e->conf.font_secondary_data.size, 0, txt_color 
+      font, current_cmd.text,
+      (Vector2){ menu_rec.x + 2 * max_char_w, txt_y_pos }, 
+      font_size, 0, txt_color 
     );
   }
 }
@@ -135,8 +149,10 @@ unsigned int get_msg_color(Editor *e, MessageType type){
 }
 
 void DrawCurrentMessage(Editor *e) {
+  Font font = e->conf.font_secondary_data.font;
+  int font_size = e->conf.font_secondary_data.size;
   Buffer *buff = e->buffs->data[e->current_buff];
-  RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
+  // RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   if(buff->msg_index > e->msgs.len - 1) return;
   Message msg = e->msgs.data[buff->msg_index];
   if(!strlen(msg.text)) return;
@@ -145,18 +161,10 @@ void DrawCurrentMessage(Editor *e) {
     e->conf.font_secondary_data.font, msg.text,
     (Vector2){
       e->conf.padding.left, 
-      e->s_height - (char_size.row + 4)
+      e->s_height - (font_size + 4)
     },
     e->conf.font_secondary_data.size, 0, color
   ); 
-}
-
-int get_max_char_w(Font font){
-  int max = 0;
-  for(int i = 0; i < font.glyphCount; i++){
-    if(font.recs[i].width > max) max = font.recs[i].width;
-  }
-  return max;
 }
 
 void DrawStatusLine(Editor *e, bool is_blinking){
@@ -241,26 +249,29 @@ void DrawStatusLine(Editor *e, bool is_blinking){
   }
 }
 
-RowCol get_char_size(float font_size){
+/* RowCol get_char_size(float font_size){
   float char_base_width = 0.453125;
   return (RowCol) {
     .col = char_base_width * font_size,
     .row = font_size
   };
-}
+} */
 
 void DrawChar(Editor *e, int c, int x_pos, int y_pos, unsigned int color, float font_size){
   DrawTextCodepoint(e->conf.font_data.font, c, (Vector2){x_pos, y_pos}, font_size, GetColor(color));
 }
 
 void DrawEditorLines(Editor *e){
+  Font font = e->conf.font_data.font;
+  int font_size = e->conf.font_data.size;
+  float max_char_w = get_max_char_w(font);
   Buffer *buff = e->buffs->data[e->current_buff];
   Padding pad = e->conf.padding;
-  RowCol char_size = get_char_size(e->conf.font_data.size);
+  // RowCol char_size = get_char_size(e->conf.font_data.size);
 
   for (int l = 0; l < get_max_num_lines(e); l++) {
     int y_pos = pad.top + buff->cursor.height + l * (e->conf.line_height + buff->cursor.height);
-    int x_pos = e->conf.padding.left + (e->conf.ln_padding + 1) * (char_size.col + e->conf.letter_spacing);
+    int x_pos = e->conf.padding.left + (e->conf.ln_padding + 1) * (max_char_w + e->conf.letter_spacing);
     DrawLineEx(
       (Vector2){x_pos, y_pos}, 
       (Vector2){e->s_width - (e->conf.padding.right), y_pos}, 3.0f,
@@ -270,7 +281,10 @@ void DrawEditorLines(Editor *e){
 }
 
 void udpate_explorer_size(Editor *e){
-  RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
+  Font font = e->conf.font_secondary_data.font;
+  int font_size = e->conf.font_secondary_data.size;
+  float max_char_w = get_max_char_w(font);
+  // RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   size_t max_num_lines = get_max_num_lines(e);
   e->exp->max_w = e->s_width / 3;
   for(
@@ -280,7 +294,7 @@ void udpate_explorer_size(Editor *e){
   ){
     File file = e->exp->files->data[i];
     const char *file_name = get_file_name_from_path(file.path->data);
-    size_t text_w = strlen(file_name) * char_size.col;
+    size_t text_w = strlen(file_name) * max_char_w;
     if(text_w > e->exp->max_w){
       if(text_w < (2 * e->s_width / 3)){
         e->exp->max_w = text_w + e->conf.padding.left * 2;
@@ -389,12 +403,16 @@ void DrawExplorer(Editor *e, bool is_blinking){
   Files *d_files = (e->is_searching && e->query->len) ?
       e->exp->s_matches : e->exp->files;
   Padding pad = e->conf.padding;
-  RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
+  Buffer *buff = e->buffs->data[e->current_buff];
+  Font font = e->conf.font_secondary_data.font;
+  int font_size = e->conf.font_secondary_data.size;
+  float max_char_w = get_max_char_w(font);
+  // RowCol char_size = get_char_size(e->conf.font_secondary_data.size);
   Rectangle explorer = {
-    0, pad.top, e->s_width / 3, e->s_height - (char_size.row + pad.top)
+    0, pad.top, e->s_width / 3, e->s_height - (font_size + pad.top)
   };
   Rectangle separator = {
-    e->exp->max_w, pad.top, 2, e->s_height - (char_size.row + pad.top)
+    e->exp->max_w, pad.top, 2, e->s_height - (font_size + pad.top)
   };
   DrawRectangleRec(explorer, GetColor(e->conf.bg_color));
   DrawRectangleRec(separator, GetColor(e->conf.line_numbers_color));
@@ -409,15 +427,15 @@ void DrawExplorer(Editor *e, bool is_blinking){
     const char *file_name = get_file_name_from_path(file.path->data);
     String *dis_name = string(file_name);
     size_t file_name_len = strlen(file_name);
-    size_t text_w = file_name_len * char_size.col;
+    size_t text_w = file_name_len * max_char_w;
     bool is_too_long = text_w > e->exp->max_w;
     if(is_too_long){
-      dis_name->len -= (pad.left * 2 + text_w - e->exp->max_w) / char_size.col + 4;
+      dis_name->len -= (pad.left * 2 + text_w - e->exp->max_w) / max_char_w + 4;
       dis_name->data[dis_name->len] = 0;
     }
     Rectangle file_rec = {
-      0, y_offset * char_size.row + pad.top * 2,
-      e->exp->max_w, char_size.row
+      0, y_offset * font_size + pad.top * 2,
+      e->exp->max_w,font_size 
     };
     DrawRectangleRec(
       file_rec,
@@ -434,7 +452,7 @@ void DrawExplorer(Editor *e, bool is_blinking){
   if(!d_files->len){
     Rectangle file_rec = {
       0, pad.top * 2,
-      e->exp->max_w, char_size.row
+      e->exp->max_w, font_size
     };
     DrawRectangleRec(
       file_rec,
@@ -448,25 +466,33 @@ void DrawExplorer(Editor *e, bool is_blinking){
 }
 
 void DrawLineNumber(Editor *e, size_t n, size_t y_offset){
-  RowCol char_size = get_char_size(e->conf.font_data.size);
+  // RowCol char_size = get_char_size(e->conf.font_data.size);
+  Buffer *buff = e->buffs->data[e->current_buff];
+  Font font = e->conf.font_data.font;
+  int font_size = e->conf.font_data.size;
+  float max_char_w = get_max_char_w(font);
   Padding pad = e->conf.padding;
   DrawTextEx(e->conf.font_data.font,
     TextFormat("%zu", n),
     (Vector2){
       pad.left + (e->exp->is_open ? e->exp->max_w : 0),
-      pad.top + (e->conf.line_height + char_size.row) * y_offset
+      pad.top + (e->conf.line_height + font_size) * y_offset
      },
-    e->conf.font_data.size, 0, GetColor(e->conf.line_numbers_color));
+    font_size, 0, GetColor(e->conf.line_numbers_color)
+  );
 }
 
 void DrawBufferText(Editor *e, bool is_blinking){
   Buffer *buff = e->buffs->data[e->current_buff];
   Padding pad = e->conf.padding;
-  RowCol char_size = get_char_size(e->conf.font_data.size);
+  Font font = e->conf.font_data.font;
+  int font_size = e->conf.font_data.size;
+  float max_char_w = get_max_char_w(font);
+  // RowCol char_size = get_char_size(e->conf.font_data.size);
   bool has_nums = e->conf.ln_mode != NONE;
   size_t i, index = 0, x_offset = 0, y_offset = 0, num_cariages = 0;
-  size_t total_char_w = e->conf.letter_spacing + char_size.col;
-  size_t total_char_h = e->conf.line_height + char_size.row;
+  size_t total_char_w = e->conf.letter_spacing + max_char_w;
+  size_t total_char_h = e->conf.line_height + font_size;
   size_t total_pl = pad.left + (e->exp->is_open ? e->exp->max_w : 0);
   if(has_nums) total_pl += (e->conf.ln_padding + 1) * total_char_w;
   size_t total_pt = pad.top;

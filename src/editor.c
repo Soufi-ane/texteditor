@@ -27,7 +27,7 @@ Cmd default_cmds[NUM_COMMANDS] = {
 };
 
 size_t get_max_line_length(Editor *e){ 
-  size_t char_width = get_char_size(e->conf.font_data.size).col;
+  int char_width = get_max_char_w(e->conf.font_data.font);
   size_t x_padding = e->conf.padding.left + e->conf.padding.right;
   if(e->conf.ln_mode != NONE) x_padding += e->conf.ln_padding * (e->conf.letter_spacing + char_width);
   return (e->s_width - x_padding) / (e->conf.letter_spacing + char_width); 
@@ -113,7 +113,7 @@ void update_lines(Editor *e){
 }
 
 size_t get_max_num_lines(Editor *e){ 
-  size_t char_height = get_char_size(e->conf.font_data.size).row;
+  size_t char_height = e->conf.font_data.size;
   size_t y_padding = e->conf.padding.top + e->conf.padding.bottom;
   return (e->s_height - y_padding) / (e->conf.line_height + char_height); 
 }

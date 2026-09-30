@@ -14,7 +14,7 @@ void DrawStatusLine(Editor *e, bool is_blinking);
 
 void DrawChar(Editor *e, int c, int x_pos, int y_pos, unsigned int color, float font_size);
 
-RowCol get_char_size(float font_size);
+int get_max_char_w(Font font);
 
 void DrawLineNumber(Editor *e, size_t i, size_t y_offset);
 
