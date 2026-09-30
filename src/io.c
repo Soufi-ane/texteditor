@@ -657,17 +657,13 @@ int try_loading_config(Editor *e){
 }
 
 void handle_cmd_args(Editor *e, int argc, char **argv){
-  if(argc > 3){
+  if(argc > 2){
     fprintf(stderr, "Too many args\n");
     exit(1);
   }
   if(argc > 1 && !strcmp(argv[1], "-v")){
     printf("texteditor: v%s\n", VERSION);
     exit(0);
-  }else if(argc > 2 && !strcmp(argv[1], "-f")){
-    read_file(e, argv[2]);
-  }else if(argc > 2 && !strcmp(argv[1], "-d")){
-    snprintf(e->base_dir, sizeof(e->base_dir), "%s", argv[2]);
   }
   else if(argc == 2){
     String *path = string(argv[1]);
