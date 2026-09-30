@@ -450,8 +450,8 @@ void handle_caps_lock_and_escape(Editor* e){
       e->conf.is_selecting = false;
     }
   }else {
-    e->conf.is_menu_open = !e->conf.is_menu_open;
-    e->prompt->len = 0;
+    if(!e->conf.is_menu_open) show_menu(e);
+    else e->conf.is_menu_open = false;
     filter_cmds_by_prompt(e);
   }
   if(cur_buf->cur_act != NULL) {
@@ -748,6 +748,7 @@ void handle_backspace(Editor* e) {
 }
 
 void handle_create_new_file(Editor *e){
+  e->conf.is_menu_open = false;
   free_str(e->exp->label);
   free_str(e->exp->placeholder);
   e->exp->label = string("Directories end with '/'");
@@ -766,6 +767,14 @@ void enter_search_mode(Editor *e){
   update_buf_state(e);
 }
 
+void show_menu(Editor *e){
+  e->conf.is_menu_open = true;
+  e->exp->is_creating_file = false;
+  e->conf.is_opening_file = false;
+  e->mode = INSERT;
+  e->prompt->len = 0;
+}
+
 void handle_normal_mode_keys(Editor* e, int c){
   switch(c){
     case 'G':
@@ -781,10 +790,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       e->conf.is_menu_open = false;
       break;
     case 'm':
-      e->conf.is_menu_open = true;
-      e->exp->is_creating_file = false;
-      e->conf.is_opening_file = false;
-      e->mode = INSERT;
+      show_menu(e);
       break;
     case '$':
       move_to_end_of_line(e);

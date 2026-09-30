@@ -344,4 +344,6 @@ void handle_explorer_delete(Editor *e);
 
 void update_curr_file(Editor * e);
 
+void show_menu(Editor *e);
+
 #endif
