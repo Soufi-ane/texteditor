@@ -753,6 +753,16 @@ void handle_create_new_file(Editor *e){
   e->exp->is_creating_file = true;
 }
 
+void enter_search_mode(Editor *e){
+  e->s_ranges->len = 0;
+  e->exp->curr_file = 0;
+  e->is_searching = true;
+  e->mode = INSERT;
+  free_str(e->query);
+  e->query = new_str(128);
+  update_buf_state(e);
+}
+
 void handle_normal_mode_keys(Editor* e, int c){
   switch(c){
     case 'G':
@@ -866,13 +876,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       undo(e);
       break;
     case '/':
-      e->s_ranges->len = 0;
-      e->exp->curr_file = 0;
-      e->is_searching = true;
-      e->mode = INSERT;
-      free_str(e->query);
-      e->query = new_str(128);
-      update_buf_state(e);
+      enter_search_mode(e);
       break;
     case 'n':
       go_to_next_match(e);
@@ -962,8 +966,7 @@ void delete_to_beginning_of_line(Editor *e){
 
 void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
   if(IsKeyPressed(KEY_F)) {
-    toggle_full_screen(e);
-    // update_scroll(e, true);
+    enter_search_mode(e);
   }
   if(IsKeyPressed(KEY_S)) try_saving_file(e);
 
@@ -1358,6 +1361,11 @@ void handle_keys(Editor* e){
     else if(e->conf.is_selecting && !e->conf.is_vim_mode) {
       handle_delete_selection(e);
     } 
+  }
+
+  else if(IsKeyPressed(KEY_F5)) {
+    toggle_full_screen(e);
+    update_scroll(e, cur_buf->cursor.index, false, false);
   }
 
 //escape & capslock
