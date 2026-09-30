@@ -729,7 +729,7 @@ void DrawBufferText(Editor *e, bool is_blinking){
             } 
           }
         }else if (is_x_big){
-          if(index == line.end - 1){
+          if(index == line.end){
             if(line.end - line.start < 1){
               handle_mouse_click(e, line.start, mouse_dragged);
             }else {
