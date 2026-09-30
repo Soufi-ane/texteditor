@@ -583,7 +583,7 @@ void go_to_prev_buffer(Editor *e){
 void handle_tab(Editor* e, bool is_shift_down) {
   if(!e->conf.is_menu_open){
     if(e->mode == INSERT || !e->conf.is_vim_mode){
-      if(e->is_searching && e->exp->is_open){
+      if(e->exp->is_open){
         if(is_shift_down) move_up_explorer(e);
         else move_down_explorer(e);
       }else {
@@ -594,7 +594,10 @@ void handle_tab(Editor* e, bool is_shift_down) {
         }
         else add_char_to_cur_buf(e, '\t', cur_buf->cursor.index);
       }
-    }else if(e->conf.is_vim_mode){
+    }else if(e->exp->is_open) {
+      if(is_shift_down) move_up_explorer(e);
+      else move_down_explorer(e);
+    }else {
       if(is_shift_down) go_to_prev_buffer(e);
       else go_to_next_buffer(e);
     }
@@ -1006,13 +1009,13 @@ void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
     if(e->exp->is_open) handle_create_new_file(e);
     else go_to_next_buffer(e);
   }
+  if(IsKeyPressed(KEY_P)){
+    go_to_prev_buffer(e);
+  }
   if(IsKeyPressed(KEY_D)){
     if(e->exp->is_open && e->exp->files->len){
       handle_explorer_delete(e);
     }
-  }
-  if(IsKeyPressed(KEY_P)){
-    go_to_prev_buffer(e);
   }
   if(IsKeyPressed(KEY_LEFT)){
     move_to_word_beginning(e);
