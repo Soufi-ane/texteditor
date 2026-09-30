@@ -778,7 +778,7 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'x':
       if(cur_buf->s->len){
-        str_remove_chars(cur_buf->s, cur_buf->cursor.index, 1);
+        remove_chars_cur_buf(e, cur_buf->cursor.index, 1);
       }
       break;
     case 'b':
