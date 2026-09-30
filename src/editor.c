@@ -1348,46 +1348,54 @@ void handle_keys(Editor* e){
   } 
   else if (IsKeyPressed(KEY_UP)) {
     long_press_time = GetTime();
-    move_cursor_up(e);
+    if(e->exp->is_open) move_up_explorer(e);
+    else move_cursor_up(e);
   }
   else if (IsKeyPressed(KEY_DOWN)) {
     long_press_time = GetTime();
-    move_cursor_down(e);
+    if(e->exp->is_open) move_down_explorer(e);
+    else move_cursor_down(e);
   }
   else if (IsKeyPressed(KEY_LEFT)) {
     long_press_time = GetTime();
-    move_cursor_left(e, 1);
+    if(e->exp->is_open) move_left_explorer(e);
+    else move_cursor_left(e, 1);
   }
   else if (IsKeyPressed(KEY_RIGHT)) {
     long_press_time = GetTime();
-    move_cursor_right(e, 1);
+    if(e->exp->is_open) move_right_explorer(e);
+    else move_cursor_right(e, 1);
   }
 
   if (IsKeyDown(KEY_LEFT)) {
     double now = GetTime();
     if(now - long_press_time > LONG_PRESS_DELAY){
-      move_cursor_left(e, 1);
+      if(e->exp->is_open) move_left_explorer(e);
+      else move_cursor_left(e, 1);
       long_press_time = now - (LONG_PRESS_DELAY - REPEAT_RATE);
     }
   }
   else if (IsKeyDown(KEY_RIGHT)) {
     double now = GetTime();
     if(now - long_press_time > LONG_PRESS_DELAY){
-      move_cursor_right(e, 1);
+      if(e->exp->is_open) move_right_explorer(e);
+      else move_cursor_right(e, 1);
       long_press_time = now - (LONG_PRESS_DELAY - REPEAT_RATE);
     }
   }
   else if (IsKeyDown(KEY_UP)) {
     double now = GetTime();
     if(now - long_press_time > LONG_PRESS_DELAY){
-      move_cursor_up(e);
+      if(e->exp->is_open) move_up_explorer(e);
+      else move_cursor_up(e);
       long_press_time = now - (LONG_PRESS_DELAY - REPEAT_RATE);
     }
   }
   else if (IsKeyDown(KEY_DOWN)) {
     double now = GetTime();
     if(now - long_press_time > LONG_PRESS_DELAY){
-      move_cursor_down(e);
+      if(e->exp->is_open) move_down_explorer(e);
+      else move_cursor_down(e);
       long_press_time = now - (LONG_PRESS_DELAY - REPEAT_RATE);
     }
   }
