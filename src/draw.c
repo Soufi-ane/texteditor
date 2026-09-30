@@ -603,6 +603,99 @@ void DrawBufferText(Editor *e, bool is_blinking){
       DrawCursor(e, char_pos.x, char_pos.y, e->conf.selection_bg, true);
     }
     if(i == buff->s->len) break;
+    if(c == '\n'){
+      y_offset++;
+      x_offset = 0;
+      index++;
+      if(e->conf.ln_mode != NONE) {
+        bool is_after = ++cur_gui_index > buff->cur_li;
+        size_t line_number = e->conf.ln_mode == RELATIVE 
+          ? (
+             is_after 
+             ? (cur_gui_index - buff->cur_li)
+             : (buff->cur_li - cur_gui_index)
+            )
+          : cur_gui_index + buff->num_prev_lines + 1;
+        if(buff->cur_li == cur_gui_index && e->conf.ln_mode == RELATIVE){
+          line_number = buff->num_prev_lines + buff->cur_li + 1;
+        } 
+        DrawLineNumber(e, line_number, y_offset);
+      } 
+      // continue;
+    }else {
+      if(c == '\r') {
+        memmove(&text[i], &text[i + 1], buff->s->len - i);
+        num_cariages++;
+      }
+      else {
+        index++;
+      }
+
+      if((x_offset) >= max_len) {
+        y_offset++;
+        x_offset = 0;
+      }
+      else if(i > 0 && isspace(text[i - 1]) || i == buff->d_start + 1){
+        int word_len = 0;
+        while(
+          word_len < max_len - 1 && 
+          i + word_len < buff->s->len &&
+          !isspace(text[i + word_len++])
+        );
+        if((x_offset + word_len - 1) > max_len){
+          x_offset = 0;
+          y_offset++;
+        }
+      }
+
+      char_pos = (Vector2) {
+        total_pl + x_offset * total_char_w,
+        total_pt + y_offset * total_char_h,
+      };
+
+
+      char_index = index + buff->d_start - 1;
+      if(char_index == buff->cursor.index){
+        if(!e->exp->is_open && !e->is_searching)
+        DrawCursor(
+          e, char_pos.x, char_pos.y,
+          is_blinking ? 0x00000000 : buff->cursor.color,
+          true
+        );
+
+      }
+      if(c_selected && char_index != buff->cursor.index) {
+        if(!e->exp->is_open && !e->is_searching)
+        DrawCursor(e, char_pos.x , char_pos.y, e->conf.selection_bg, true);
+      }
+
+      bool is_match = false;
+      if(e->is_searching){
+        for(size_t x = 0; x < e->s_ranges->len; x++){
+          Range r = e->s_ranges->data[x];
+          if(char_index >= r.start && char_index <= r.end){
+            is_match = true;
+            DrawCursor(e, char_pos.x, char_pos.y, e->conf.search_bg, true);
+          }
+        }
+      }
+      DrawTextEx(
+        e->conf.font_data.font, TextFormat("%c", c),
+        char_pos, e->conf.font_data.size,
+        0.0f,
+        GetColor(
+          is_match ? e->conf.search_fg : 
+          ( c_selected ? e->conf.selection_fg :
+          ((char_index == buff->cursor.index && 
+            !is_blinking && !e->exp->is_open && !e->is_searching) ? 
+            e->conf.under_cursor_color:
+            e->conf.text_color
+          ))
+        )
+      );
+      x_offset++;
+    }
+
     if((mouse_clicked || mouse_down) && !matched_char){
       if(mouse_clicked) {
         e->conf.is_selecting = false;
@@ -618,7 +711,7 @@ void DrawBufferText(Editor *e, bool is_blinking){
       bool is_x_small = e->mouse.x < char_pos.x; 
       float distance_x = fabsf(char_pos.x - e->mouse.x);
       float distance_y = fabsf(char_pos.y - e->mouse.y);
-      size_t line_index = cur_gui_index; //get_line_from_index(buff->lines, char_index);
+      size_t line_index = cur_gui_index;
       Line line = buff->lines->data[line_index];
 
       if(is_x_match && is_y_match){
@@ -631,17 +724,16 @@ void DrawBufferText(Editor *e, bool is_blinking){
             handle_mouse_click(e, line.start, mouse_dragged);
           }else {
             if(distance_x < closest_x){
-               matched_char = true;
               closest_x = distance_x;
               closest_char_index = char_index;
             } 
           }
         }else if (is_x_big){
-          if(index == line.end){
+          if(index == line.end - 1){
             if(line.end - line.start < 1){
               handle_mouse_click(e, line.start, mouse_dragged);
             }else {
-              handle_mouse_click(e, line.end - 1, mouse_dragged);
+              handle_mouse_click(e, line.end - e->conf.is_vim_mode, mouse_dragged);
             }
             matched_char = true;
           }else {
@@ -674,102 +766,10 @@ void DrawBufferText(Editor *e, bool is_blinking){
           }
         }else if(is_x_big && char_index == line.end - 1){
           matched_char = true;
-          handle_mouse_click(e, line.end - 1, mouse_dragged);
+          handle_mouse_click(e, line.end - e->conf.is_vim_mode, mouse_dragged);
         }
       } 
     }
-
-    if(c == '\n'){
-      y_offset++;
-      x_offset = 0;
-      index++;
-      if(e->conf.ln_mode != NONE) {
-        bool is_after = ++cur_gui_index > buff->cur_li;
-        size_t line_number = e->conf.ln_mode == RELATIVE 
-          ? (
-             is_after 
-             ? (cur_gui_index - buff->cur_li)
-             : (buff->cur_li - cur_gui_index)
-            )
-          : cur_gui_index + buff->num_prev_lines + 1;
-        if(buff->cur_li == cur_gui_index && e->conf.ln_mode == RELATIVE){
-          line_number = buff->num_prev_lines + buff->cur_li + 1;
-        } 
-        DrawLineNumber(e, line_number, y_offset);
-      } 
-      continue;
-    }
-    if(c == '\r') {
-      memmove(&text[i], &text[i + 1], buff->s->len - i);
-      num_cariages++;
-    }
-    else {
-      index++;
-    }
-
-    if((x_offset) >= max_len) {
-      y_offset++;
-      x_offset = 0;
-    }
-    else if(i > 0 && isspace(text[i - 1]) || i == buff->d_start + 1){
-      int word_len = 0;
-      while(
-        word_len < max_len - 1 && 
-        i + word_len < buff->s->len &&
-        !isspace(text[i + word_len++])
-      );
-      if((x_offset + word_len - 1) > max_len){
-        x_offset = 0;
-        y_offset++;
-      }
-    }
-
-    char_pos = (Vector2) {
-      total_pl + x_offset * total_char_w,
-      total_pt + y_offset * total_char_h,
-    };
-
-    char_index = index + buff->d_start - 1;
-    if(char_index == buff->cursor.index){
-      if(!e->exp->is_open && !e->is_searching)
-      DrawCursor(
-        e, char_pos.x, char_pos.y,
-        is_blinking ? 0x00000000 : buff->cursor.color,
-        true
-      );
-
-    }
-    if(c_selected && char_index != buff->cursor.index) {
-      if(!e->exp->is_open && !e->is_searching)
-      DrawCursor(e, char_pos.x , char_pos.y, e->conf.selection_bg, true);
-    }
-
-    bool is_match = false;
-    if(e->is_searching){
-      for(size_t x = 0; x < e->s_ranges->len; x++){
-        Range r = e->s_ranges->data[x];
-        if(char_index >= r.start && char_index <= r.end){
-          is_match = true;
-          DrawCursor(e, char_pos.x, char_pos.y, e->conf.search_bg, true);
-        }
-      }
-    }
-    DrawTextEx(
-      e->conf.font_data.font, TextFormat("%c", c),
-      char_pos, e->conf.font_data.size,
-      0.0f,
-      GetColor(
-        is_match ? e->conf.search_fg : 
-        ( c_selected ? e->conf.selection_fg :
-        ((char_index == buff->cursor.index && 
-          !is_blinking && !e->exp->is_open && !e->is_searching) ? 
-          e->conf.under_cursor_color:
-          e->conf.text_color
-        ))
-      )
-    );
-
-    x_offset++;
   }
   if((mouse_clicked || mouse_down) && !matched_char){
     handle_mouse_click(e, closest_char_index, mouse_dragged);
