@@ -1,5 +1,5 @@
 FLAGS = -Iinclude -lraylib -lm -lpthread -ldl -lrt -lGL
-DEBUG_FLAGS  = -Wpedantic -g -O1 -fsanitize=address,undefined
+DEBUG_FLAGS  = -Wpedantic -g -O0 -fsanitize=address,undefined
 PROD_FLAGS   = -DPROD -O3
 INSTALL_DIR  = /usr/local/bin
 FONTS_DIR    = /usr/local/share/fonts
