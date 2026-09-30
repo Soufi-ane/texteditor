@@ -534,15 +534,14 @@ void DrawBufferText(Editor *e, bool is_blinking){
   char *text = buff->s->data;
 
   if(mouse_down && e->conf.is_selecting) {
+    double now = GetTime();
     if(e->mouse.y < total_pt + total_char_h * e->conf.scroll_pad){
-      double now = GetTime();
       if(now - last_press_time > HOLD_PRESS_DELAY) {
         scroll_down(e, 1);
         last_press_time = now;
       }
     }
     else if(e->mouse.y > e->s_height - pad.bottom - e->conf.scroll_pad * total_char_h) {
-      double now = GetTime();
       if(now - last_press_time > HOLD_PRESS_DELAY) {
         scroll_up(e, 1);
         last_press_time = now;
@@ -702,11 +701,11 @@ void DrawBufferText(Editor *e, bool is_blinking){
     }
 
     if((mouse_clicked || mouse_down) && !matched_char){
+      e->conf.is_selecting = mouse_dragged;
       if(mouse_clicked) {
         e->conf.is_selecting = false;
         press_start_pos = e->mouse;
       }
-      e->conf.is_selecting = mouse_dragged;
 
       bool is_y_match = e->mouse.y >= char_pos.y && e->mouse.y <= (char_pos.y + total_char_h);
       bool is_x_match = e->mouse.x >= char_pos.x && e->mouse.x <= (char_pos.x + total_char_w);
