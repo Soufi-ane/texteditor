@@ -63,6 +63,17 @@ int write_file(Editor* e){
   return 0;
 }
 
+String *get_trash_path(Editor *e){
+  String *trash_path;
+  #ifdef PROD
+  trash_path = string("/.local/share/texteditor/trash/");
+  add_text_to_str(trash_path, e->HOME_DIR, 0);
+  #else
+  trash_path = string("trash/");
+  #endif
+  return trash_path;
+}
+
 bool create_file(Editor *e, char *path){
   FILE* file = fopen(path , "r");
   if(file != NULL) {
@@ -73,20 +84,23 @@ bool create_file(Editor *e, char *path){
   if(file == NULL) {
     new_message(e, "Failed to create file", ERROR);
     return false;
+  }else {
+    String *trash_path = get_trash_path(e);
+    FileAction *act = new_file_action();
+    const char *file_name = get_file_name_from_path(path);
+    add_str_to_str(trash_path, c_string('/'), trash_path->len);
+    add_text_to_str(trash_path, file_name, trash_path->len);
+    act->old = trash_path;
+    act->new = string(path);
+    stack_push(&e->exp->undo_stack, *act);
+    stack_flush(&e->exp->redo_stack);
   }
-  // fputc('\n', file);
   fclose(file);
   return true;
 }
 
 void clear_trash(Editor *e) {
-  String *trash_path;
-  #ifdef PROD
-  trash_path = string("/.local/share/texteditor/trash/");
-  add_text_to_str(trash_path, e->HOME_DIR, 0);
-  #else
-  trash_path = string("trash/");
-  #endif
+  String *trash_path = get_trash_path(e);
   DIR *dir;
   struct dirent *entry;
   dir = opendir(trash_path->data);
