@@ -1255,6 +1255,9 @@ void handle_enter(Editor* e){
         !strcmp(e->exp->input->data, "y")
       ){
         move_to_trash(e, cur_file.path->data);
+        if(str_equals(cur_file.path, string(cur_buf->file_path))){
+          force_close_current_buffer(e);
+        }
         read_dir_files(e, e->exp->open_dir->data);
         update_curr_file(e);
       }

@@ -159,7 +159,7 @@ typedef struct {
   Text_AStack undo_stack;
   Text_AStack redo_stack;
   TextAction *cur_act;
-  char const * file_path;
+  char const *file_path;
   bool is_saved;
   bool is_readonly;
 } Buffer ;
