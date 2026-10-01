@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
     DrawStatusLine(e, is_blinking);
     if(buff->msg_index > -1) DrawCurrentMessage(e);
     if(e->exp->is_open) DrawExplorer(e, is_blinking);
-    if(e->conf.is_menu_open) DrawMenu(e);
+    if(e->conf.is_menu_open) DrawMenu(e, is_blinking);
     handle_keys(e);
 
     EndDrawing();

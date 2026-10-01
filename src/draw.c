@@ -37,7 +37,7 @@ void DrawCursor(Editor* e, int x, int y, unsigned int color, bool is_primary){
   );
 }
 
-void DrawMenu(Editor * e){
+void DrawMenu(Editor * e, bool is_blinking){
   Font font = e->conf.font_secondary_data.font;
   int font_size = e->conf.font_secondary_data.size;
   int max_char_w = get_max_char_w(font);
@@ -85,7 +85,11 @@ void DrawMenu(Editor * e){
     );
   }
 
-  DrawCursor(e, cursor_x, cursor_y, buff->cursor.color, false);
+  DrawCursor(
+    e, cursor_x, cursor_y, 
+    is_blinking ? 0x00000000 : buff->cursor.color,
+    false
+  );
 
   for(
     int i = (e->prompt->len > max_displayed ? e->prompt->len - max_displayed : 0);
@@ -638,7 +642,7 @@ void DrawBufferText(Editor *e, bool is_blinking){
 
       char_index = index + buff->d_start - 1;
       if(char_index == buff->cursor.index){
-        if(!e->exp->is_open && !e->is_searching)
+        if(!e->exp->is_open && !e->is_searching && !e->conf.is_menu_open)
         DrawCursor(
           e, char_pos.x, char_pos.y,
           is_blinking ? 0x00000000 : buff->cursor.color,
@@ -669,7 +673,9 @@ void DrawBufferText(Editor *e, bool is_blinking){
           is_match ? e->conf.search_fg : 
           ( c_selected ? e->conf.selection_fg :
           ((char_index == buff->cursor.index && 
-            !is_blinking && !e->exp->is_open && !e->is_searching) ? 
+            !is_blinking && !e->exp->is_open && 
+            !e->conf.is_menu_open && !e->is_searching
+            ) ? 
             e->conf.under_cursor_color:
             e->conf.text_color
           ))

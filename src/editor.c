@@ -448,6 +448,7 @@ void handle_caps_lock_and_escape(Editor* e){
       filter_cmds_by_prompt(e);
       e->conf.is_opening_file = false;
       e->conf.is_selecting = false;
+      update_buf_state(e);
     }
   }else {
     if(!e->conf.is_menu_open) show_menu(e);
@@ -773,6 +774,7 @@ void show_menu(Editor *e){
   e->conf.is_opening_file = false;
   e->mode = INSERT;
   e->prompt->len = 0;
+  update_buf_state(e);
 }
 
 void handle_normal_mode_keys(Editor* e, int c){
@@ -1293,6 +1295,7 @@ void exit_exp_input(Editor * e){
   e->exp->input->len = 0;
   e->exp->input->data[e->exp->input->len] = 0;
   e->mode = NORMAL;
+  update_buf_state(e);
 }
 
 void handle_mouse_click(Editor *e, size_t index, bool is_holding){

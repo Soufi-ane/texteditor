@@ -6,7 +6,7 @@
 
 void DrawCursor(Editor* e, int x, int y, unsigned int color, bool is_primary);
 
-void DrawMenu(Editor * e);
+void DrawMenu(Editor * e, bool is_blinking);
 
 void DrawCurrentMessage(Editor *e);
 
