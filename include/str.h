@@ -43,4 +43,6 @@ Ranges *new_ranges(size_t cap);
 
 bool str_includes(String *str, String *sub_str, bool check_case);
 
+bool str_equals(String *this, String *that);
+
 #endif

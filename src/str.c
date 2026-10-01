@@ -135,3 +135,7 @@ bool str_includes(String *str, String *sub_str, bool check_case){
   }
   return false;
 }
+
+bool str_equals(String *this, String *that){
+  return !strcmp(this->data, that->data);
+}
