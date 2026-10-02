@@ -346,4 +346,8 @@ void update_curr_file(Editor * e);
 
 void show_menu(Editor *e);
 
+void start_new_line(Editor *e, bool is_up);
+
+void update_last_col(Editor *e);
+
 #endif

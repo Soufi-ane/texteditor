@@ -153,6 +153,15 @@ void move_to_matching_pair(Editor *e, char c){
   update_buf_state(e);
 }
 
+void start_new_line(Editor *e, bool is_up){
+  add_char_to_cur_buf(
+    e, '\n',
+    is_up ? cur_line.start - 1 : cur_line.end
+  );
+  update_last_col(e);
+  e->mode = INSERT;
+}
+
 void cur_buf_str_search(Editor *e, String *str, String *query){
   e->s_ranges->len = 0;
   e->cur_range = 0;
@@ -815,8 +824,10 @@ void handle_normal_mode_keys(Editor* e, int c){
       toggle_explorer(e);
       break;
     case 'o':
-      /* if(e->conf.is_menu_open){
-      } */
+      start_new_line(e, false);
+      break;
+    case 'O':
+      start_new_line(e, true);
       break;
     case 's':
       try_saving_file(e);

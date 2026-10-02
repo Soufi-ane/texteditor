@@ -73,6 +73,7 @@ char *get_messages_path(Editor *e){
   return "/usr/local/share/texteditor/messages.log";
   #else
   return "assets/messages.log";
+  #endif
 }
 
 String *get_config_path(Editor *e){
@@ -186,7 +187,6 @@ void move_to_trash(Editor *e, char *path){
   }
 }
 
-
 void read_file(Editor* e, char const * file_path){
 	FILE* f = fopen(file_path, "r+");
   if(f == NULL) {
@@ -248,7 +248,6 @@ void try_saving_file(Editor* e){
   char *conf_path = get_config_path(e)->data;
   char *help_path = get_help_path(e);
   char *msgs_path = get_messages_path(e);
-  #endif
 
   if(buff->file_path){
     if(
