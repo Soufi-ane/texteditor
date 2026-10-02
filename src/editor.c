@@ -42,7 +42,7 @@ void update_buf_state(Editor *e){
 
 void update_line_number_padding(Editor *e){
   if(!cur_buf->lines) return;
-  e->conf.ln_padding = get_digit_count(cur_buf->num_prev_lines + cur_buf->lines->len - 1);
+  e->conf.ln_padding = get_digit_count(cur_buf->num_prev_lines + cur_buf->lines->len);
 }
 
 size_t get_count_prev_lines(String *str, size_t from){
@@ -322,13 +322,10 @@ size_t get_prev_line_start(String *str, size_t index){
     }else {
       new_first = seek_back_by_lines(cur_buf, index, max - scroll_pad);
     }
-  } else {
   } 
-  if(new_first != cur_buf->d_start) {
-    cur_buf->d_start = new_first;
-    cur_buf->num_prev_lines = get_count_prev_lines(cur_buf->s, new_first);
-    update_line_number_padding(e);
-  }
+  cur_buf->d_start = new_first;
+  cur_buf->num_prev_lines = get_count_prev_lines(cur_buf->s, new_first);
+  update_line_number_padding(e);
   update_lines(e);
 }
 
@@ -385,8 +382,8 @@ void remove_chars_cur_buf(Editor *e, size_t index, size_t count){
   memcpy(deleted->data, &cur_buf->s->data[index], count);
   deleted->len += count;
   update_text_action(&cur_buf->cur_act, index, deleted, false);
-
   str_remove_chars(str, index, count);
+  update_scroll(e, cur_buf->cursor.index, false, true);
   cur_buf->is_saved = false;
 }
 
