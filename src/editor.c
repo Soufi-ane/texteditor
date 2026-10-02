@@ -1177,13 +1177,8 @@ void handle_open_directory(Editor *e){
 }
 
 void open_config_file(Editor *e){
-  char path[1024];
-  #ifdef PROD
-  sprintf(path, "%s/.config/texteditor/texteditor.conf", e->HOME_DIR);
-  #else
-  sprintf(path, "assets/texteditor.conf");
-  #endif
-  read_file(e, path);
+  String *config_path = get_config_path(e);
+  read_file(e, config_path->data);
   update_scroll(e, cur_buf->cursor.index, false, true);
   e->mode = NORMAL;
 }
@@ -1211,12 +1206,8 @@ void handle_command(Editor *e, Cmd cmd){
       start_new_file(e);
       break;
     case HELP:
-      #ifdef PROD
-      read_file(e, "/usr/local/share/texteditor/help.txt");
-      #else
-      read_file(e, "assets/help.txt");
-      #endif
-      e->mode = NORMAL;
+      char *help_file_path = get_help_path(e);
+      read_file(e, help_file_path);
       break;
     case OPEN_CONFIG:
       open_config_file(e);

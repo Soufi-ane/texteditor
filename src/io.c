@@ -32,11 +32,8 @@ bool key_in(ConfigKey key, ConfigKey *choices, size_t len){
 }
 
 void write_new_message(Editor *e, char *msg){
-  #ifdef PROD
-  char *file_path = "/usr/local/share/texteditor/messages.log";
-  #else
-  char *file_path = "assets/messages.log";
-  #endif
+  char *file_path = get_messages_path(e);
+
 	FILE* file = fopen(file_path, "a+");
   if(file == NULL) return;
 
@@ -61,6 +58,33 @@ int write_file(Editor* e){
 
 	fclose(file);
   return 0;
+}
+
+char *get_help_path(Editor *e){
+  #ifdef PROD
+  return "/usr/local/share/texteditor/help.txt";
+  #else
+  return "assets/help.txt";
+  #endif
+}
+
+char *get_messages_path(Editor *e){
+  #ifdef PROD
+  return "/usr/local/share/texteditor/messages.log";
+  #else
+  return "assets/messages.log";
+}
+
+String *get_config_path(Editor *e){
+  String *config_path;
+  char path[1024];
+  #ifdef PROD
+  sprintf(path, "%s/.config/texteditor/texteditor.conf", e->HOME_DIR);
+  config_path = string(path);
+  #else
+  config_path = string("assets/texteditor.conf");
+  #endif
+  return config_path;
 }
 
 String *get_trash_path(Editor *e){
@@ -197,7 +221,9 @@ void read_file(Editor* e, char const * file_path){
 
   if(e->buffs->len > e->buffs->cap - 1) realloc_editor_buffers(e);
 
-  if(access(file_path, W_OK) != 0) buff->is_readonly = true;
+  if(access(file_path, W_OK) != 0){
+    buff->is_readonly = true;
+  } 
   buff->file_path = strdup(file_path);
   size_t bytes_read = fread(buff->s->data, 1, file_size, f);
   if(bytes_read != (size_t) file_size){
@@ -208,6 +234,7 @@ void read_file(Editor* e, char const * file_path){
   buff->s->data[file_size ? (file_size - 1) : 0] = 0;
   buff->s->len = bytes_read ? (bytes_read - 1) : 0;
   buff->is_saved = true;
+  e->mode = NORMAL;
   update_lines(e);
   update_line_number_padding(e);
 }
@@ -218,17 +245,16 @@ void try_saving_file(Editor* e){
     new_message(e, "No changes to be saved", INFO);
     return;
   }
-  char config_path[1024];
-  #ifdef PROD
-  char *messages_path = "/usr/local/share/texteditor/messages.log";
-  sprintf(config_path, "%s/.config/texteditor/texteditor.conf", e->HOME_DIR);
-  #else
-  char *messages_path = "assets/messages.log";
-  sprintf(config_path, "assets/texteditor.conf");
+  char *conf_path = get_config_path(e)->data;
+  char *help_path = get_help_path(e);
+  char *msgs_path = get_messages_path(e);
   #endif
 
   if(buff->file_path){
-    if(!strcmp(messages_path, buff->file_path)){
+    if(
+      !strcmp(msgs_path, buff->file_path) ||
+      !strcmp(help_path, buff->file_path)
+    ){
       buff->is_readonly = true;
     }
     if(buff->is_readonly){
@@ -248,7 +274,7 @@ void try_saving_file(Editor* e){
       new_message(e, "Readonly file!", ERROR);
     }
     if(is_done){
-      if(!strcmp(config_path, buff->file_path)){
+      if(!strcmp(conf_path, buff->file_path)){
         try_loading_config(e);
       }
     } 

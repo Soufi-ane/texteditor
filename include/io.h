@@ -39,4 +39,10 @@ void clear_trash(Editor *e);
 
 void search_files_in_dir(Editor *e, String *dir_path, bool reset);
 
+String *get_config_path(Editor *e);
+
+char *get_help_path(Editor *e);
+
+char *get_messages_path(Editor *e);
+
 #endif
