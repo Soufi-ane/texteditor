@@ -1,16 +1,31 @@
 
+General key mappings:
+
+  F5     : Toggle fullscreen
+  Ctrl+u : Delete to beginning of line
+  Ctrl+n : Switch to next buffer
+  Ctrl+p : Switch to previous buffer
+
 Normal mode:
 
-  escape: Show menu
+  Escape: Show menu
   Ctrl+c: Copy
   Ctrl+v: Paste
-  Ctrl+f: Toggle fullscreen
+  Ctrl+z: Undo
+  Ctrl+y: Redo
+  Ctrl+f: Search
   Ctrl+s: Save buffer
   Ctrl+x: Quit buffer/editor if no content
   Ctrl+X: Force quit buffer/editor if no content
-  Ctrl+n: Switch to next buffer
-  Ctrl+p: Switch to previous buffer
-  Ctrl+u: Delete to beginning of line
+
+  Explorer :
+
+    Ctrl+b          : Toggle Explorer
+    Ctrl+n          : Create file/directory
+    Ctrl+d / Delete : Delete file/directory
+    Ctrl+f          : Search for files in current directory
+    <TAB>           : Move to next file match
+    <S-TAB>         : Move to previous file match
 
 Vim mode (Not really):
 
@@ -42,7 +57,7 @@ Configuration:
     Config file: "$HOME/.config/texteditor/texteditor.conf"
 
   You can only customize the properties that already exits
-  in the file!
+  in the file (Or modify the source code)!
   Lines starting with '#' are ignored
 
 Command line 
