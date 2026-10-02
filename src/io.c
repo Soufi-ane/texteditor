@@ -354,16 +354,15 @@ void paste_from_clipboard(Editor *e, bool is_pre_paste){
   String *clip_str = string(clip_buff);
   free(clip_buff);
   bool has_text = curr_buff->s->len > 0;
-  bool at_end = curr_buff->cursor.index >= curr_buff->s->len;
   Line line = curr_buff->lines->data[curr_buff->cur_li];
   bool line_empty = line.end - line.start < 1;
   if(line_empty) is_pre_paste = false;
   size_t insert_index = curr_buff->cursor.index + has_text;
-  if(has_text) insert_index -= at_end + line_empty + is_pre_paste;
+  if(has_text) insert_index -= line_empty + is_pre_paste;
   update_text_action(&curr_buff->cur_act, insert_index, clip_str, true);
   add_str_to_str(curr_buff->s, clip_str, insert_index);
   move_cursor_right(e, clip_str->len - !has_text -
-      ((at_end || line_empty || is_pre_paste) && has_text));
+      ((line_empty || is_pre_paste) && has_text));
   update_lines(e);
   update_scroll(e, curr_buff->cursor.index, false, false);
 }
