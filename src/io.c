@@ -347,7 +347,7 @@ void copy_selection_to_clipboard(Editor *e){
   else new_message(e, "Failed to copy", ERROR);
 }
 
-void paste_from_clipboard(Editor *e){
+void paste_from_clipboard(Editor *e, bool is_pre_paste){
   Buffer *curr_buff = e->buffs->data[e->current_buff];
   char *clip_buff = read_from_clipboard();
   if(!clip_buff) return;
@@ -355,11 +355,13 @@ void paste_from_clipboard(Editor *e){
   free(clip_buff);
   bool has_text = curr_buff->s->len > 0;
   bool at_end = curr_buff->cursor.index >= curr_buff->s->len;
+  Line line = curr_buff->lines->data[curr_buff->cur_li];
+  bool line_empty = line.end - line.start < 1;
   size_t insert_index = curr_buff->cursor.index + has_text;
-  if(has_text) insert_index -= at_end;
+  if(has_text) insert_index -= at_end + line_empty + is_pre_paste;
   update_text_action(&curr_buff->cur_act, insert_index, clip_str, true);
   add_str_to_str(curr_buff->s, clip_str, insert_index);
-  move_cursor_right(e, clip_str->len - !has_text - (at_end && has_text));
+  move_cursor_right(e, clip_str->len - !has_text - ((at_end || line_empty || is_pre_paste) && has_text));
   update_lines(e);
   update_scroll(e, curr_buff->cursor.index, false, false);
 }

@@ -862,8 +862,12 @@ void handle_normal_mode_keys(Editor* e, int c){
       break;
     case 'p':
       if(e->conf.is_selecting) handle_delete_selection(e);
-      paste_from_clipboard(e);
-      // update_scroll(e, true);
+      paste_from_clipboard(e, false);
+      e->conf.is_menu_open = false;
+      break;
+    case 'P':
+      if(e->conf.is_selecting) handle_delete_selection(e);
+      paste_from_clipboard(e, true);
       e->conf.is_menu_open = false;
       break;
     case 'd':
@@ -996,8 +1000,8 @@ void handle_ctrl_plus_key(Editor *e, bool is_shift_down){
   }
 
   if(IsKeyPressed(KEY_V)) {
-    paste_from_clipboard(e);
-    // update_scroll(e, true);
+    if(e->conf.is_selecting) handle_delete_selection(e);
+    paste_from_clipboard(e, is_shift_down);
     e->conf.is_menu_open = false;
   }
 

@@ -17,7 +17,7 @@ void copy_selection_to_clipboard(Editor *e);
 
 char *read_from_clipboard();
 
-void paste_from_clipboard(Editor *e);
+void paste_from_clipboard(Editor *e, bool is_pre_paste);
 
 int try_loading_config(Editor *e);
 
