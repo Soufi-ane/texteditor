@@ -829,6 +829,12 @@ void handle_normal_mode_keys(Editor* e, int c){
     case 'O':
       start_new_line(e, true);
       break;
+    case 'c':
+      if(e->conf.is_selecting) {
+        handle_delete_selection(e);
+        e->mode = INSERT;
+      } 
+      break;
     case 's':
       try_saving_file(e);
       break;
