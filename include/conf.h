@@ -4,10 +4,6 @@
 // raylib
 #define GLSL_VERSION          330
 
-// text
-#define LINE_HEIGHT           45
-#define LETTER_SPACING        14
-
 // screen
 #define SCREEN_HEIGHT         780
 #define SCREEN_WIDTH          1300

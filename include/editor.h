@@ -294,8 +294,6 @@ void redo_text_action(Editor *e, TextAction *act);
 
 void free_text_action(TextAction *action);
 
-// void action_stack_flush(ActionStack *stack);
-
 void update_text_action(TextAction **act, size_t index, String *str, bool is_new);
 
 void update_lines(Editor *e);
@@ -305,8 +303,6 @@ void move_to_first_line(Editor *e);
 void move_to_last_line(Editor* e);
 
 void adapte_col_to_cur_line(Editor *e);
-
-// size_t get_line_from_index(Lines *lines, size_t index);
 
 void scroll_up(Editor *e, size_t count);
 
