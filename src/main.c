@@ -8,6 +8,8 @@ int main(int argc, char **argv) {
   getcwd(e->base_dir, sizeof(e->base_dir));
   e->exp->open_dir = string(e->base_dir);
 
+  handle_cmd_args(e, argc, argv);
+
   // SetConfigFlags(FLAG_WINDOW_RESIZABLE);
   SetTraceLogLevel(LOG_NONE);
   InitWindow(e->s_width, e->s_height, "Text Editor");
@@ -19,8 +21,6 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Failed to load fonts\n");
     return 1;
   }
-
-  handle_cmd_args(e, argc, argv);
 
   if(!e->buffs->data[e->current_buff]->file_path){
     toggle_explorer(e);

@@ -28,6 +28,7 @@ Cmd default_cmds[NUM_COMMANDS] = {
 
 size_t get_max_line_length(Editor *e){ 
   int char_width = get_max_char_w(e->conf.font_data.font);
+  if(!char_width) return 0;
   size_t x_padding = e->conf.padding.left + e->conf.padding.right;
   if(e->conf.ln_mode != NONE) x_padding += e->conf.ln_padding * (e->conf.letter_spacing + char_width);
   return (e->s_width - x_padding) / (e->conf.letter_spacing + char_width); 
