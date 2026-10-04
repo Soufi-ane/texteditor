@@ -399,10 +399,12 @@ void DrawExplorer(Editor *e, bool is_blinking){
   int font_size = e->conf.font_secondary_data.size;
   float max_char_w = get_max_char_w(font);
   Rectangle explorer = {
-    0, pad.top, e->s_width / 3, e->s_height - (font_size + pad.top)
+    pad.left, pad.top, 
+    e->s_width / 3,
+    e->s_height - (font_size + pad.top)
   };
   Rectangle separator = {
-    e->exp->max_w, pad.top, 2, e->s_height - (font_size + pad.top)
+    pad.left + e->exp->max_w, pad.top, 2, e->s_height - (font_size + pad.top)
   };
   DrawRectangleRec(explorer, GetColor(e->conf.bg_color));
   DrawRectangleRec(separator, GetColor(e->conf.line_numbers_color));
@@ -420,11 +422,11 @@ void DrawExplorer(Editor *e, bool is_blinking){
     size_t text_w = file_name_len * max_char_w;
     bool is_too_long = text_w > e->exp->max_w;
     if(is_too_long){
-      dis_name->len -= (pad.left * 2 + text_w - e->exp->max_w) / max_char_w + 4;
+      dis_name->len -= (text_w - e->exp->max_w) / max_char_w + 1;
       dis_name->data[dis_name->len] = 0;
     }
     Rectangle file_rec = {
-      0, y_offset * font_size + pad.top * 2,
+      pad.left , y_offset * font_size + pad.top * 2,
       e->exp->max_w,font_size 
     };
     DrawRectangleRec(
@@ -435,7 +437,7 @@ void DrawExplorer(Editor *e, bool is_blinking){
     DrawTextEx(
       e->conf.font_secondary_data.font,
       TextFormat("%s%s", dis_name->data, is_too_long ? "..." : ""),
-      (Vector2){ pad.left, file_rec.y },
+      (Vector2){ pad.left + max_char_w, file_rec.y },
       e->conf.font_secondary_data.size, 0, GetColor(e->conf.text_color));
     y_offset++;
   }
@@ -464,7 +466,8 @@ void DrawLineNumber(Editor *e, size_t n, size_t y_offset){
   DrawTextEx(e->conf.font_data.font,
     TextFormat("%zu", n),
     (Vector2){
-      pad.left + (e->exp->is_open ? e->exp->max_w : 0),
+      (e->exp->is_open ? 
+       (pad.left + e->exp->max_w + max_char_w) : pad.left),
       pad.top + (e->conf.line_height + font_size) * y_offset
      },
     font_size, 0, GetColor(e->conf.line_numbers_color)
@@ -481,7 +484,8 @@ void DrawBufferText(Editor *e, bool is_blinking){
   size_t i, index = 0, x_offset = 0, y_offset = 0, num_cariages = 0;
   size_t total_char_w = e->conf.letter_spacing + max_char_w;
   size_t total_char_h = e->conf.line_height + font_size;
-  size_t total_pl = pad.left + (e->exp->is_open ? e->exp->max_w : 0);
+  size_t total_pl = (e->exp->is_open ? 
+      (pad.left + e->exp->max_w + max_char_w) : pad.left);
   if(has_nums) total_pl += (e->conf.ln_padding + 1) * total_char_w;
   size_t total_pt = pad.top;
   size_t max_len = get_max_line_length(e);

@@ -9,7 +9,7 @@
 #define SCREEN_WIDTH          1300
 
 // editor
-#define VERSION               "1.0.7"
+#define VERSION               "1.0.8"
 #define MAX_MESSAGES          1024
 #define LONG_PRESS_DELAY      0.3f
 #define REPEAT_RATE           0.015f
