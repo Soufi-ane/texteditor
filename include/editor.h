@@ -240,7 +240,7 @@ void move_to_word_beginning(Editor* e);
 
 void move_to_word_ending(Editor* e);
 
- void update_scroll(Editor *e, size_t index, bool center_line, bool is_up);
+void update_scroll(Editor *e, size_t index, bool center_line, bool is_up);
 
 void new_message(Editor *e, const char *message, MessageType type);
 

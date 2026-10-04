@@ -601,6 +601,7 @@ void handle_tab(Editor* e, bool is_shift_down) {
           }
         }
         else add_char_to_cur_buf(e, '\t', cur_buf->cursor.index);
+        update_buf_state(e);
       }
     }else if(e->exp->is_open) {
       if(is_shift_down) move_up_explorer(e);
