@@ -262,7 +262,7 @@ void DrawEditorLines(Editor *e){
   Buffer *buff = e->buffs->data[e->current_buff];
   Padding pad = e->conf.padding;
 
-  for (int l = 0; l < get_max_num_lines(e); l++) {
+  for (int l = 0; l < buff->lines->len; l++) {
     int y_pos = pad.top + buff->cursor.height + l * (e->conf.line_height + buff->cursor.height);
     int x_pos = e->conf.padding.left + (e->conf.ln_padding + 1) * (max_char_w + e->conf.letter_spacing);
     DrawLineEx(
